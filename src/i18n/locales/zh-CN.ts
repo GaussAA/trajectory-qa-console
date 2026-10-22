@@ -312,6 +312,20 @@ export const zhCN = {
   'compare.status.changed': '内容变化',
   'compare.status.added': '新增步',
   'compare.status.removed': '删除步',
+  'semantic.category.off_topic': '答非所问',
+  'semantic.category.unsupported_claim': '无依据断言',
+  'semantic.category.overreach': '越权承诺',
+  'semantic.category.incoherent': '前后矛盾',
+  'semantic.category.unsafe': '安全或合规风险',
+  'cli.err.semanticConfig': '语义复核缺少配置：{missing}',
+  'cli.semanticLimited': '语义复核达单次上限，其余会话未复核（--semantic-limit）',
+  'cli.semantic': '语义复核：{sessions} 个会话，{findings} 条判定',
+  'cli.semanticIssues': '语义复核失败 {count} 次（已降级为规则结论）',
+  'cli.optSemantic': '--semantic               调用模型做语义复核（需 TQA_LLM_API_KEY）',
+  'cli.optSemanticDryRun': '--semantic-dry-run       只打印将发送的提示词，不调用模型',
+  'cli.optLlmUrl': '--llm-url <url>          OpenAI 兼容的 chat/completions 地址',
+  'cli.optLlmModel': '--llm-model <model>      模型名',
+  'cli.optSemanticLimit': '--semantic-limit <n>     单次最多复核多少会话，默认 20',
 } as const
 
 export type MessageKey = keyof typeof zhCN

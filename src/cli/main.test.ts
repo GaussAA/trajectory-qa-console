@@ -51,129 +51,129 @@ afterEach(() => {
 })
 
 describe('main', () => {
-  it('prints help and exits 0', () => {
+  it('prints help and exits 0', async () => {
     const { io, chunks } = capture()
-    expect(main(['--help'], io)).toBe(EXIT.ok)
+    expect(await main(['--help'], io)).toBe(EXIT.ok)
     expect(chunks.out).toContain('用法：')
   })
 
-  it('prints the version and exits 0', () => {
+  it('prints the version and exits 0', async () => {
     const { io, chunks } = capture()
-    expect(main(['--version'], io)).toBe(EXIT.ok)
+    expect(await main(['--version'], io)).toBe(EXIT.ok)
     expect(chunks.out.trim()).toMatch(/^\d+\.\d+\.\d+$/)
   })
 
-  it('falls back to the real stdout when no io is injected', () => {
+  it('falls back to the real stdout when no io is injected', async () => {
     const written: string[] = []
     const spy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk: string | Uint8Array) => {
       written.push(typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8'))
       return true
     })
     try {
-      expect(main(['--version'])).toBe(EXIT.ok)
+      expect(await main(['--version'])).toBe(EXIT.ok)
     } finally {
       spy.mockRestore()
     }
     expect(written.join('')).toMatch(/^\d+\.\d+\.\d+/)
   })
 
-  it('rejects bad usage with exit 2 and a hint', () => {
+  it('rejects bad usage with exit 2 and a hint', async () => {
     const { io, chunks } = capture()
-    expect(main(['--nope'], io)).toBe(EXIT.error)
+    expect(await main(['--nope'], io)).toBe(EXIT.error)
     expect(chunks.err).toContain('未知选项')
     expect(chunks.err).toContain('--help')
   })
 
-  it('follows --locale for its own errors', () => {
+  it('follows --locale for its own errors', async () => {
     const { io, chunks } = capture()
-    expect(main(['--locale', 'en', '--nope'], io)).toBe(EXIT.error)
+    expect(await main(['--locale', 'en', '--nope'], io)).toBe(EXIT.error)
     expect(chunks.err).toContain('Unknown option')
   })
 
-  it('reports a missing path', () => {
+  it('reports a missing path', async () => {
     const { io, chunks } = capture()
-    expect(main([join(tempDir(), 'ghost.json')], io)).toBe(EXIT.error)
+    expect(await main([join(tempDir(), 'ghost.json')], io)).toBe(EXIT.error)
     expect(chunks.err).toContain('路径不存在')
   })
 
-  it('analyzes a directory and prints the table', () => {
+  it('analyzes a directory and prints the table', async () => {
     const dir = tempDir()
     trace(dir, 'clean.json', CLEAN)
     const { io, chunks } = capture()
 
-    expect(main([dir], io)).toBe(EXIT.ok)
+    expect(await main([dir], io)).toBe(EXIT.ok)
     expect(chunks.out).toContain('1 个文件')
     expect(chunks.out).toContain('A')
     expect(chunks.err).toBe('')
   })
 
-  it('returns 1 when the gate fails, 0 when it passes', () => {
+  it('returns 1 when the gate fails, 0 when it passes', async () => {
     const dir = tempDir()
     trace(dir, 'clean.json', CLEAN)
     trace(dir, 'broken.json', BROKEN)
 
     const failing = capture()
-    expect(main([dir, '--fail-below', '90', '--quiet'], failing.io)).toBe(EXIT.gate)
+    expect(await main([dir, '--fail-below', '90', '--quiet'], failing.io)).toBe(EXIT.gate)
     expect(failing.chunks.out).toContain('未通过')
 
     const passing = capture()
-    expect(main([dir, '--fail-below', '10', '--quiet'], passing.io)).toBe(EXIT.ok)
+    expect(await main([dir, '--fail-below', '10', '--quiet'], passing.io)).toBe(EXIT.ok)
   })
 
-  it('writes the reports with --out and honours --format', () => {
+  it('writes the reports with --out and honours --format', async () => {
     const dir = tempDir()
     trace(dir, 'clean.json', CLEAN)
     const out = join(dir, 'out')
 
     const both = capture()
-    expect(main([dir, '--out', out, '--quiet'], both.io)).toBe(EXIT.ok)
+    expect(await main([dir, '--out', out, '--quiet'], both.io)).toBe(EXIT.ok)
     expect(existsSync(join(out, 'report.md'))).toBe(true)
     expect(existsSync(join(out, 'report.json'))).toBe(true)
     expect(both.chunks.out).toContain('已写出')
 
     const mdOnly = join(dir, 'md-only')
-    expect(main([dir, '--out', mdOnly, '--format', 'md', '--quiet'], capture().io)).toBe(EXIT.ok)
+    expect(await main([dir, '--out', mdOnly, '--format', 'md', '--quiet'], capture().io)).toBe(EXIT.ok)
     expect(existsSync(join(mdOnly, 'report.md'))).toBe(true)
     expect(existsSync(join(mdOnly, 'report.json'))).toBe(false)
   })
 
-  it('exits 2 when the output directory cannot be created', () => {
+  it('exits 2 when the output directory cannot be created', async () => {
     const dir = tempDir()
     trace(dir, 'clean.json', CLEAN)
     // 把 --out 指向一个已存在的文件，mkdir 必然失败。
     const blocker = trace(dir, 'blocker.txt', 'x')
     const { io, chunks } = capture()
 
-    expect(main([dir, '--out', blocker, '--quiet'], io)).toBe(EXIT.error)
+    expect(await main([dir, '--out', blocker, '--quiet'], io)).toBe(EXIT.error)
     expect(chunks.err).toContain('写入')
   })
 
-  it('refuses to report success when every file failed', () => {
+  it('refuses to report success when every file failed', async () => {
     const dir = tempDir()
     trace(dir, 'bad.json', '{not json')
     const { io, chunks } = capture()
 
     // 「什么都没分析到」必须是 2：空跑通过比失败更危险。
-    expect(main([dir], io)).toBe(EXIT.error)
+    expect(await main([dir], io)).toBe(EXIT.error)
     expect(chunks.err).toContain('未产出报告')
   })
 
-  it('accepts a valid pack and rejects a broken one', () => {
+  it('accepts a valid pack and rejects a broken one', async () => {
     const dir = tempDir()
     trace(dir, 'clean.json', CLEAN)
 
     const goodPack = join(dir, 'pack.json')
     writeFileSync(goodPack, JSON.stringify(DEFAULT_PACK))
-    expect(main([dir, '--pack', goodPack, '--quiet'], capture().io)).toBe(EXIT.ok)
+    expect(await main([dir, '--pack', goodPack, '--quiet'], capture().io)).toBe(EXIT.ok)
 
     const badPack = join(dir, 'bad-pack.json')
     writeFileSync(badPack, JSON.stringify({ ...DEFAULT_PACK, rules: [{ id: 'x' }] }))
     const broken = capture()
-    expect(main([dir, '--pack', badPack, '--quiet'], broken.io)).toBe(EXIT.error)
+    expect(await main([dir, '--pack', badPack, '--quiet'], broken.io)).toBe(EXIT.error)
     expect(broken.chunks.err).toContain('规则包校验失败')
   })
 
-  it('resolves builtin pack aliases case-insensitively', () => {
+  it('resolves builtin pack aliases case-insensitively', async () => {
     expect(resolvePackAlias('en')?.name).toBe(BUILTIN_PACK_EN.name)
     expect(resolvePackAlias('  EN ')?.name).toBe(BUILTIN_PACK_EN.name)
     expect(resolvePackAlias('builtin-en')?.name).toBe(BUILTIN_PACK_EN.name)
@@ -181,13 +181,15 @@ describe('main', () => {
     expect(resolvePackAlias('nope')).toBeNull()
   })
 
-  it('produces a fully English report with --pack en --locale en', () => {
+  it('produces a fully English report with --pack en --locale en', async () => {
     const dir = tempDir()
     trace(dir, 'clean.json', CLEAN)
     trace(dir, 'broken.json', BROKEN)
     const out = join(dir, 'out')
 
-    expect(main([dir, '--pack', 'en', '--locale', 'en', '--out', out, '--quiet'], capture().io)).toBe(EXIT.ok)
+    expect(await main([dir, '--pack', 'en', '--locale', 'en', '--out', out, '--quiet'], capture().io)).toBe(
+      EXIT.ok,
+    )
 
     const markdown = readFileSync(join(out, 'report.md'), 'utf8')
     expect(markdown).toContain('# Trajectory QA Report')
@@ -195,18 +197,139 @@ describe('main', () => {
     expect(markdown).not.toMatch(/[\u4e00-\u9fff]/)
   })
 
-  it('reports an unreadable pack file', () => {
+  it('reports an unreadable pack file', async () => {
     const dir = tempDir()
     trace(dir, 'clean.json', CLEAN)
     const missing = join(dir, 'no-pack.json')
     const { io, chunks } = capture()
-    expect(main([dir, '--pack', missing, '--quiet'], io)).toBe(EXIT.error)
+    expect(await main([dir, '--pack', missing, '--quiet'], io)).toBe(EXIT.error)
     expect(chunks.err).toContain('规则包校验失败')
   })
 })
 
+describe('semantic review', () => {
+  const JUDGEMENT = JSON.stringify({
+    choices: [
+      {
+        message: {
+          content: JSON.stringify({
+            findings: [
+              { category: 'unsafe', step: 2, severity: 'error', quote: '原文', reason: '泄露了手机号' },
+            ],
+          }),
+        },
+      },
+    ],
+  })
+
+  it('refuses to run without configuration', async () => {
+    const dir = tempDir()
+    trace(dir, 'clean.json', CLEAN)
+    const { io, chunks } = capture()
+
+    expect(await main([dir, '--semantic'], io, { env: {} })).toBe(EXIT.error)
+    expect(chunks.err).toContain('语义复核缺少配置')
+    expect(chunks.err).toContain('TQA_LLM_API_KEY')
+  })
+
+  it('merges model findings into the score and reports them', async () => {
+    const dir = tempDir()
+    trace(dir, 'clean.json', CLEAN)
+    const out = join(dir, 'out')
+    const calls: { apiKey: string }[] = []
+    const { io, chunks } = capture()
+
+    const code = await main(
+      [dir, '--semantic', '--llm-url', 'https://llm.example/v1', '--llm-model', 'm', '--out', out, '--quiet'],
+      io,
+      {
+        env: { TQA_LLM_API_KEY: 'k-123' },
+        transport: async (request) => {
+          calls.push({ apiKey: request.apiKey })
+          return { ok: true, status: 200, text: JUDGEMENT }
+        },
+      },
+    )
+
+    expect(code).toBe(EXIT.ok)
+    expect(calls).toHaveLength(1)
+    expect(chunks.out).toContain('语义复核：1 个会话，1 条判定')
+    const report = readFileSync(join(out, 'report.md'), 'utf8')
+    expect(report).toContain('安全或合规风险')
+    expect(report).toContain('泄露了手机号')
+  })
+
+  it('degrades to rule findings when the model call fails', async () => {
+    const dir = tempDir()
+    trace(dir, 'clean.json', CLEAN)
+    const { io, chunks } = capture()
+
+    const code = await main(
+      [dir, '--semantic', '--llm-url', 'https://llm.example/v1', '--llm-model', 'm', '--quiet'],
+      io,
+      {
+        env: { TQA_LLM_API_KEY: 'k' },
+        transport: async () => ({ ok: false, status: 400, text: 'bad request' }),
+      },
+    )
+
+    // 语义失败不改变退出码：规则结论照旧可用。
+    expect(code).toBe(EXIT.ok)
+    expect(chunks.out).toContain('语义复核失败 1 次')
+  })
+
+  it('prints the prompt on --semantic-dry-run and never calls the model', async () => {
+    const dir = tempDir()
+    trace(dir, 'clean.json', CLEAN)
+    let called = 0
+    const { io, chunks } = capture()
+
+    const code = await main([dir, '--semantic-dry-run'], io, {
+      env: {},
+      transport: async () => {
+        called += 1
+        return { ok: true, status: 200, text: '{}' }
+      },
+    })
+
+    expect(code).toBe(EXIT.ok)
+    expect(called).toBe(0)
+    const prompt = JSON.parse(chunks.out) as { role: string; content: string }[]
+    expect(prompt[0]?.content).toContain('只输出 JSON')
+    expect(prompt[1]?.content).toContain('查一下报销标准')
+  })
+
+  it('honours --semantic-limit', async () => {
+    const dir = tempDir()
+    trace(dir, 'a.json', CLEAN)
+    trace(dir, 'b.json', CLEAN)
+    let called = 0
+    const { io, chunks } = capture()
+
+    await main(
+      [dir, '--semantic', '--llm-url', 'u', '--llm-model', 'm', '--semantic-limit', '1', '--quiet'],
+      io,
+      {
+        env: { TQA_LLM_API_KEY: 'k' },
+        transport: async () => {
+          called += 1
+          return {
+            ok: true,
+            status: 200,
+            text: JSON.stringify({ choices: [{ message: { content: '{"findings":[]}' } }] }),
+          }
+        },
+      },
+    )
+
+    expect(called).toBe(1)
+    expect(chunks.out).toContain('语义复核：1 个会话')
+    expect(chunks.err).toContain('--semantic-limit')
+  })
+})
+
 describe('loadPack', () => {
-  it('parses the builtin pack round-trip', () => {
+  it('parses the builtin pack round-trip', async () => {
     const dir = tempDir()
     const path = join(dir, 'pack.json')
     writeFileSync(path, JSON.stringify(DEFAULT_PACK))
@@ -216,7 +339,7 @@ describe('loadPack', () => {
     expect(loaded.pack.rules.length).toBe(DEFAULT_PACK.rules.length)
   })
 
-  it('reports json syntax errors verbatim', () => {
+  it('reports json syntax errors verbatim', async () => {
     const dir = tempDir()
     const path = join(dir, 'pack.json')
     writeFileSync(path, '{oops')
@@ -233,11 +356,11 @@ describe('cli contract', () => {
     bin: Record<string, string>
   }
 
-  it('keeps the reported version in sync with package.json', () => {
+  it('keeps the reported version in sync with package.json', async () => {
     expect(CLI_VERSION).toBe(pkg.version)
   })
 
-  it('points the bin entry at the built bundle', () => {
+  it('points the bin entry at the built bundle', async () => {
     expect(pkg.bin['trajectory-qa']).toBe('dist-cli/qa.mjs')
   })
 })

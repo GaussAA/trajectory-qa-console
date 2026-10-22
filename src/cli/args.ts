@@ -25,6 +25,14 @@ export interface CliOptions {
   failBelow: number | null
   maxFiles: number
   maxFileBytes: number
+  /** 语义复核（调用 OpenAI 兼容接口），默认关闭。 */
+  semantic: boolean
+  llmUrl: string | null
+  llmModel: string | null
+  /** 单次运行最多复核多少个会话，兜住成本。 */
+  semanticLimit: number
+  /** 只打印将要发送的提示词，不调用模型。 */
+  semanticDryRun: boolean
   quiet: boolean
   help: boolean
   version: boolean
@@ -87,6 +95,11 @@ export function parseArgs(argv: string[]): ParseResult {
     failBelow: null,
     maxFiles: CLI_DEFAULTS.maxFiles,
     maxFileBytes: CLI_DEFAULTS.maxFileBytes,
+    semantic: false,
+    llmUrl: null,
+    llmModel: null,
+    semanticLimit: 20,
+    semanticDryRun: false,
     quiet: false,
     help: false,
     version: false,
@@ -184,6 +197,38 @@ export function parseArgs(argv: string[]): ParseResult {
         const parsed = parseInteger(value, flag, 1, 100_000)
         if (typeof parsed !== 'number') return { ok: false, error: parsed }
         options.maxFiles = parsed
+        index += 1
+        break
+      }
+      case '--semantic':
+        options.semantic = true
+        index += 1
+        break
+      case '--semantic-dry-run':
+        options.semantic = true
+        options.semanticDryRun = true
+        index += 1
+        break
+      case '--llm-url': {
+        const value = takeValue(inline, flag)
+        if (typeof value !== 'string') return { ok: false, error: value }
+        options.llmUrl = value
+        index += 1
+        break
+      }
+      case '--llm-model': {
+        const value = takeValue(inline, flag)
+        if (typeof value !== 'string') return { ok: false, error: value }
+        options.llmModel = value
+        index += 1
+        break
+      }
+      case '--semantic-limit': {
+        const value = takeValue(inline, flag)
+        if (typeof value !== 'string') return { ok: false, error: value }
+        const parsed = parseInteger(value, flag, 1, 10_000)
+        if (typeof parsed !== 'number') return { ok: false, error: parsed }
+        options.semanticLimit = parsed
         index += 1
         break
       }

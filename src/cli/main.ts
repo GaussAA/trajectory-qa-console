@@ -9,13 +9,21 @@
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { analyze } from '../core/analysis'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
 import { BUILTIN_PACK_EN } from '../core/rules/builtin-pack-en'
 import { validatePack } from '../core/rules/contract'
 import type { RulePack } from '../core/model'
 import { isLocale, translate, type Locale, type MessageKey } from '../i18n/core'
+import {
+  judgeTrajectory,
+  toFindings,
+  buildMessages,
+  fetchTransport,
+  type LlmTransport,
+} from '../core/semantic'
 import { parseArgs, type CliOptions, type UsageError } from './args'
-import { runBatch } from './batch'
+import { displayPath, runBatch } from './batch'
 import { collectFiles } from './collect'
 import { renderHelp, renderSummary } from './summary'
 import { CLI_VERSION } from './version'
@@ -132,9 +140,41 @@ function writeReports(options: CliOptions, markdown: string, json: string): stri
   return written
 }
 
-export function main(argv: string[], io: { out?: Write; err?: Write } = {}): number {
+export interface CliDeps {
+  /** 注入传输层：测试用假实现，生产用 fetch。 */
+  transport?: LlmTransport
+  env?: Record<string, string | undefined>
+}
+
+export interface SemanticConfig {
+  url: string
+  model: string
+  apiKey: string
+}
+
+/** 密钥只从环境变量读：不落盘、不进命令行历史、不进日志。 */
+export function resolveSemantic(
+  options: CliOptions,
+  env: Record<string, string | undefined>,
+): { ok: true; config: SemanticConfig } | { ok: false; missing: string[] } {
+  const url = options.llmUrl ?? env.TQA_LLM_URL ?? ''
+  const model = options.llmModel ?? env.TQA_LLM_MODEL ?? ''
+  const apiKey = env.TQA_LLM_API_KEY ?? ''
+  const missing: string[] = []
+  if (!url) missing.push('--llm-url / TQA_LLM_URL')
+  if (!model) missing.push('--llm-model / TQA_LLM_MODEL')
+  if (!apiKey) missing.push('TQA_LLM_API_KEY')
+  return missing.length > 0 ? { ok: false, missing } : { ok: true, config: { url, model, apiKey } }
+}
+
+export async function main(
+  argv: string[],
+  io: { out?: Write; err?: Write } = {},
+  deps: CliDeps = {},
+): Promise<number> {
   const stdout = io.out ?? out
   const stderr = io.err ?? err
+  const env = deps.env ?? process.env
 
   const parsed = parseArgs(argv)
   if (!parsed.ok) {
@@ -179,14 +219,64 @@ export function main(argv: string[], io: { out?: Write; err?: Write } = {}): num
     pack = loaded.pack
   }
 
-  const result = runBatch(collected.value.files, {
+  // 试跑：只打印将要发送的提示词，不调用模型（便于审计与离线检查）。
+  if (options.semanticDryRun) {
+    const first = collected.value.files[0] as string
+    const read = readFileSync(first, 'utf8')
+    const analyzed = analyze({ source: read, label: displayPath(first), pack })
+    if (!analyzed.ok) {
+      stderr(`✗ ${t(`error.${analyzed.error.code}` as MessageKey)}\n`)
+      return EXIT.error
+    }
+    const session = analyzed.value[0]
+    if (!session) {
+      stderr(`✗ ${t('cli.nothingAnalyzable')}\n`)
+      return EXIT.error
+    }
+    stdout(`${JSON.stringify(buildMessages(session.trajectory), null, 2)}\n`)
+    return EXIT.ok
+  }
+
+  let semanticConfig: SemanticConfig | null = null
+  if (options.semantic) {
+    const resolved = resolveSemantic(options, env)
+    if (!resolved.ok) {
+      stderr(`✗ ${t('cli.err.semanticConfig', { missing: resolved.missing.join(' / ') })}\n`)
+      return EXIT.error
+    }
+    semanticConfig = resolved.config
+  }
+
+  const transport = deps.transport ?? fetchTransport
+  let judged = 0
+  const semanticHook = semanticConfig
+    ? async (session: Parameters<NonNullable<Parameters<typeof runBatch>[1]['semantic']>>[0]) => {
+        if (judged >= options.semanticLimit) return null
+        judged += 1
+        const result = await judgeTrajectory(session.trajectory, {
+          ...semanticConfig,
+          transport,
+          maxFindings: 8,
+          timeoutMs: 20_000,
+        })
+        if (!result.ok) throw new Error(result.error.message)
+        return toFindings(result.value, locale, session.id)
+      }
+    : undefined
+
+  const result = await runBatch(collected.value.files, {
     locale,
     pack,
     failBelow: options.failBelow,
     maxFileBytes: options.maxFileBytes,
+    semantic: semanticHook,
   })
 
   stdout(`${renderSummary(result, locale, { quiet: options.quiet })}\n`)
+
+  if (result.semantic && result.semantic.sessions >= options.semanticLimit) {
+    stderr(`${t('cli.semanticLimited', { limit: options.semanticLimit })}\n`)
+  }
 
   if (result.entries.length === 0) {
     stderr(`✗ ${t('cli.nothingAnalyzable')}\n`)

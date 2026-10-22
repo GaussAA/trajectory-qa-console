@@ -19,6 +19,7 @@ function result(overrides: Partial<BatchResult> = {}): BatchResult {
     worst: { file: 'examples/b.json', label: 'b', score: 54, grade: 'D' },
     gate: null,
     failedFiles: 0,
+    semantic: null,
     elapsedMs: 12,
     ...overrides,
   }

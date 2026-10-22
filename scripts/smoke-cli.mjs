@@ -55,6 +55,14 @@ check('未知选项给出提示', usage.stderr.includes('--help'))
 const english = run(['examples', '--locale', 'en', '--quiet'])
 check('英文输出', /files · \d+ sessions/.test(english.stdout), english.stdout.trim())
 
+const dryRun = run(['examples', '--semantic-dry-run'])
+check('--semantic-dry-run 退出码 0', dryRun.code === 0, `实际 ${dryRun.code}`)
+check('试跑输出提示词', dryRun.stdout.includes('只输出 JSON') && dryRun.stdout.includes('trajectory:'))
+
+const noKey = run(['examples', '--semantic'])
+check('缺配置时退出码 2', noKey.code === 2, `实际 ${noKey.code}`)
+check('缺配置给出变量名', noKey.stderr.includes('TQA_LLM_API_KEY'))
+
 const outDir = mkdtempSync(join(tmpdir(), 'tqa-smoke-'))
 try {
   const written = run(['examples', '--out', outDir, '--quiet'])
@@ -78,4 +86,4 @@ if (problems.length > 0) {
   process.exit(1)
 }
 
-console.log('✓ CLI 冒烟通过：help / 通过 / 门禁 / 用法错误 / 英文 / 英文包 / 落盘')
+console.log('✓ CLI 冒烟通过：help / 通过 / 门禁 / 用法错误 / 英文 / 英文包 / 语义试跑 / 落盘')

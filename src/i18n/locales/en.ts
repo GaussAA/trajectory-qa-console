@@ -319,4 +319,19 @@ export const en: Record<MessageKey, string> = {
   'compare.status.added': 'added',
   'compare.status.removed': 'removed',
 
+  'semantic.category.off_topic': 'Off-topic answer',
+  'semantic.category.unsupported_claim': 'Unsupported claim',
+  'semantic.category.overreach': 'Overreach',
+  'semantic.category.incoherent': 'Incoherent',
+  'semantic.category.unsafe': 'Unsafe or non-compliant',
+  'cli.err.semanticConfig': 'Semantic review needs configuration: {missing}',
+  'cli.semanticLimited':
+    'Semantic review hit its per-run limit; remaining sessions were skipped (--semantic-limit)',
+  'cli.semantic': 'Semantic review: {sessions} session(s), {findings} finding(s)',
+  'cli.semanticIssues': '{count} semantic review(s) failed and fell back to rule findings',
+  'cli.optSemantic': '--semantic               run the semantic pass (needs TQA_LLM_API_KEY)',
+  'cli.optSemanticDryRun': '--semantic-dry-run       print the prompt instead of calling the model',
+  'cli.optLlmUrl': '--llm-url <url>          OpenAI-compatible chat/completions URL',
+  'cli.optLlmModel': '--llm-model <model>      model name',
+  'cli.optSemanticLimit': '--semantic-limit <n>     max sessions to review per run (default: 20)',
 }

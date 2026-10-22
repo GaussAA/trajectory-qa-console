@@ -7,8 +7,8 @@
 
 import { readFileSync, statSync } from 'node:fs'
 import { basename, relative, sep } from 'node:path'
-import { analyze, gradeOf, scoreSession, type ScoreCard } from '../core/analysis'
-import type { AppError, RulePack } from '../core/model'
+import { analyze, gradeOf, scoreSession, type ScoreCard, type SessionAnalysis } from '../core/analysis'
+import type { AppError, Finding, RulePack } from '../core/model'
 import { translate, type Locale } from '../i18n/core'
 import { buildJsonReport, buildMarkdownReport, type ReportEntry } from '../lib/report'
 
@@ -34,12 +34,22 @@ export interface GateResult {
   offenders: GateOffender[]
 }
 
+/** 语义复核钩子：给一条会话，返回可直接进评分卡的 findings。
+ *  返回 `null` 表示「按预算跳过」，不计入已复核数；抛错表示失败，批量流程照旧。 */
+export type SemanticHook = (session: SessionAnalysis) => Promise<Finding[] | null>
+
+export interface SemanticIssue {
+  file: string
+  message: string
+}
+
 export interface BatchOptions {
   locale: Locale
   pack: RulePack
   failBelow: number | null
   maxFileBytes: number
   generatedAt?: Date
+  semantic?: SemanticHook
 }
 
 export interface BatchResult {
@@ -51,6 +61,8 @@ export interface BatchResult {
   worst: { file: string; label: string; score: number; grade: string } | null
   gate: GateResult | null
   failedFiles: number
+  /** 语义复核成功的会话数与新增 finding 数。 */
+  semantic: { sessions: number; findings: number; issues: SemanticIssue[] } | null
   elapsedMs: number
 }
 
@@ -101,28 +113,46 @@ function mean(values: number[]): number {
   return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
 }
 
-export function runBatch(files: string[], options: BatchOptions): BatchResult {
+export async function runBatch(files: string[], options: BatchOptions): Promise<BatchResult> {
   const started = Date.now()
   const outcomes: FileOutcome[] = []
   const entries: ReportEntry[] = []
+  const semantic = options.semantic ? { sessions: 0, findings: 0, issues: [] as SemanticIssue[] } : null
 
-  files.forEach((file, index) => {
+  for (const [index, file] of files.entries()) {
     const label = displayPath(file)
     const read = readTrace(file, options.maxFileBytes, options.locale)
     if (!read.ok) {
       outcomes.push({ file: label, sessions: 0, score: 0, grade: '—', error: read.error })
-      return
+      continue
     }
 
     const analyzed = analyze({ source: read.text, label, pack: options.pack, idPrefix: `file${index}` })
     if (!analyzed.ok) {
       outcomes.push({ file: label, sessions: 0, score: 0, grade: '—', error: analyzed.error })
-      return
+      continue
     }
 
     const cards: ScoreCard[] = []
     for (const session of analyzed.value) {
-      const card: ScoreCard = scoreSession(session, options.pack.dimensions)
+      const extra: Finding[] = []
+      if (options.semantic && semantic) {
+        try {
+          const judged = await options.semantic(session)
+          if (judged !== null) {
+            extra.push(...judged)
+            semantic.sessions += 1
+            semantic.findings += judged.length
+          }
+        } catch (error) {
+          // 语义失败不拖累整批：记一条 issue，规则结论照旧出。
+          semantic.issues.push({
+            file: label,
+            message: error instanceof Error ? error.message : String(error),
+          })
+        }
+      }
+      const card: ScoreCard = scoreSession(session, options.pack.dimensions, [], extra)
       cards.push(card)
       entries.push({ trajectory: session.trajectory, card })
     }
@@ -134,7 +164,7 @@ export function runBatch(files: string[], options: BatchOptions): BatchResult {
       score,
       grade: cards.length > 0 ? gradeOf(score).grade : '—',
     })
-  })
+  }
 
   const allScores = entries.map((entry) => entry.card.overall)
   const average = mean(allScores)
@@ -181,6 +211,7 @@ export function runBatch(files: string[], options: BatchOptions): BatchResult {
     worst,
     gate,
     failedFiles: outcomes.filter((outcome) => outcome.error).length,
+    semantic,
     elapsedMs: Date.now() - started,
   }
 }

@@ -89,6 +89,27 @@ node dist-cli/qa.mjs examples --pack en --locale en --out ./qa-out   # 全英文
 - 只有一条轨迹时不进对比，直接提示「至少两条」。
 - 深链：`?compare` 打开对比（配合 `#demo` 载入示例）。
 
+### 语义复核（可选，仅命令行）
+
+`src/core/semantic/`：`prompt`（摘要 + 输出契约）、`parse`（容错解析）、`judge`（超时/重试/取消）、
+`merge`（并入 `semantic` 维度，error 10 / warn 6 / info 3）。
+
+```bash
+export TQA_LLM_URL=https://api.example.com/v1/chat/completions
+export TQA_LLM_MODEL=your-model
+export TQA_LLM_API_KEY=...            # 只从环境变量读，不接受 --api-key
+
+node dist-cli/qa.mjs traces --semantic-dry-run      # 只看提示词，不调用模型
+node dist-cli/qa.mjs traces --semantic --fail-below 80
+```
+
+- 类别：`off_topic / unsupported_claim / overreach / incoherent / unsafe`，标题随语言翻译，
+  `reason` 与 `quote` 是模型原文（不翻译）。
+- 预算：`--semantic-limit`（默认 20 会话）、单会话最多 8 条；超长轨迹压到 120 步，
+  优先保留工具出错/未配对的步。
+- 失败降级：单次调用失败只记 issue，整批继续、退出码不变。
+- **界面不接模型**：守住离线承诺、CORS 与密钥托管三条线（ADR-0011）。
+
 ## 质量门槛
 
 `pnpm verify` = typecheck + lint + 覆盖率测试 + 构建。覆盖率门槛：行/函数/语句 ≥85%，分支 ≥75%。

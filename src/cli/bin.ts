@@ -9,7 +9,7 @@
 import { EXIT, main } from './main'
 
 try {
-  process.exitCode = main(process.argv.slice(2))
+  process.exitCode = await main(process.argv.slice(2))
 } catch (error) {
   const detail = error instanceof Error ? (error.stack ?? error.message) : String(error)
   process.stderr.write(`✗ ${detail}\n`)

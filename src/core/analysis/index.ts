@@ -124,9 +124,11 @@ export function scoreSession(
   analysis: SessionAnalysis,
   dimensions: Dimension[],
   annotations: Annotation[] = [],
+  /** 外部来源的 findings（如语义复核）。放在最后，规则与标注顺序不变。 */
+  extra: Finding[] = [],
 ): ScoreCard {
   const manual = annotationFindings(analysis.trajectory.id, annotations)
-  return scoreTrajectory([...analysis.findings, ...manual], dimensions, analysis.ruleIssues)
+  return scoreTrajectory([...analysis.findings, ...manual, ...extra], dimensions, analysis.ruleIssues)
 }
 
 export type { Finding, RuleIssue }

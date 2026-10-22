@@ -36,11 +36,11 @@ const options = {
 }
 
 describe('runBatch', () => {
-  it('summarizes files, sessions and the average', () => {
+  it('summarizes files, sessions and the average', async () => {
     const clean = tempFile('clean.json', CLEAN)
     const broken = tempFile('broken.json', BROKEN)
 
-    const result = runBatch([clean, broken], options)
+    const result = await runBatch([clean, broken], options)
     expect(result.files).toHaveLength(2)
     expect(result.entries).toHaveLength(2)
     expect(result.failedFiles).toBe(0)
@@ -51,58 +51,58 @@ describe('runBatch', () => {
     expect(JSON.parse(result.json).sessions).toHaveLength(2)
   })
 
-  it('keeps going when one file cannot be parsed', () => {
+  it('keeps going when one file cannot be parsed', async () => {
     const good = tempFile('good.json', CLEAN)
     const bad = tempFile('bad.json', '{not json')
 
-    const result = runBatch([good, bad], options)
+    const result = await runBatch([good, bad], options)
     expect(result.files.map((file) => file.error?.code)).toEqual([undefined, 'invalid-json'])
     expect(result.failedFiles).toBe(1)
     expect(result.entries).toHaveLength(1)
   })
 
-  it('marks an oversized file instead of reading it', () => {
+  it('marks an oversized file instead of reading it', async () => {
     const big = tempFile('big.json', CLEAN)
-    const result = runBatch([big], { ...options, maxFileBytes: 10 })
+    const result = await runBatch([big], { ...options, maxFileBytes: 10 })
     expect(result.files[0]?.error?.code).toBe('too-large')
     expect(result.entries).toHaveLength(0)
   })
 
-  it('fails the gate on any session below the threshold', () => {
+  it('fails the gate on any session below the threshold', async () => {
     const clean = tempFile('clean.json', CLEAN)
     const broken = tempFile('broken.json', BROKEN)
 
-    const passed = runBatch([clean], { ...options, failBelow: 50 })
+    const passed = await runBatch([clean], { ...options, failBelow: 50 })
     expect(passed.gate).toEqual({ threshold: 50, passed: true, offenders: [] })
 
-    const failed = runBatch([clean, broken], { ...options, failBelow: 90 })
+    const failed = await runBatch([clean, broken], { ...options, failBelow: 90 })
     expect(failed.gate?.passed).toBe(false)
     expect(failed.gate?.offenders.length).toBeGreaterThan(0)
     expect(failed.gate?.offenders[0]?.score).toBeLessThan(90)
   })
 
-  it('leaves the gate off when no threshold is given', () => {
+  it('leaves the gate off when no threshold is given', async () => {
     const clean = tempFile('clean.json', CLEAN)
-    expect(runBatch([clean], options).gate).toBeNull()
+    expect((await runBatch([clean], options)).gate).toBeNull()
   })
 
-  it('honours the locale in both formats', () => {
+  it('honours the locale in both formats', async () => {
     const clean = tempFile('clean.json', CLEAN)
-    const result = runBatch([clean], { ...options, locale: 'en' })
+    const result = await runBatch([clean], { ...options, locale: 'en' })
     expect(result.markdown.startsWith('# Trajectory QA Report')).toBe(true)
     expect(JSON.parse(result.json).locale).toBe('en')
   })
 })
 
 describe('displayPath', () => {
-  it('uses a unix separator so reports compare across platforms', () => {
+  it('uses a unix separator so reports compare across platforms', async () => {
     const root = mkdtempSync(join(tmpdir(), 'tqa-path-'))
     roots.push(root)
     const nested = join(root, 'nested', 'a.json')
     expect(displayPath(nested, root)).toBe('nested/a.json')
   })
 
-  it('falls back to the file name outside the working directory', () => {
+  it('falls back to the file name outside the working directory', async () => {
     expect(displayPath(join(tmpdir(), 'elsewhere', 'a.json'), join(process.cwd(), 'src'))).toBe('a.json')
   })
 })

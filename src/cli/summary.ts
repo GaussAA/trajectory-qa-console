@@ -101,6 +101,21 @@ export function renderSummary(result: BatchResult, locale: Locale, options: Summ
     }
   }
 
+  if (result.semantic) {
+    lines.push(
+      t('cli.semantic', {
+        sessions: result.semantic.sessions,
+        findings: result.semantic.findings,
+      }),
+    )
+    if (result.semantic.issues.length > 0) {
+      lines.push(t('cli.semanticIssues', { count: result.semantic.issues.length }))
+      for (const issue of result.semantic.issues.slice(0, 3)) {
+        lines.push(`  ✗ ${issue.file} · ${issue.message}`)
+      }
+    }
+  }
+
   if (result.failedFiles > 0) lines.push(t('cli.failedFiles', { count: result.failedFiles }))
 
   if (result.gate) {
@@ -136,6 +151,11 @@ export function renderHelp(locale: Locale, { version }: HelpOptions): string {
     `  ${t('cli.optFailBelow')}`,
     `  ${t('cli.optMaxFiles')}`,
     `  ${t('cli.optMaxBytes')}`,
+    `  ${t('cli.optSemantic')}`,
+    `  ${t('cli.optSemanticDryRun')}`,
+    `  ${t('cli.optLlmUrl')}`,
+    `  ${t('cli.optLlmModel')}`,
+    `  ${t('cli.optSemanticLimit')}`,
     `  ${t('cli.optQuiet')}`,
     `  ${t('cli.optHelp')}`,
     '',
