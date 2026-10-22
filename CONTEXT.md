@@ -78,6 +78,17 @@ node dist-cli/qa.mjs examples --pack en --locale en --out ./qa-out   # 全英文
 界面侧只改草稿、不直接生效：试错不留痕，「校验并应用」仍是唯一入口。
 试跑重算走 `useDeferredValue`，大轨迹下打字不会被卡。
 
+### 轨迹对比
+
+顶栏「对比」（需 ≥2 条轨迹）进入对比模式：左侧会话列表保留，中右两列合并。
+
+- `core/compare.ts`：`compareCards`（分数/维度/步数/token 增量）、
+  `diffFindings`（新增 / 已修复 / 仍在）、`alignSteps`（按 `角色|工具名` 做 LCS 对齐，
+  内容差异用 FNV-1a 指纹判定）、`summarizeAlignment`。
+- 对齐上限 `(n+1)(m+1) > 400_000` 时退化为按位置配对，**不假装对齐过**。
+- 只有一条轨迹时不进对比，直接提示「至少两条」。
+- 深链：`?compare` 打开对比（配合 `#demo` 载入示例）。
+
 ## 质量门槛
 
 `pnpm verify` = typecheck + lint + 覆盖率测试 + 构建。覆盖率门槛：行/函数/语句 ≥85%，分支 ≥75%。

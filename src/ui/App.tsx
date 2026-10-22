@@ -4,6 +4,7 @@ import type { AnalyzerPort } from '../app/analyzer'
 import { createPersistence, createBrowserStorage, type PersistencePort } from '../app/persistence'
 import { createTelemetry, installGlobalErrorHandlers, type Telemetry } from '../app/telemetry'
 import { DiagnosticsDrawer } from './DiagnosticsDrawer'
+import { ComparePanel } from './ComparePanel'
 import { EmptyState } from './EmptyState'
 import { ErrorBoundary } from './ErrorBoundary'
 import { FindingsPanel } from './FindingsPanel'
@@ -45,6 +46,8 @@ export default function App({
 
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false)
+  const [compareOpen, setCompareOpen] = useState(false)
+  const canCompare = state.sessions.length >= 2
   const [dragging, setDragging] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const dragDepth = useRef(0)
@@ -56,6 +59,7 @@ export default function App({
     const params = new URLSearchParams(window.location.search)
     if (params.has('drawer')) setDrawerOpen(true)
     if (params.has('diag')) setDiagnosticsOpen(true)
+    if (params.has('compare')) setCompareOpen(true)
   }, [])
 
   useEffect(() => {
@@ -181,6 +185,16 @@ export default function App({
             <Icon name="sliders" size={13} />
             {t('action.rules')}
           </button>
+          <button
+            type="button"
+            className={cx('btn ghost sm', compareOpen && 'active')}
+            onClick={() => setCompareOpen((open) => !open)}
+            disabled={!canCompare}
+            aria-pressed={compareOpen}
+            title={canCompare ? t('compare.title') : t('compare.needTwo')}
+          >
+            {t('action.compare')}
+          </button>
           <button type="button" className="btn ghost sm" onClick={() => setDiagnosticsOpen(true)}>
             {t('action.diagnostics')}
           </button>
@@ -219,7 +233,10 @@ export default function App({
           issues={state.issues}
         />
       ) : (
-        <main className="main-grid" aria-label={t('app.name')}>
+        <main
+          className={cx('main-grid', compareOpen && canCompare && 'compare-mode')}
+          aria-label={t('app.name')}
+        >
           <div className="col col-left">
             <ErrorBoundary nameKey="panel.sessions" compact onError={reportBoundaryError('sessions')}>
               <SessionList
@@ -233,40 +250,57 @@ export default function App({
             </ErrorBoundary>
           </div>
 
-          <div className="col col-center">
-            <ErrorBoundary nameKey="panel.score" compact onError={reportBoundaryError('score')}>
-              <ScorePanel
-                card={card}
-                trajectory={session.trajectory}
-                ruleIssueCount={card.ruleIssues.length}
+          {compareOpen && canCompare ? (
+            <ErrorBoundary nameKey="compare.title" compact onError={reportBoundaryError('compare')}>
+              <ComparePanel
+                sessions={state.sessions}
+                cards={cards}
+                initialBaseId={session.id}
+                onClose={() => setCompareOpen(false)}
               />
             </ErrorBoundary>
-            <ErrorBoundary nameKey="panel.timeline" compact onError={reportBoundaryError('timeline')}>
-              <Timeline
-                trajectory={session.trajectory}
-                card={card}
-                selectedStep={state.selectedStep}
-                onSelectStep={actions.chooseStep}
-              />
-            </ErrorBoundary>
-          </div>
+          ) : (
+            <>
+              <div className="col col-center">
+                <ErrorBoundary nameKey="panel.score" compact onError={reportBoundaryError('score')}>
+                  <ScorePanel
+                    card={card}
+                    trajectory={session.trajectory}
+                    ruleIssueCount={card.ruleIssues.length}
+                  />
+                </ErrorBoundary>
+                <ErrorBoundary nameKey="panel.timeline" compact onError={reportBoundaryError('timeline')}>
+                  <Timeline
+                    trajectory={session.trajectory}
+                    card={card}
+                    selectedStep={state.selectedStep}
+                    onSelectStep={actions.chooseStep}
+                  />
+                </ErrorBoundary>
+              </div>
 
-          <div className="col col-right">
-            <ErrorBoundary nameKey="panel.inspector" compact onError={reportBoundaryError('inspector')}>
-              <Inspector
-                trajectory={session.trajectory}
-                step={step}
-                card={card}
-                dimensions={state.pack.dimensions}
-                annotations={state.annotations}
-                onAnnotate={actions.addAnnotation}
-                onRemoveAnnotation={actions.removeAnnotation}
-              />
-            </ErrorBoundary>
-            <ErrorBoundary nameKey="panel.findings" compact onError={reportBoundaryError('findings')}>
-              <FindingsPanel card={card} dimensions={state.pack.dimensions} onLocate={actions.chooseStep} />
-            </ErrorBoundary>
-          </div>
+              <div className="col col-right">
+                <ErrorBoundary nameKey="panel.inspector" compact onError={reportBoundaryError('inspector')}>
+                  <Inspector
+                    trajectory={session.trajectory}
+                    step={step}
+                    card={card}
+                    dimensions={state.pack.dimensions}
+                    annotations={state.annotations}
+                    onAnnotate={actions.addAnnotation}
+                    onRemoveAnnotation={actions.removeAnnotation}
+                  />
+                </ErrorBoundary>
+                <ErrorBoundary nameKey="panel.findings" compact onError={reportBoundaryError('findings')}>
+                  <FindingsPanel
+                    card={card}
+                    dimensions={state.pack.dimensions}
+                    onLocate={actions.chooseStep}
+                  />
+                </ErrorBoundary>
+              </div>
+            </>
+          )}
         </main>
       )}
 

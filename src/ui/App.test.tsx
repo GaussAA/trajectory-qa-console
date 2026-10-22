@@ -49,6 +49,25 @@ describe('App smoke', () => {
     expect(await screen.findByText('D 级')).toBeTruthy()
   })
 
+  it('keeps compare disabled until two traces exist, then toggles the view', async () => {
+    const { user } = setup()
+    const compare = screen.getByRole('button', { name: '对比' }) as HTMLButtonElement
+    expect(compare.disabled).toBe(true)
+
+    await loadSamples(user)
+    await waitFor(() =>
+      expect((screen.getByRole('button', { name: '对比' }) as HTMLButtonElement).disabled).toBe(false),
+    )
+
+    await user.click(screen.getByRole('button', { name: '对比' }))
+    expect(await screen.findByText('轨迹对比')).toBeTruthy()
+    expect(screen.getByRole('button', { name: /退出对比/ })).toBeTruthy()
+
+    await user.click(screen.getByRole('button', { name: /退出对比/ }))
+    await waitFor(() => expect(screen.queryByText('轨迹对比')).toBeNull())
+    expect(screen.getByText('时间线')).toBeTruthy()
+  })
+
   it('records a manual annotation and surfaces it as a finding', async () => {
     const { user } = setup()
     await loadSamples(user)

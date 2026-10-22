@@ -296,4 +296,27 @@ export const en: Record<MessageKey, string> = {
   'cli.err.write-failed': 'Failed to write {path}: {message}',
   'cli.err.run-failed': 'Analysis failed: {message}',
 
+  'action.compare': 'Compare',
+
+  'compare.title': 'Trace comparison',
+  'compare.base': 'Baseline',
+  'compare.target': 'Candidate',
+  'compare.close': 'Exit compare',
+  'compare.dimensions': 'Dimensions',
+  'compare.findings': 'Findings',
+  'compare.added': '{count} new',
+  'compare.resolved': '{count} fixed',
+  'compare.persisted': '{count} remaining',
+  'compare.steps': 'Steps',
+  'compare.stepDiff': 'Step differences',
+  'compare.changed': 'content change(s)',
+  'compare.structural': 'structural add/remove',
+  'compare.none': 'No differences here',
+  'compare.limit': 'Showing the first {count} differences',
+  'compare.needTwo': 'Load at least two traces to compare',
+  'compare.status.same': 'same',
+  'compare.status.changed': 'changed',
+  'compare.status.added': 'added',
+  'compare.status.removed': 'removed',
+
 }

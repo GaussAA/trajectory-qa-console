@@ -290,6 +290,28 @@ export const zhCN = {
   'cli.err.pack-invalid': '规则包校验失败：{detail}',
   'cli.err.write-failed': '写入 {path} 失败：{message}',
   'cli.err.run-failed': '分析过程出错：{message}',
+  'action.compare': '对比',
+
+  'compare.title': '轨迹对比',
+  'compare.base': '基准',
+  'compare.target': '对照',
+  'compare.close': '退出对比',
+  'compare.dimensions': '维度得分',
+  'compare.findings': '问题变化',
+  'compare.added': '新增 {count}',
+  'compare.resolved': '已修复 {count}',
+  'compare.persisted': '仍在 {count}',
+  'compare.steps': '步骤',
+  'compare.stepDiff': '步骤差异',
+  'compare.changed': '处内容变化',
+  'compare.structural': '处结构增删',
+  'compare.none': '这一段没有差异',
+  'compare.limit': '仅显示前 {count} 处差异',
+  'compare.needTwo': '至少需要两条轨迹才能对比',
+  'compare.status.same': '相同',
+  'compare.status.changed': '内容变化',
+  'compare.status.added': '新增步',
+  'compare.status.removed': '删除步',
 } as const
 
 export type MessageKey = keyof typeof zhCN
