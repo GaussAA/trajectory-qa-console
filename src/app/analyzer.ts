@@ -53,9 +53,27 @@ let requestSequence = 0
 /** Injectable so tests can exercise the protocol without a real Worker. */
 export type WorkerFactory = () => Worker
 
-export function createWorkerAnalyzer(createWorker?: WorkerFactory): AnalyzerPort | null {
-  if (!createWorker && typeof Worker === 'undefined') return null
+export interface WorkerAnalyzerOptions {
+  /** A worker that never answers must not hang the UI forever. */
+  timeoutMs?: number
+}
+
+/** Blob workers are blocked on `file://` (origin "null"), which is exactly how
+ *  the single-file build is usually opened. Probe the environment instead of
+ *  discovering it by hanging. */
+export function canUseWorker(): boolean {
+  if (typeof Worker === 'undefined') return false
+  if (typeof location !== 'undefined' && location.protocol === 'file:') return false
+  return true
+}
+
+export function createWorkerAnalyzer(
+  createWorker?: WorkerFactory,
+  options: WorkerAnalyzerOptions = {},
+): AnalyzerPort | null {
+  if (!createWorker && !canUseWorker()) return null
   const factory: WorkerFactory = createWorker ?? (() => new AnalyzeWorker())
+  const timeoutMs = options.timeoutMs ?? 8000
 
   return {
     analyze(request, signal) {
@@ -73,6 +91,7 @@ export function createWorkerAnalyzer(createWorker?: WorkerFactory): AnalyzerPort
         }
 
         const id = (requestSequence += 1)
+        const disposers: (() => void)[] = []
 
         const onMessage = (event: MessageEvent<WorkerResponse>) => {
           if (event.data?.id !== id) return
@@ -85,6 +104,7 @@ export function createWorkerAnalyzer(createWorker?: WorkerFactory): AnalyzerPort
           finish(fail('aborted', '已取消分析'))
         }
         const cleanup = () => {
+          for (const dispose of disposers) dispose()
           worker.removeEventListener('message', onMessage)
           worker.removeEventListener('error', onError)
           signal?.removeEventListener('abort', onAbort)
@@ -103,6 +123,11 @@ export function createWorkerAnalyzer(createWorker?: WorkerFactory): AnalyzerPort
           return
         }
         signal?.addEventListener('abort', onAbort, { once: true })
+
+        const watchdog = setTimeout(() => {
+          finish(fail('analysis-failed', `分析线程 ${timeoutMs}ms 未响应，已降级`))
+        }, timeoutMs)
+        disposers.push(() => clearTimeout(watchdog))
 
         const message: WorkerRequest = {
           id,
@@ -128,13 +153,16 @@ export function createAnalyzer(options: AnalyzerOptions = {}): AnalyzerPort {
   const sync = createSyncAnalyzer()
   const worker = options.forceSync ? null : (options.workerFactory?.() ?? createWorkerAnalyzer())
   const threshold = options.thresholdChars ?? WORKER_THRESHOLD_CHARS
+  let workerHealthy = worker !== null
 
   return {
     async analyze(request, signal) {
-      if (worker && request.text.length > threshold) {
+      if (worker && workerHealthy && request.text.length > threshold) {
         const result = await worker.analyze(request, signal)
         // Degrade rather than fail: a worker problem must not cost the user data.
         if (!result.ok && result.error.code === 'analysis-failed') {
+          // Remember the failure so the next file does not pay the timeout again.
+          workerHealthy = false
           return sync.analyze(request, signal)
         }
         return result

@@ -1,5 +1,11 @@
-import { describe, expect, it } from 'vitest'
-import { createAnalyzer, createSyncAnalyzer, createWorkerAnalyzer, type AnalyzerPort } from './analyzer'
+import { describe, expect, it, vi } from 'vitest'
+import {
+  canUseWorker,
+  createAnalyzer,
+  createSyncAnalyzer,
+  createWorkerAnalyzer,
+  type AnalyzerPort,
+} from './analyzer'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
 import type { WorkerRequest } from '../workers/protocol'
 
@@ -59,7 +65,44 @@ describe('analyzer port', () => {
   })
 
   it('has no worker adapter outside a browser', () => {
+    expect(canUseWorker()).toBe(false)
     expect(createWorkerAnalyzer()).toBeNull()
+  })
+
+  it('times out a silent worker instead of hanging', async () => {
+    vi.useFakeTimers()
+    try {
+      const worker = new FakeWorker()
+      const port = createWorkerAnalyzer(() => worker as unknown as Worker, { timeoutMs: 20 })
+      const promise = port?.analyze(request)
+      vi.advanceTimersByTime(20)
+      const result = await promise
+      expect(result?.ok).toBe(false)
+      if (result && !result.ok) expect(result.error.code).toBe('analysis-failed')
+      expect(worker.terminated).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('stops retrying a broken worker after the first failure', async () => {
+    let workerCalls = 0
+    const analyzer = createAnalyzer({
+      thresholdChars: 1,
+      workerFactory: () => ({
+        analyze: async () => {
+          workerCalls += 1
+          return { ok: false, error: { code: 'analysis-failed', message: 'broken' } }
+        },
+      }),
+    })
+
+    const first = await analyzer.analyze(request)
+    const second = await analyzer.analyze({ ...request, label: 'second.json' })
+
+    expect(first.ok).toBe(true)
+    expect(second.ok).toBe(true)
+    expect(workerCalls).toBe(1)
   })
 
   it('speaks the worker protocol and terminates the thread', async () => {

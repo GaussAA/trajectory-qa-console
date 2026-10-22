@@ -212,3 +212,37 @@ export const SAMPLE_FILES: SampleFile[] = [
     content: JSON.stringify(STRUCTURE, null, 2),
   },
 ]
+
+/** Synthetic long trace used by the `#stress:N` deep link and by manual
+ *  performance checks. Shapes stay realistic: user → tool call → tool result. */
+export function buildStressTrace(steps = 5000): string {
+  const messages: unknown[] = [{ role: 'system', content: '你是压力测试用的助手，回答需引用检索结果。' }]
+  let turn = 0
+
+  while (messages.length < steps - 1) {
+    messages.push({ role: 'user', content: `第 ${turn} 轮：请检索并总结第 ${turn} 号文档。` })
+    messages.push({
+      role: 'assistant',
+      tool_calls: [
+        {
+          id: `stress-${turn}`,
+          type: 'function',
+          function: {
+            name: turn % 7 === 0 ? 'search_docs' : 'fetch_doc',
+            arguments: `{"q":"doc-${turn}","top_k":3}`,
+          },
+        },
+      ],
+    })
+    messages.push({
+      role: 'tool',
+      tool_call_id: `stress-${turn}`,
+      name: turn % 7 === 0 ? 'search_docs' : 'fetch_doc',
+      content: `doc-${turn}: ${'内容片段 '.repeat(28)}`,
+    })
+    turn += 1
+  }
+
+  messages.push({ role: 'assistant', content: '压力测试轨迹结束，共整理若干结论。' })
+  return JSON.stringify(messages)
+}

@@ -51,18 +51,15 @@ export default function App({
   }, [])
 
   useEffect(() => {
-    const match = /^#demo(?::(\d+))?$/.exec(window.location.hash)
-    if (!match || demoLoaded.current) return
+    const hash = window.location.hash
+    const demo = /^#demo(?::(\d+))?$/.exec(hash)
+    const stress = /^#stress(?::(\d+))?$/.exec(hash)
+    if ((!demo && !stress) || demoLoaded.current) return
     demoLoaded.current = true
-    actions.loadSamples(match[1] ? Number(match[1]) - 1 : undefined)
+    if (demo) actions.loadSamples(demo[1] ? Number(demo[1]) - 1 : undefined)
+    else actions.loadStress(stress?.[1] ? Number(stress[1]) : undefined)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  useEffect(() => {
-    if (state.selectedStep === null) return
-    const element = document.getElementById(`step-row-${state.selectedStep}`)
-    element?.scrollIntoView?.({ block: 'center', behavior: 'smooth' })
-  }, [state.selectedStep, state.selectedId])
 
   const reportBoundaryError = useCallback(
     (name: string) => (error: Error, info: ErrorInfo) => {

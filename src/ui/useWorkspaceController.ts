@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import type { ScoreCard, SessionAnalysis } from '../core/analysis'
 import type { Annotation, RulePack, Severity } from '../core/model'
+import { buildStressTrace } from '../core/sample'
 import { createAnalyzer, type AnalyzerPort } from '../app/analyzer'
 import { buildDiagnostics, buildReportBundle, downloadText } from '../app/exporters'
 import { readFiles, sampleInputs, type IngestFile, type IngestIssue, type TextInput } from '../app/ingest'
@@ -195,6 +196,14 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
     [ingest],
   )
 
+  /** Demo/performance hook: `#stress:10000` loads a synthetic long trace. */
+  const loadStress = useCallback(
+    (steps = 5000) => {
+      void ingest([{ name: `stress-${steps}.json`, text: buildStressTrace(steps) }])
+    },
+    [ingest],
+  )
+
   const cancel = useCallback(() => {
     abortRef.current?.abort()
     abortRef.current = null
@@ -282,6 +291,7 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
     actions: {
       ingestFiles,
       loadSamples,
+      loadStress,
       cancel,
       clear,
       chooseSession,

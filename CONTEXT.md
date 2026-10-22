@@ -47,3 +47,5 @@ src/lib/      格式化与报告文本
 样式分四层（tokens / base / layout / components），只允许上层引用下层变量，不靠权重压制。
 交互元素均可键盘到达；抽屉有焦点陷阱与 Esc 关闭；动效尊重 `prefers-reduced-motion`。
 性能基线：1k 步 < 500ms、10k 步 < 3s（实测约 20ms / 98ms）。
+时间线 > 400 步切紧凑虚拟滚动（固定行高 46px），概览条降采样至 ≤180 段。
+调试深链：`#demo` / `#demo:N` 载入示例，`#stress:N` 生成 N 步合成轨迹，`?drawer=1`、`?diag=1` 打开抽屉。
