@@ -59,6 +59,42 @@ describe('rule engine', () => {
     expect(ruleIds(trace)).toContain('structure-orphan-result')
   })
 
+  it('escalates very long traces instead of letting them score A', () => {
+    const messages: unknown[] = [{ role: 'user', content: '开始' }]
+    for (let i = 0; i < 1001; i += 1) messages.push({ role: 'assistant', content: `第 ${i} 步` })
+
+    const result = parseTrajectory(JSON.stringify(messages))
+    if (!result.ok) throw new Error(result.error.message)
+    const trajectory = result.value[0]
+    if (!trajectory) throw new Error('trace did not parse')
+
+    const { findings } = runRules(trajectory, DEFAULT_PACK)
+    const ids = findings.map((finding) => finding.ruleId)
+    expect(ids).toContain('eff-long-trace')
+    expect(ids).toContain('eff-marathon-trace')
+    expect(ids).toContain('eff-runaway-trace')
+
+    const card = scoreTrajectory(findings, DIMENSIONS)
+    expect(card.counts.error).toBeGreaterThan(0)
+    expect(card.overall).toBeLessThanOrEqual(74)
+    expect(card.grade).toBe('C')
+  })
+
+  it('keeps a 300-step trace at warning level rather than error', () => {
+    const messages: unknown[] = [{ role: 'user', content: '开始' }]
+    for (let i = 0; i < 299; i += 1) messages.push({ role: 'assistant', content: `第 ${i} 步` })
+    messages.push({ role: 'assistant', content: '完成' })
+
+    const result = parseTrajectory(JSON.stringify(messages))
+    if (!result.ok) throw new Error(result.error.message)
+    const trajectory = result.value[0]
+    if (!trajectory) throw new Error('trace did not parse')
+
+    const { findings } = runRules(trajectory, DEFAULT_PACK)
+    expect(findings.some((finding) => finding.ruleId === 'eff-marathon-trace')).toBe(true)
+    expect(findings.some((finding) => finding.ruleId === 'eff-runaway-trace')).toBe(false)
+  })
+
   it('reports a per-step finding for every offending step', () => {
     const trajectory = parseOrThrow(BROKEN_TRACE)
     if (!trajectory) throw new Error('trace did not parse')
