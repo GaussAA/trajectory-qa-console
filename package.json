@@ -12,6 +12,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "build:cli": "vite build --config vite.cli.config.ts",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings=0",
@@ -20,7 +21,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "verify": "pnpm typecheck && pnpm lint && pnpm test:coverage && node scripts/check-i18n.mjs && vite build && node scripts/check-artifact.mjs",
+    "verify": "pnpm typecheck && pnpm lint && pnpm test:coverage && node scripts/check-i18n.mjs && vite build && node scripts/check-artifact.mjs && pnpm build:cli && node scripts/smoke-cli.mjs",
     "ci": "pnpm verify"
   },
   "dependencies": {
@@ -47,5 +48,8 @@
     "vite": "^7.0.0",
     "vite-plugin-singlefile": "^2.3.0",
     "vitest": "^3.2.0"
+  },
+  "bin": {
+    "trajectory-qa": "dist-cli/qa.mjs"
   }
 }

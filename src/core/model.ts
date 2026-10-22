@@ -15,6 +15,7 @@ export type ErrorCode =
   | 'too-many-steps'
   | 'invalid-pack'
   | 'analysis-failed'
+  | 'read-failed'
   | 'aborted'
 
 export interface AppError {

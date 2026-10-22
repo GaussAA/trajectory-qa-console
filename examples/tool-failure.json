@@ -1,0 +1,33 @@
+{
+  "model": "qwen-max",
+  "messages": [
+    {
+      "role": "system",
+      "content": "你是工单处理助手，失败时要如实告知用户。"
+    },
+    {
+      "role": "user",
+      "content": "帮我把工单 TK-2048 标记为已解决。"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call-a",
+          "type": "function",
+          "function": {
+            "name": "update_ticket",
+            "arguments": "{\"ticketId\":\"TK-2048\",\"status\":\"resolved\""
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call-b",
+      "content": "Error: ticket not found",
+      "is_error": true
+    }
+  ]
+}

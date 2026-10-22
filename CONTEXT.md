@@ -40,6 +40,27 @@ src/workers/  分析线程（Vite ?worker&inline，单文件内联）
 src/lib/      格式化与报告文本
 ```
 
+### 命令行（`src/cli`）
+
+| 文件 | 职责 |
+|---|---|
+| `args.ts` | 参数解析，错误以 `UsageErrorCode` 返回（不含文案） |
+| `collect.ts` | 目录递归展开、跳过依赖/隐藏目录、超限即失败 |
+| `batch.ts` | 逐文件 `analyze` + 评分 + 两份报告 + 门禁判定（只算，不打印） |
+| `summary.ts` | 终端表格与帮助（CJK 按两列对齐） |
+| `main.ts` | 参数 → 收集 → 批处理 → 打印/落盘 → 退出码 |
+| `bin.ts` | 进程边界：argv、`process.exitCode`、未捕获异常 |
+
+```bash
+pnpm build:cli                                  # 产出 dist-cli/qa.mjs
+node dist-cli/qa.mjs examples                   # 列表 + 结论
+node dist-cli/qa.mjs examples --fail-below 90   # CI 门禁（不通过退出 1）
+node dist-cli/qa.mjs examples --out ./qa-out --locale en
+```
+
+退出码：`0` 通过、`1` 门禁未通过、`2` 用法/读写/无可分析内容。**空跑必须是 2**——
+没有可分析内容却返回 0，等于让门禁永远绿。
+
 ## 质量门槛
 
 `pnpm verify` = typecheck + lint + 覆盖率测试 + 构建。覆盖率门槛：行/函数/语句 ≥85%，分支 ≥75%。
@@ -65,6 +86,8 @@ src/lib/      格式化与报告文本
 ## 持续集成
 
 `.github/workflows/ci.yml`：push 到 main、PR、手动触发；先 `pnpm install --frozen-lockfile`，再 `pnpm verify`。
-`verify` 的最后一步是**产物契约校验**（`scripts/check-artifact.mjs`）：不得含外部脚本/样式/远程图片，
+`verify` 依次是：typecheck → lint → 覆盖率测试 → 文案扫描（`src/ui` + `src/cli`）→ 单文件构建 →
+产物契约校验 → CLI 构建 → CLI 冒烟（`scripts/smoke-cli.mjs`）。
+产物契约校验（`scripts/check-artifact.mjs`）要求：不得含外部脚本/样式/远程图片，
 必须有 `#root`，体积不超过 1500 KB（`ARTIFACT_BUDGET_KB` 可调）。
 产物与覆盖率作为 artifact 上传（保留 14 / 7 天）。本地等价入口：`pnpm verify`。

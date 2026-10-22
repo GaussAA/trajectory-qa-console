@@ -40,11 +40,22 @@ jobs:
       - name: Verify
         run: pnpm verify
 
+      - name: CLI smoke (built bundle)
+        run: node scripts/smoke-cli.mjs
+
       - name: Upload single-file artifact
         uses: actions/upload-artifact@v4
         with:
           name: trajectory-qa-console
           path: dist/index.html
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload CLI bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: trajectory-qa-cli
+          path: dist-cli/qa.mjs
           if-no-files-found: error
           retention-days: 14
 

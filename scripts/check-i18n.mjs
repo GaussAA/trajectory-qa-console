@@ -9,7 +9,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
-const ROOTS = ['src/ui']
+const ROOTS = ['src/ui', 'src/cli']
 const CJK = /[\u4e00-\u9fff]/
 
 function walk(dir) {
@@ -22,19 +22,41 @@ function walk(dir) {
   return files
 }
 
+/** 去掉行尾注释，但保留字符串里的 `//`（例如 'https://…'）。 */
+function stripLineComment(line) {
+  let quote = null
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index]
+    if (quote) {
+      if (char === '\\') {
+        index += 1
+        continue
+      }
+      if (char === quote) quote = null
+      continue
+    }
+    if (char === '"' || char === "'" || char === '`') {
+      quote = char
+      continue
+    }
+    if (char === '/' && line[index + 1] === '/') return line.slice(0, index)
+  }
+  return line
+}
+
 const problems = []
 for (const file of ROOTS.flatMap(walk)) {
   const source = readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
   source.split('\n').forEach((line, index) => {
-    const code = line.replace(/^\s*\/\/.*$/, '')
+    const code = stripLineComment(line)
     if (CJK.test(code)) problems.push(`${file}:${index + 1}  ${code.trim()}`)
   })
 }
 
 if (problems.length > 0) {
-  console.error('✗ UI 中存在硬编码中文，请移入 src/i18n 字典：')
+  console.error('✗ UI/CLI 中存在硬编码中文，请移入 src/i18n 字典：')
   for (const problem of problems) console.error(`  ${problem}`)
   process.exit(1)
 }
 
-console.log('✓ UI 文案全部经字典，无硬编码中文')
+console.log('✓ UI 与 CLI 文案全部经字典，无硬编码中文')
