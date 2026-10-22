@@ -1,70 +1,25 @@
-/** UI 文案的单一入口。
+/** React 侧入口：Provider 与 hooks。
  *
- *  设计取舍：
- *  1. 中文是源语言，键集合即类型；英文缺键会在编译期失败，不靠运行时兜底。
- *  2. 键是扁平的 `域.语义`，插值用 `{name}`，两语言的占位符由测试强制一致。
- *  3. 规则包里的标题与提示属「数据」，不在这里翻译——换语言需另导规则包。
+ *  纯逻辑（字典、插值、探测、时间格式化）在 `./core`，报告层直接用它，
+ *  这样非组件代码无需依赖 React。这里只做转发与状态。
  */
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { en } from './locales/en'
-import { zhCN, type MessageKey } from './locales/zh-CN'
+import { detectLocale, isLocale, LOCALE_STORAGE_KEY, translate, type Locale, type Translate } from './core'
 
-export type { MessageKey }
-
-export type Locale = 'zh-CN' | 'en'
-
-export type TranslateParams = Record<string, string | number>
-
-export type Translate = (key: MessageKey, params?: TranslateParams) => string
-
-export const LOCALES: { id: Locale; label: string }[] = [
-  { id: 'zh-CN', label: '中文' },
-  { id: 'en', label: 'EN' },
-]
-
-export const LOCALE_STORAGE_KEY = 'tqa.locale'
-
-const DICTIONARIES: Record<Locale, Record<MessageKey, string>> = {
-  'zh-CN': zhCN,
-  en,
-}
-
-export function getDictionary(locale: Locale): Record<MessageKey, string> {
-  return DICTIONARIES[locale]
-}
-
-export function isLocale(value: unknown): value is Locale {
-  return value === 'zh-CN' || value === 'en'
-}
-
-/** Replaces `{name}` placeholders; unknown placeholders stay visible on
- *  purpose — a silently blank label is harder to diagnose than `{count}`. */
-export function interpolate(template: string, params?: TranslateParams): string {
-  if (!params) return template
-  return template.replace(/\{(\w+)\}/g, (match, key: string) => {
-    const value = params[key]
-    return value === undefined ? match : String(value)
-  })
-}
-
-export function hasMessage(locale: Locale, key: string): key is MessageKey {
-  return Object.prototype.hasOwnProperty.call(DICTIONARIES[locale], key)
-}
-
-export function translate(locale: Locale, key: MessageKey, params?: TranslateParams): string {
-  const template = DICTIONARIES[locale][key]
-  return interpolate(template ?? key, params)
-}
-
-/** Priority: explicit choice > Chinese system locale > English. */
-export function detectLocale(stored?: string | null, navigatorLanguage?: string): Locale {
-  if (isLocale(stored)) return stored
-  if (navigatorLanguage) {
-    return navigatorLanguage.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en'
-  }
-  return 'zh-CN'
-}
+export {
+  LOCALES,
+  LOCALE_STORAGE_KEY,
+  detectLocale,
+  formatDateTime,
+  getDictionary,
+  hasMessage,
+  interpolate,
+  isLocale,
+  labelFor,
+  translate,
+} from './core'
+export type { Locale, MessageKey, Translate, TranslateParams } from './core'
 
 function readStoredLocale(): string | null {
   try {
@@ -102,6 +57,7 @@ export function I18nProvider({ children, initialLocale }: { children: ReactNode;
   }, [locale])
 
   const setLocale = useCallback((next: Locale) => {
+    if (!isLocale(next)) return
     setLocaleState(next)
     writeStoredLocale(next)
   }, [])

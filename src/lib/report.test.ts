@@ -28,6 +28,7 @@ describe('report builders', () => {
       entries,
       pack: DEFAULT_PACK,
       generatedAt: new Date('2026-10-22T12:00:00Z'),
+      locale: 'zh-CN',
     })
     expect(markdown).toContain('# 轨迹质检报告')
     expect(markdown).toContain('| 会话 | 步骤 | token | 总分 |')
@@ -43,11 +44,61 @@ describe('report builders', () => {
         entries,
         pack: DEFAULT_PACK,
         generatedAt: new Date('2026-10-22T12:00:00Z'),
+        locale: 'zh-CN',
       }),
     )
     expect(json.sessions).toHaveLength(1)
     expect(json.sessions[0].score).toBe(card.overall)
     expect(json.sessions[0].findings.length).toBeGreaterThan(0)
     expect(json.rulePack.rules).toBe(DEFAULT_PACK.rules.length)
+  })
+
+  it('localizes the whole markdown report for English', () => {
+    const markdown = buildMarkdownReport({
+      entries,
+      pack: DEFAULT_PACK,
+      generatedAt: new Date('2026-10-22T12:00:00Z'),
+      locale: 'en',
+    })
+    expect(markdown).toContain('# Trajectory QA Report')
+    expect(markdown).toContain('| Session | Steps | tokens | Score | Grade |')
+    expect(markdown).toContain('### Findings')
+    expect(markdown).toContain('Scoring:')
+
+    // Rule titles/messages are rule-pack data and stay Chinese on purpose, so
+    // only the chrome — everything before the findings list plus the footer —
+    // must be CJK-free.
+    const chrome = markdown.slice(0, markdown.indexOf('### Findings')).split('\n')
+    const chineseLines = chrome.filter((line) => /[\u4e00-\u9fff]/.test(line))
+    // The only Chinese left in the chrome is the rule-pack name — also data.
+    expect(chineseLines).toHaveLength(1)
+    expect(chineseLines[0]).toContain(DEFAULT_PACK.name)
+    expect(markdown.slice(markdown.lastIndexOf('\n---\n'))).not.toMatch(/[\u4e00-\u9fff]/)
+  })
+
+  it('keeps json keys stable but localizes readable labels', () => {
+    const zh = JSON.parse(
+      buildJsonReport({
+        entries,
+        pack: DEFAULT_PACK,
+        generatedAt: new Date('2026-10-22T12:00:00Z'),
+        locale: 'zh-CN',
+      }),
+    )
+    const en = JSON.parse(
+      buildJsonReport({
+        entries,
+        pack: DEFAULT_PACK,
+        generatedAt: new Date('2026-10-22T12:00:00Z'),
+        locale: 'en',
+      }),
+    )
+
+    // Machine contract: identical shape, only label values differ.
+    expect(Object.keys(en.sessions[0]).sort()).toEqual(Object.keys(zh.sessions[0]).sort())
+    expect(en.sessions[0].dimensions[0].id).toBe(zh.sessions[0].dimensions[0].id)
+    expect(zh.sessions[0].dimensions[0].label).toBe('结构合法性')
+    expect(en.sessions[0].dimensions[0].label).toBe('Structure')
+    expect(en.locale).toBe('en')
   })
 })

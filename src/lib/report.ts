@@ -1,8 +1,23 @@
-import type { ScoreCard } from '../core/analysis'
-import type { RulePack, Trajectory } from '../core/model'
-import { formatTokens } from '../core/estimate'
+/** 报告组装：Markdown（给人看）与 JSON（给机器看）。
+ *
+ *  双语边界：
+ *  - Markdown 全量本地化（标题、表头、结论、时间格式）。
+ *  - JSON 的**键名**是消费方契约，永不翻译；只有值的可读标签（gradeLabel、
+ *    维度 label）随语言变化。CI 解析 JSON 不会因语言切换而断。
+ *  - 规则包里的规则标题与提示属数据，任何语言下都保持原样。
+ */
 
-const SEVERITY_TEXT: Record<string, string> = { error: '严重', warn: '警告', info: '提示' }
+import { formatTokens } from '../core/estimate'
+import type { ScoreCard } from '../core/analysis'
+import type { RulePack, Severity, Trajectory } from '../core/model'
+import {
+  formatDateTime,
+  labelFor,
+  translate,
+  type Locale,
+  type MessageKey,
+  type Translate,
+} from '../i18n/core'
 
 /** One session's report material. Passing entries — not two collections keyed by
  *  an id — removes the chance of the card and the trajectory drifting apart. */
@@ -15,20 +30,38 @@ export interface ReportInput {
   entries: ReportEntry[]
   pack: RulePack
   generatedAt: Date
+  locale: Locale
+}
+
+const SEVERITY_KEY: Record<Severity, MessageKey> = {
+  error: 'severity.error',
+  warn: 'severity.warn',
+  info: 'severity.info',
 }
 
 function escapeCell(text: string): string {
   return text.replace(/\|/g, '\\|').replace(/\n+/g, ' ')
 }
 
-export function buildMarkdownReport({ entries, pack, generatedAt }: ReportInput): string {
+function severityText(t: Translate, severity: Severity): string {
+  const key = SEVERITY_KEY[severity]
+  return key ? t(key) : severity
+}
+
+export function buildMarkdownReport({ entries, pack, generatedAt, locale }: ReportInput): string {
+  const t: Translate = (key, params) => translate(locale, key, params)
   const lines: string[] = []
 
-  lines.push('# 轨迹质检报告')
+  lines.push(`# ${t('report.title')}`)
   lines.push('')
-  lines.push(`- 生成时间：${generatedAt.toLocaleString('zh-CN')}`)
-  lines.push(`- 规则包：${pack.name}（${pack.rules.filter((rule) => rule.enabled !== false).length} 条启用）`)
-  lines.push(`- 会话数：${entries.length}`)
+  lines.push(`- ${t('report.generatedAt', { time: formatDateTime(locale, generatedAt) })}`)
+  lines.push(
+    `- ${t('report.rulePack', {
+      name: pack.name,
+      count: pack.rules.filter((rule) => rule.enabled !== false).length,
+    })}`,
+  )
+  lines.push(`- ${t('report.sessionCount', { count: entries.length })}`)
 
   const totalSteps = entries.reduce((sum, entry) => sum + entry.trajectory.steps.length, 0)
   const totalTokens = entries.reduce((sum, entry) => sum + entry.trajectory.meta.totalTokens, 0)
@@ -37,14 +70,18 @@ export function buildMarkdownReport({ entries, pack, generatedAt }: ReportInput)
       ? Math.round(entries.reduce((sum, entry) => sum + entry.card.overall, 0) / entries.length)
       : 100
 
-  lines.push(`- 总步数：${totalSteps}`)
-  lines.push(`- 估算 token：${formatTokens(totalTokens)}`)
-  lines.push(`- 平均分：${average}`)
+  lines.push(`- ${t('report.totalSteps', { count: totalSteps })}`)
+  lines.push(`- ${t('report.estimatedTokens', { tokens: formatTokens(totalTokens) })}`)
+  lines.push(`- ${t('report.average', { score: average })}`)
   lines.push('')
 
-  lines.push('## 总览')
+  lines.push(`## ${t('report.overview')}`)
   lines.push('')
-  lines.push('| 会话 | 步骤 | token | 总分 | 等级 | 严重 | 警告 | 提示 |')
+  lines.push(
+    `| ${t('report.sessionHeader')} | ${t('report.stepsHeader')} | ${t('report.tokenHeader')} | ${t(
+      'report.scoreHeader',
+    )} | ${t('report.gradeHeader')} | ${t('severity.error')} | ${t('severity.warn')} | ${t('severity.info')} |`,
+  )
   lines.push('| --- | ---: | ---: | ---: | :---: | ---: | ---: | ---: |')
   for (const { trajectory, card } of entries) {
     lines.push(
@@ -58,44 +95,56 @@ export function buildMarkdownReport({ entries, pack, generatedAt }: ReportInput)
   entries.forEach(({ trajectory, card }, index) => {
     lines.push(`## ${index + 1}. ${trajectory.label}`)
     lines.push('')
-    lines.push(`**总分 ${card.overall} / ${card.grade} · ${card.gradeLabel}**`)
+    lines.push(
+      `**${t('report.totalScore', {
+        score: card.overall,
+        grade: card.grade,
+        label: labelFor(locale, 'grade', card.grade, card.gradeLabel),
+      })}**`,
+    )
     lines.push('')
     if (card.capped) {
-      lines.push(`> 加权分 ${card.rawOverall}，因存在严重问题（error 级规则）封顶至 ${card.overall}。`)
+      lines.push(`> ${t('report.cappedNote', { raw: card.rawOverall, score: card.overall })}`)
       lines.push('')
     }
-    if (trajectory.meta.model) lines.push(`- 模型：${trajectory.meta.model}`)
-    if (trajectory.meta.estimatedTokens) lines.push('- token 为字符估算值，非上游上报')
+    if (trajectory.meta.model) lines.push(`- ${t('report.model', { model: trajectory.meta.model })}`)
+    if (trajectory.meta.estimatedTokens) lines.push(`- ${t('report.estimatedNote')}`)
     lines.push('')
 
-    lines.push('| 维度 | 得分 | 扣分 | 问题数 |')
+    lines.push(
+      `| ${t('report.dimensionHeader')} | ${t('report.dimensionScore')} | ${t('report.dimensionLost')} | ${t(
+        'report.dimensionFindings',
+      )} |`,
+    )
     lines.push('| --- | ---: | ---: | ---: |')
     for (const dimension of card.dimensions) {
-      lines.push(`| ${dimension.label} | ${dimension.score} | ${dimension.lost} | ${dimension.findings} |`)
+      const name = labelFor(locale, 'dimension', dimension.id, dimension.label)
+      lines.push(`| ${name} | ${dimension.score} | ${dimension.lost} | ${dimension.findings} |`)
     }
     lines.push('')
 
     if (card.findings.length === 0) {
-      lines.push('未发现问题。')
+      lines.push(t('report.noFindings'))
       lines.push('')
       return
     }
 
-    lines.push('### 问题清单')
+    lines.push(`### ${t('report.findings')}`)
     lines.push('')
     card.findings.forEach((finding, findingIndex) => {
-      const location = finding.stepIndex !== undefined ? ` · 第 ${finding.stepIndex + 1} 步` : ''
+      const location =
+        finding.stepIndex !== undefined ? ` · ${t('report.stepAt', { index: finding.stepIndex + 1 })}` : ''
       lines.push(
-        `${findingIndex + 1}. **${SEVERITY_TEXT[finding.severity] ?? finding.severity}** · **${finding.ruleTitle}**${location}`,
+        `${findingIndex + 1}. **${severityText(t, finding.severity)}** · **${finding.ruleTitle}**${location}`,
       )
-      lines.push(`   - 详情：${escapeCell(finding.message)}`)
-      if (finding.evidence) lines.push(`   - 证据：${escapeCell(finding.evidence)}`)
+      lines.push(`   - ${t('report.detail', { text: escapeCell(finding.message) })}`)
+      if (finding.evidence) lines.push(`   - ${t('report.evidence', { text: escapeCell(finding.evidence) })}`)
     })
     lines.push('')
   })
 
   if (entries.some((entry) => entry.card.ruleIssues.length > 0)) {
-    lines.push('## 规则异常')
+    lines.push(`## ${t('report.ruleIssues')}`)
     lines.push('')
     const seen = new Set<string>()
     for (const { card } of entries) {
@@ -103,7 +152,7 @@ export function buildMarkdownReport({ entries, pack, generatedAt }: ReportInput)
         const key = `${issue.ruleId}:${issue.message}`
         if (seen.has(key)) continue
         seen.add(key)
-        lines.push(`- \`${issue.ruleId}\`：${issue.message}`)
+        lines.push(`- ${t('report.ruleIssueItem', { id: issue.ruleId, message: issue.message })}`)
       }
     }
     lines.push('')
@@ -111,18 +160,17 @@ export function buildMarkdownReport({ entries, pack, generatedAt }: ReportInput)
 
   lines.push('---')
   lines.push('')
-  lines.push(
-    '由轨迹质检台生成。评分口径：各维度满分 100，按严重度加权扣分，单条规则最多计 3 次；总分取维度加权平均。存在严重问题（error 级规则）时按数量封顶：≥1 条 74 分、≥3 条 54 分、≥5 条 39 分。',
-  )
+  lines.push(t('report.footer'))
   lines.push('')
 
   return lines.join('\n')
 }
 
-export function buildJsonReport({ entries, pack, generatedAt }: ReportInput): string {
+export function buildJsonReport({ entries, pack, generatedAt, locale }: ReportInput): string {
   return JSON.stringify(
     {
       generatedAt: generatedAt.toISOString(),
+      locale,
       rulePack: { name: pack.name, version: pack.version, rules: pack.rules.length },
       sessions: entries.map(({ trajectory, card }) => ({
         id: trajectory.id,
@@ -134,7 +182,11 @@ export function buildJsonReport({ entries, pack, generatedAt }: ReportInput): st
         score: card.overall,
         rawScore: card.rawOverall,
         grade: card.grade,
-        dimensions: card.dimensions,
+        gradeLabel: labelFor(locale, 'grade', card.grade, card.gradeLabel),
+        dimensions: card.dimensions.map((dimension) => ({
+          ...dimension,
+          label: labelFor(locale, 'dimension', dimension.id, dimension.label),
+        })),
         counts: card.counts,
         findings: card.findings,
         ruleIssues: card.ruleIssues,

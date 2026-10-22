@@ -1,7 +1,7 @@
 import { formatDuration, formatTokens } from '../core/estimate'
 import type { ScoreCard } from '../core/analysis'
 import type { Trajectory } from '../core/model'
-import { hasMessage, useI18n } from '../i18n'
+import { labelFor, useI18n } from '../i18n'
 import { cx, GRADE_COLOR } from '../lib/format'
 
 interface Props {
@@ -22,13 +22,7 @@ export function ScorePanel({ card, trajectory, ruleIssueCount }: Props) {
       ? trajectory.meta.endedAt - trajectory.meta.startedAt
       : undefined
 
-  const gradeKey = `grade.${card.grade}`
-  const gradeLabel = hasMessage(locale, gradeKey) ? t(gradeKey) : card.gradeLabel
-
-  const dimensionName = (id: string, fallback: string) => {
-    const key = `dimension.${id}`
-    return hasMessage(locale, key) ? t(key) : fallback
-  }
+  const gradeLabel = labelFor(locale, 'grade', card.grade, card.gradeLabel)
 
   return (
     <section className="panel score-panel glass">
@@ -123,7 +117,7 @@ export function ScorePanel({ card, trajectory, ruleIssueCount }: Props) {
           <div className={cx('dim-row', dimension.findings === 0 && 'dim-clean')} key={dimension.id}>
             <span className="dim-name">
               <i style={{ background: dimension.color }} />
-              {dimensionName(dimension.id, dimension.label)}
+              {labelFor(locale, 'dimension', dimension.id, dimension.label)}
               <em>{Math.round(dimension.weight * 100)}%</em>
             </span>
             <span className="dim-track">

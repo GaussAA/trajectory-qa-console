@@ -25,7 +25,7 @@ function fixtureState() {
 describe('exporters', () => {
   it('builds a markdown report and a json report from the same state', () => {
     const { state, cards } = fixtureState()
-    const bundle = buildReportBundle(state, cards, new Date('2026-10-22T12:00:00Z'))
+    const bundle = buildReportBundle(state, cards, { generatedAt: new Date('2026-10-22T12:00:00Z') })
 
     expect(bundle.markdown).toContain('# 轨迹质检报告')
     expect(bundle.markdown).toContain('trace.json')
@@ -34,6 +34,14 @@ describe('exporters', () => {
     const json = JSON.parse(bundle.json)
     expect(json.sessions).toHaveLength(1)
     expect(json.sessions[0].score).toBe(cards.get(state.sessions[0]!.id)?.overall)
+  })
+
+  it('follows the requested locale in both formats', () => {
+    const { state, cards } = fixtureState()
+    const bundle = buildReportBundle(state, cards, { locale: 'en' })
+
+    expect(bundle.markdown.startsWith('# Trajectory QA Report')).toBe(true)
+    expect(JSON.parse(bundle.json).locale).toBe('en')
   })
 
   it('builds a diagnostics bundle with timings, issues and events', () => {

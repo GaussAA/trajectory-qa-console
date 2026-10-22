@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import type { ScoreCard, SessionAnalysis } from '../core/analysis'
 import type { Annotation, RulePack, Severity } from '../core/model'
-import type { MessageKey, TranslateParams } from '../i18n'
+import { useI18n, type MessageKey, type TranslateParams } from '../i18n'
 import { buildStressTrace } from '../core/sample'
 import { createAnalyzer, type AnalyzerPort } from '../app/analyzer'
 import { buildDiagnostics, buildReportBundle, downloadText } from '../app/exporters'
@@ -52,6 +52,7 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
   const port = useMemo(() => analyzer ?? createAnalyzer(), [analyzer])
   const abortRef = useRef<AbortController | null>(null)
   const [toast, setToast] = useState<ToastMessage | null>(null)
+  const { locale } = useI18n()
   const [events, setEvents] = useState<TelemetryEvent[]>(() => telemetry.snapshot())
 
   useEffect(() => telemetry.subscribe(() => setEvents(telemetry.snapshot())), [telemetry])
@@ -255,19 +256,19 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
 
   const exportMarkdown = useCallback(() => {
     if (stateRef.current.sessions.length === 0) return
-    const bundle = buildReportBundle(stateRef.current, cards)
+    const bundle = buildReportBundle(stateRef.current, cards, { locale })
     downloadFile(`trajectory-qa-${nowStamp()}.md`, bundle.markdown, 'text/markdown')
-    telemetry.emit('export:markdown', { sessions: stateRef.current.sessions.length })
+    telemetry.emit('export:markdown', { sessions: stateRef.current.sessions.length, locale })
     setToast({ key: 'toast.reportExported' })
-  }, [cards, telemetry])
+  }, [cards, locale, telemetry])
 
   const exportJson = useCallback(() => {
     if (stateRef.current.sessions.length === 0) return
-    const bundle = buildReportBundle(stateRef.current, cards)
+    const bundle = buildReportBundle(stateRef.current, cards, { locale })
     downloadFile(`trajectory-qa-${nowStamp()}.json`, bundle.json, 'application/json')
-    telemetry.emit('export:json', { sessions: stateRef.current.sessions.length })
+    telemetry.emit('export:json', { sessions: stateRef.current.sessions.length, locale })
     setToast({ key: 'toast.jsonExported' })
-  }, [cards, telemetry])
+  }, [cards, locale, telemetry])
 
   const exportDiagnostics = useCallback(() => {
     const content = buildDiagnostics(stateRef.current, cards, telemetry.snapshot())

@@ -2,7 +2,7 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { formatClock, formatDuration, formatTokens } from '../core/estimate'
 import { computeMetrics } from '../core/analysis'
 import type { Annotation, Dimension, Severity, Step, Trajectory } from '../core/model'
-import { hasMessage, useI18n } from '../i18n'
+import { labelFor, useI18n } from '../i18n'
 import type { ScoreCard } from '../core/analysis'
 import { ROLE_COLOR, SEVERITY_COLOR, cx, prettyJson, truncate } from '../lib/format'
 
@@ -41,11 +41,6 @@ export function Inspector({
   const [note, setNote] = useState('')
   const metrics = useMemo(() => computeMetrics(trajectory), [trajectory])
   const { locale, t } = useI18n()
-
-  const dimensionName = (item: Dimension) => {
-    const key = `dimension.${item.id}`
-    return hasMessage(locale, key) ? t(key) : item.label
-  }
 
   if (!step) {
     return (
@@ -253,7 +248,7 @@ export function Inspector({
             >
               {dimensions.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {dimensionName(item)}
+                  {labelFor(locale, 'dimension', item.id, item.label)}
                 </option>
               ))}
             </select>

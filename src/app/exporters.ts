@@ -6,6 +6,7 @@
 
 import { scoreSession, type ScoreCard } from '../core/analysis'
 import type { RulePack } from '../core/model'
+import type { Locale } from '../i18n/core'
 import { buildJsonReport, buildMarkdownReport } from '../lib/report'
 import type { WorkspaceState } from './workspace'
 import type { Telemetry, TelemetryEvent } from './telemetry'
@@ -15,18 +16,24 @@ export interface ReportBundle {
   json: string
 }
 
+export interface ReportOptions {
+  generatedAt?: Date
+  /** 报告语言跟界面走：同一份会话，中文导出给人看，英文导出给外部协作方。 */
+  locale?: Locale
+}
+
 export function buildReportBundle(
   state: WorkspaceState,
   cards: Map<string, ScoreCard>,
-  generatedAt = new Date(),
+  { generatedAt = new Date(), locale = 'zh-CN' }: ReportOptions = {},
 ): ReportBundle {
   const entries = state.sessions.flatMap((session) => {
     const card = cards.get(session.id)
     return card ? [{ trajectory: session.trajectory, card }] : []
   })
   return {
-    markdown: buildMarkdownReport({ entries, pack: state.pack, generatedAt }),
-    json: buildJsonReport({ entries, pack: state.pack, generatedAt }),
+    markdown: buildMarkdownReport({ entries, pack: state.pack, generatedAt, locale }),
+    json: buildJsonReport({ entries, pack: state.pack, generatedAt, locale }),
   }
 }
 
