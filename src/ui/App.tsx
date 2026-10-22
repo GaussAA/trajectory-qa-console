@@ -273,7 +273,7 @@ export default function App({
       <RuleDrawer
         open={drawerOpen}
         pack={state.pack}
-        card={card}
+        sessions={state.sessions}
         ruleIssues={card?.ruleIssues ?? []}
         onClose={() => setDrawerOpen(false)}
         onApply={(next) => {

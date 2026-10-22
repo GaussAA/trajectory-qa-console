@@ -244,38 +244,6 @@
   padding: 24px;
 }
 
-.hit-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-top: 8px;
-}
-
-.hit-row {
-  display: grid;
-  grid-template-columns: 1fr auto 32px;
-  gap: 10px;
-  align-items: center;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 10px;
-  color: var(--text-mute);
-}
-
-.hit-row.hit {
-  background: rgba(94, 234, 212, 0.06);
-  color: var(--text-dim);
-}
-
-.hit-count {
-  text-align: right;
-  font-family: var(--mono);
-}
-
-.hit-meta {
-  font-size: 9.5px;
-}
-
 .field-groups {
   display: flex;
   flex-direction: column;

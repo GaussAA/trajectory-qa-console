@@ -152,3 +152,116 @@
   gap: 8px;
   padding: 12px 22px 16px;
 }
+
+/* ---------- 试跑与调参 ---------- */
+
+.tune-table {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: 8px;
+}
+
+.tune-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 94px 32px 44px;
+  gap: 8px;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  color: var(--text-mute);
+}
+
+.tune-head {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  padding-bottom: 5px;
+}
+
+.tune-head > span:nth-child(3),
+.tune-head > span:nth-child(4) {
+  text-align: right;
+}
+
+.tune-row.tune-hit {
+  background: rgba(94, 234, 212, 0.055);
+}
+
+.tune-rule {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.tune-rule b {
+  flex: 0 1 auto;
+  max-width: 118px;
+  font-weight: 400;
+  font-size: 9px;
+  color: #8494ab;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tune-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 10.5px;
+  color: #9fb0c8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tune-row.tune-hit .tune-title {
+  color: #dcfbf5;
+}
+
+.tune-thresholds {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.tune-input {
+  width: 44px;
+  padding: 2px 4px;
+  border-radius: 5px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(6, 10, 18, 0.55);
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 10px;
+  text-align: right;
+}
+
+.tune-input:focus {
+  outline: 1px solid rgba(94, 234, 212, 0.55);
+  border-color: rgba(94, 234, 212, 0.35);
+}
+
+.tune-none {
+  color: var(--text-mute);
+}
+
+.tune-count,
+.tune-gain {
+  text-align: right;
+  font-family: var(--mono);
+}
+
+.tune-row.tune-hit .tune-count {
+  color: #5eead4;
+}
+
+.tune-gain {
+  color: #86efac;
+}

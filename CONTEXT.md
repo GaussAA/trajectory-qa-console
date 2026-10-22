@@ -66,6 +66,18 @@ node dist-cli/qa.mjs examples --pack en --locale en --out ./qa-out   # 全英文
 退出码：`0` 通过、`1` 门禁未通过、`2` 用法/读写/无可分析内容。**空跑必须是 2**——
 没有可分析内容却返回 0，等于让门禁永远绿。
 
+### 规则调参（抽屉内）
+
+`src/core/rules/tuning.ts` 是这块的全部逻辑，界面只负责画：
+
+- `numericLiterals(expr)`：找出表达式里的数字常量（跳过字符串与标识符）。
+- `replaceLiteral(expr, index, next)`：原位替换；**替换后必须仍能编译**，否则返回 `null`。
+- `buildTuningReport(sessions, pack)`：用草稿包真跑所有轨迹，给出每条规则的命中数、
+  覆盖轨迹数、禁用后的平均/最大涨幅，以及表达式出错的规则。
+
+界面侧只改草稿、不直接生效：试错不留痕，「校验并应用」仍是唯一入口。
+试跑重算走 `useDeferredValue`，大轨迹下打字不会被卡。
+
 ## 质量门槛
 
 `pnpm verify` = typecheck + lint + 覆盖率测试 + 构建。覆盖率门槛：行/函数/语句 ≥85%，分支 ≥75%。
