@@ -49,3 +49,10 @@ src/lib/      格式化与报告文本
 性能基线：1k 步 < 500ms、10k 步 < 3s（实测约 20ms / 98ms）。
 时间线 > 400 步切紧凑虚拟滚动（固定行高 46px），概览条降采样至 ≤180 段。
 调试深链：`#demo` / `#demo:N` 载入示例，`#stress:N` 生成 N 步合成轨迹，`?drawer=1`、`?diag=1` 打开抽屉。
+
+## 持续集成
+
+`.github/workflows/ci.yml`：push 到 main、PR、手动触发；先 `pnpm install --frozen-lockfile`，再 `pnpm verify`。
+`verify` 的最后一步是**产物契约校验**（`scripts/check-artifact.mjs`）：不得含外部脚本/样式/远程图片，
+必须有 `#root`，体积不超过 1500 KB（`ARTIFACT_BUDGET_KB` 可调）。
+产物与覆盖率作为 artifact 上传（保留 14 / 7 天）。本地等价入口：`pnpm verify`。

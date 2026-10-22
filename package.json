@@ -3,6 +3,11 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "packageManager": "pnpm@12.14.0",
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=10"
+  },
   "description": "Agent trajectory quality inspection console - single-file offline tool",
   "scripts": {
     "dev": "vite",
@@ -15,7 +20,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "verify": "pnpm typecheck && pnpm lint && pnpm test:coverage && vite build"
+    "verify": "pnpm typecheck && pnpm lint && pnpm test:coverage && vite build && node scripts/check-artifact.mjs",
+    "ci": "pnpm verify"
   },
   "dependencies": {
     "react": "^19.2.0",
