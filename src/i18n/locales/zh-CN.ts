@@ -241,7 +241,7 @@ export const zhCN = {
   'cli.optFormat': '--format <md|json|both>  报告格式，默认 both',
   'cli.optOut': '--out <目录>             写出 report.md / report.json',
   'cli.optLocale': '--locale <zh-CN|en>      报告语言，默认 zh-CN',
-  'cli.optPack': '--pack <文件>            使用自定义规则包',
+  'cli.optPack': '--pack <文件|en|zh>      自定义规则包，或内置语言包',
   'cli.optFailBelow': '--fail-below <0-100>     任一会话低于该分即以退出码 1 结束',
   'cli.optMaxFiles': '--max-files <n>          最多扫描文件数，默认 500',
   'cli.optMaxBytes': '--max-bytes <n>          单文件字节上限，默认 33554432',

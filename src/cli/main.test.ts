@@ -3,7 +3,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
-import { EXIT, loadPack, main } from './main'
+import { BUILTIN_PACK_EN } from '../core/rules/builtin-pack-en'
+import { EXIT, loadPack, main, resolvePackAlias } from './main'
 import { CLI_VERSION } from './version'
 
 const roots: string[] = []
@@ -170,6 +171,28 @@ describe('main', () => {
     const broken = capture()
     expect(main([dir, '--pack', badPack, '--quiet'], broken.io)).toBe(EXIT.error)
     expect(broken.chunks.err).toContain('规则包校验失败')
+  })
+
+  it('resolves builtin pack aliases case-insensitively', () => {
+    expect(resolvePackAlias('en')?.name).toBe(BUILTIN_PACK_EN.name)
+    expect(resolvePackAlias('  EN ')?.name).toBe(BUILTIN_PACK_EN.name)
+    expect(resolvePackAlias('builtin-en')?.name).toBe(BUILTIN_PACK_EN.name)
+    expect(resolvePackAlias('zh')?.name).toBe(DEFAULT_PACK.name)
+    expect(resolvePackAlias('nope')).toBeNull()
+  })
+
+  it('produces a fully English report with --pack en --locale en', () => {
+    const dir = tempDir()
+    trace(dir, 'clean.json', CLEAN)
+    trace(dir, 'broken.json', BROKEN)
+    const out = join(dir, 'out')
+
+    expect(main([dir, '--pack', 'en', '--locale', 'en', '--out', out, '--quiet'], capture().io)).toBe(EXIT.ok)
+
+    const markdown = readFileSync(join(out, 'report.md'), 'utf8')
+    expect(markdown).toContain('# Trajectory QA Report')
+    expect(markdown).toContain('Builtin pack · EN v1')
+    expect(markdown).not.toMatch(/[\u4e00-\u9fff]/)
   })
 
   it('reports an unreadable pack file', () => {

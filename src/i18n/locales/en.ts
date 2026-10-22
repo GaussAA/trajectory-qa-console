@@ -245,7 +245,7 @@ export const en: Record<MessageKey, string> = {
   'cli.optFormat': '--format <md|json|both>  report format (default: both)',
   'cli.optOut': '--out <dir>              write report.md / report.json',
   'cli.optLocale': '--locale <zh-CN|en>      report language (default: zh-CN)',
-  'cli.optPack': '--pack <file>            use a custom rule pack',
+  'cli.optPack': '--pack <file|en|zh>      custom pack, or a builtin language pack',
   'cli.optFailBelow': '--fail-below <0-100>     exit 1 when any session scores below this',
   'cli.optMaxFiles': '--max-files <n>          max files to scan (default: 500)',
   'cli.optMaxBytes': '--max-bytes <n>          per-file byte limit (default: 33554432)',

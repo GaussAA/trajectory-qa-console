@@ -51,11 +51,16 @@ src/lib/      格式化与报告文本
 | `main.ts` | 参数 → 收集 → 批处理 → 打印/落盘 → 退出码 |
 | `bin.ts` | 进程边界：argv、`process.exitCode`、未捕获异常 |
 
+规则包：内置中文包为默认；`packs/builtin-en.json` 是结构完全等价的英文包，
+`--pack en` 直接选用（界面可从规则抽屉导入同一份文件）。翻译只改文案，
+`id / expr / severity / scoreImpact` 与中文包逐条一致，由 `packs.test.ts` 按住。
+
 ```bash
 pnpm build:cli                                  # 产出 dist-cli/qa.mjs
 node dist-cli/qa.mjs examples                   # 列表 + 结论
 node dist-cli/qa.mjs examples --fail-below 90   # CI 门禁（不通过退出 1）
 node dist-cli/qa.mjs examples --out ./qa-out --locale en
+node dist-cli/qa.mjs examples --pack en --locale en --out ./qa-out   # 全英文报告
 ```
 
 退出码：`0` 通过、`1` 门禁未通过、`2` 用法/读写/无可分析内容。**空跑必须是 2**——

@@ -10,7 +10,9 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
+import { BUILTIN_PACK_EN } from '../core/rules/builtin-pack-en'
 import { validatePack } from '../core/rules/contract'
+import type { RulePack } from '../core/model'
 import { isLocale, translate, type Locale, type MessageKey } from '../i18n/core'
 import { parseArgs, type CliOptions, type UsageError } from './args'
 import { runBatch } from './batch'
@@ -69,9 +71,25 @@ function usageMessage(error: UsageError, locale: Locale): string {
   }
 }
 
-export type PackLoad = { ok: true; pack: typeof DEFAULT_PACK } | { ok: false; message: string }
+/** `--pack en` 这类别名直接指向内置包：免去用户先找 JSON 文件。 */
+const BUILTIN_ALIASES: Record<string, RulePack> = {
+  builtin: DEFAULT_PACK,
+  'builtin-zh': DEFAULT_PACK,
+  zh: DEFAULT_PACK,
+  'builtin-en': BUILTIN_PACK_EN,
+  en: BUILTIN_PACK_EN,
+}
+
+export function resolvePackAlias(name: string): RulePack | null {
+  return BUILTIN_ALIASES[name.trim().toLowerCase()] ?? null
+}
+
+export type PackLoad = { ok: true; pack: RulePack } | { ok: false; message: string }
 
 export function loadPack(path: string): PackLoad {
+  const alias = resolvePackAlias(path)
+  if (alias) return { ok: true, pack: alias }
+
   let raw: string
   try {
     raw = readFileSync(resolve(path), 'utf8')

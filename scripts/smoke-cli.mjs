@@ -62,6 +62,12 @@ try {
   check('写出 report.md', existsSync(join(outDir, 'report.md')))
   check('写出 report.json', existsSync(join(outDir, 'report.json')))
   check('报告含标题', readFileSync(join(outDir, 'report.md'), 'utf8').startsWith('# '))
+
+  const enDir = join(outDir, 'en')
+  const englishPack = run(['examples', '--pack', 'en', '--locale', 'en', '--out', enDir, '--quiet'])
+  check('--pack en 退出码 0', englishPack.code === 0, `实际 ${englishPack.code}`)
+  const englishReport = readFileSync(join(enDir, 'report.md'), 'utf8')
+  check('英文规则包 + 英文语言 = 全英文报告', !/[\u4e00-\u9fff]/.test(englishReport), '报告仍含中文')
 } finally {
   rmSync(outDir, { recursive: true, force: true })
 }
@@ -72,4 +78,4 @@ if (problems.length > 0) {
   process.exit(1)
 }
 
-console.log('✓ CLI 冒烟通过：help / 通过 / 门禁 / 用法错误 / 英文 / 落盘')
+console.log('✓ CLI 冒烟通过：help / 通过 / 门禁 / 用法错误 / 英文 / 英文包 / 落盘')
