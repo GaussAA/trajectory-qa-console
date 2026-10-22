@@ -19,7 +19,7 @@ export default defineConfig({
     restoreMocks: true,
     coverage: {
       provider: 'v8',
-      include: ['src/core/**/*.ts', 'src/app/**/*.ts', 'src/ui/windowing.ts'],
+      include: ['src/core/**/*.ts', 'src/app/**/*.ts', 'src/ui/windowing.ts', 'src/i18n/index.tsx'],
       exclude: ['**/*.test.ts', 'src/core/sample.ts', 'src/core/__golden__/**'],
       reporter: ['text', 'json-summary'],
       thresholds: {

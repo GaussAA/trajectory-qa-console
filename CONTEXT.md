@@ -50,6 +50,14 @@ src/lib/      格式化与报告文本
 时间线 > 400 步切紧凑虚拟滚动（固定行高 46px），概览条降采样至 ≤180 段。
 调试深链：`#demo` / `#demo:N` 载入示例，`#stress:N` 生成 N 步合成轨迹，`?drawer=1`、`?diag=1` 打开抽屉。
 
+## 多语言
+
+- `src/i18n`：中文为源语言，`MessageKey` 由中文键集推导；英文是 `Record<MessageKey, string>`，缺键**编译失败**。
+- 插值 `{name}`；两语言的占位符集合由测试强制一致；未知键回落为键名，便于定位。
+- locale 优先级：本地存储 > 系统语言（`zh*` → 中文，其余 → 英文）> 中文；切换时同步 `<html lang>` 并持久化。
+- **边界**：规则包内的规则标题与提示属「数据」，不随界面语言翻译；要英文质检结论需导入英文规则包。
+- 进度：底座（字典 + Provider + 测试）已完成；界面接线与报告本地化在后续提交，未接线前界面保持全中文。
+
 ## 持续集成
 
 `.github/workflows/ci.yml`：push 到 main、PR、手动触发；先 `pnpm install --frozen-lockfile`，再 `pnpm verify`。
