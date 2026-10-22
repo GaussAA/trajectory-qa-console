@@ -9,6 +9,7 @@
 
 import { formatTokens } from '../core/estimate'
 import type { ScoreCard } from '../core/analysis'
+import { alignSteps, compareCards, diffFindings, summarizeAlignment, type AlignStatus } from '../core/compare'
 import type { RulePack, Severity, Trajectory } from '../core/model'
 import {
   formatDateTime,
@@ -192,6 +193,209 @@ export function buildJsonReport({ entries, pack, generatedAt, locale }: ReportIn
         ruleIssues: card.ruleIssues,
         parseNotes: trajectory.parseNotes,
       })),
+    },
+    null,
+    2,
+  )
+}
+
+// ---------- 轨迹对比 ----------
+
+export interface ComparisonInput {
+  base: ReportEntry
+  target: ReportEntry
+  generatedAt: Date
+  locale: Locale
+  /** 步骤差异最多写多少行，默认 40。 */
+  maxStepRows?: number
+}
+
+const ALIGN_KEY: Record<AlignStatus, MessageKey> = {
+  same: 'compare.status.same',
+  changed: 'compare.status.changed',
+  added: 'compare.status.added',
+  removed: 'compare.status.removed',
+}
+
+function signed(value: number): string {
+  if (value === 0) return '0'
+  return value > 0 ? `+${value}` : String(value)
+}
+
+function clip(text: string, limit = 60): string {
+  const flat = text.trim().replace(/\s+/g, ' ')
+  const short = flat.length <= limit ? flat : `${flat.slice(0, limit)}…`
+  return escapeCell(short)
+}
+
+function stepPreview(step: { text: string; toolCalls: { name: string }[] } | undefined): string {
+  if (!step) return '—'
+  if (step.text.trim()) return clip(step.text)
+  if (step.toolCalls.length > 0) return escapeCell(step.toolCalls.map((call) => call.name).join(', '))
+  return '—'
+}
+
+function comparisonDiff(input: ComparisonInput) {
+  const cardDiff = compareCards(
+    { card: input.base.card, trajectory: input.base.trajectory },
+    { card: input.target.card, trajectory: input.target.trajectory },
+  )
+  const findingDiff = diffFindings(input.base.card.findings, input.target.card.findings)
+  const rows = alignSteps(input.base.trajectory.steps, input.target.trajectory.steps)
+  return { cardDiff, findingDiff, rows, summary: summarizeAlignment(rows) }
+}
+
+export function buildComparisonReport(input: ComparisonInput): string {
+  const t: Translate = (key, params) => translate(input.locale, key, params)
+  const { cardDiff, findingDiff, rows, summary } = comparisonDiff(input)
+  const lines: string[] = []
+
+  lines.push(`# ${t('report.compare.title')}`)
+  lines.push('')
+  lines.push(`- ${t('report.generatedAt', { time: formatDateTime(input.locale, input.generatedAt) })}`)
+  lines.push(`- ${t('report.compare.base', { label: input.base.trajectory.label })}`)
+  lines.push(`- ${t('report.compare.target', { label: input.target.trajectory.label })}`)
+  lines.push('')
+
+  lines.push(`## ${t('report.compare.scoreSection')}`)
+  lines.push('')
+  lines.push(
+    `| ${t('report.compare.item')} | ${t('report.compare.baseColumn')} | ${t(
+      'report.compare.targetColumn',
+    )} | ${t('report.compare.delta')} |`,
+  )
+  lines.push('| --- | ---: | ---: | ---: |')
+  lines.push(
+    `| ${t('report.compare.total')} | ${cardDiff.overall.before} | ${cardDiff.overall.after} | ${signed(
+      cardDiff.overall.delta,
+    )} |`,
+  )
+  lines.push(`| ${t('report.compare.grade')} | ${cardDiff.grade.before} | ${cardDiff.grade.after} | — |`)
+  lines.push(
+    `| ${t('report.compare.steps')} | ${cardDiff.steps.before} | ${cardDiff.steps.after} | ${signed(
+      cardDiff.steps.delta,
+    )} |`,
+  )
+  lines.push(
+    `| ${t('report.compare.tokens')} | ${cardDiff.tokens.before} | ${cardDiff.tokens.after} | ${signed(
+      cardDiff.tokens.delta,
+    )} |`,
+  )
+  lines.push('')
+
+  lines.push(`## ${t('report.compare.dimensionSection')}`)
+  lines.push('')
+  lines.push(
+    `| ${t('report.dimensionHeader')} | ${t('report.compare.baseColumn')} | ${t(
+      'report.compare.targetColumn',
+    )} | ${t('report.compare.delta')} |`,
+  )
+  lines.push('| --- | ---: | ---: | ---: |')
+  for (const dimension of cardDiff.dimensions) {
+    const name = labelFor(input.locale, 'dimension', dimension.id, dimension.label)
+    lines.push(`| ${name} | ${dimension.before} | ${dimension.after} | ${signed(dimension.delta)} |`)
+  }
+  lines.push('')
+
+  lines.push(`## ${t('report.compare.findingsSection')}`)
+  lines.push('')
+  lines.push(
+    t('report.compare.findingsSummary', {
+      added: findingDiff.added.length,
+      resolved: findingDiff.resolved.length,
+      persisted: findingDiff.persisted.length,
+    }),
+  )
+  lines.push('')
+
+  const writeFindings = (title: string, items: typeof findingDiff.added) => {
+    if (items.length === 0) return
+    lines.push(`### ${title}`)
+    lines.push('')
+    items.forEach((finding, index) => {
+      const location =
+        finding.stepIndex !== undefined ? ` · ${t('report.stepAt', { index: finding.stepIndex + 1 })}` : ''
+      lines.push(
+        `${index + 1}. **${severityText(t, finding.severity)}** · **${finding.ruleTitle}**${location}`,
+      )
+      lines.push(`   - ${t('report.detail', { text: escapeCell(finding.message) })}`)
+    })
+    lines.push('')
+  }
+
+  writeFindings(t('report.compare.addedSection'), findingDiff.added)
+  writeFindings(t('report.compare.resolvedSection'), findingDiff.resolved)
+
+  lines.push(`## ${t('report.compare.stepsSection')}`)
+  lines.push('')
+  lines.push(
+    `${summary.changed} ${t('compare.changed')} · ${summary.added + summary.removed} ${t('compare.structural')}`,
+  )
+  lines.push('')
+  const limit = input.maxStepRows ?? 40
+  const changed = rows.filter((row) => row.status !== 'same')
+  if (changed.length === 0) {
+    lines.push(t('report.compare.noDifferences'))
+    lines.push('')
+  } else {
+    lines.push(
+      `| ${t('report.compare.status')} | ${t('report.compare.baseStep')} | ${t('report.compare.targetStep')} | ${t(
+        'report.compare.baseText',
+      )} | ${t('report.compare.targetText')} |`,
+    )
+    lines.push('| --- | ---: | ---: | --- | --- |')
+    for (const row of changed.slice(0, limit)) {
+      lines.push(
+        `| ${t(ALIGN_KEY[row.status])} | ${row.before ? row.before.index + 1 : '—'} | ${
+          row.after ? row.after.index + 1 : '—'
+        } | ${stepPreview(row.before)} | ${stepPreview(row.after)} |`,
+      )
+    }
+    lines.push('')
+    if (changed.length > limit) {
+      lines.push(t('report.compare.truncated', { count: limit }))
+      lines.push('')
+    }
+  }
+
+  lines.push('---')
+  lines.push('')
+  lines.push(
+    t('report.compare.findingsSummary', {
+      added: findingDiff.added.length,
+      resolved: findingDiff.resolved.length,
+      persisted: findingDiff.persisted.length,
+    }),
+  )
+  lines.push('')
+
+  return lines.join('\n')
+}
+
+export function buildComparisonJson(input: ComparisonInput): string {
+  const { cardDiff, findingDiff, rows, summary } = comparisonDiff(input)
+  return JSON.stringify(
+    {
+      generatedAt: input.generatedAt.toISOString(),
+      locale: input.locale,
+      base: { id: input.base.trajectory.id, label: input.base.trajectory.label },
+      target: { id: input.target.trajectory.id, label: input.target.trajectory.label },
+      score: cardDiff,
+      findings: {
+        added: findingDiff.added.length,
+        resolved: findingDiff.resolved.length,
+        persisted: findingDiff.persisted.length,
+        addedItems: findingDiff.added,
+        resolvedItems: findingDiff.resolved,
+      },
+      steps: summary,
+      changedSteps: rows
+        .filter((row) => row.status !== 'same')
+        .map((row) => ({
+          status: row.status,
+          baseStep: row.before ? row.before.index + 1 : null,
+          targetStep: row.after ? row.after.index + 1 : null,
+        })),
     },
     null,
     2,

@@ -151,6 +151,7 @@ export function renderHelp(locale: Locale, { version }: HelpOptions): string {
     `  ${t('cli.optFailBelow')}`,
     `  ${t('cli.optMaxFiles')}`,
     `  ${t('cli.optMaxBytes')}`,
+    `  ${t('cli.optCompare')}`,
     `  ${t('cli.optSemantic')}`,
     `  ${t('cli.optSemanticDryRun')}`,
     `  ${t('cli.optLlmUrl')}`,

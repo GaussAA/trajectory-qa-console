@@ -207,6 +207,48 @@ describe('main', () => {
   })
 })
 
+describe('compare mode', () => {
+  it('writes a comparison report for exactly two traces', async () => {
+    const dir = tempDir()
+    trace(dir, 'a.json', CLEAN)
+    trace(dir, 'b.json', BROKEN)
+    const out = join(dir, 'out')
+    const { io, chunks } = capture()
+
+    const code = await main([dir, '--compare', '--out', out], io)
+
+    expect(code).toBe(EXIT.ok)
+    expect(chunks.out).toContain('对比：')
+    expect(existsSync(join(out, 'compare.md'))).toBe(true)
+    expect(existsSync(join(out, 'compare.json'))).toBe(true)
+    // 对比模式不额外产出逐会话报告，避免两份文件语义重叠
+    expect(existsSync(join(out, 'report.md'))).toBe(false)
+    expect(readFileSync(join(out, 'compare.md'), 'utf8')).toContain('# 轨迹对比报告')
+  })
+
+  it('refuses to compare fewer than two traces', async () => {
+    const dir = tempDir()
+    trace(dir, 'a.json', CLEAN)
+    const { io, chunks } = capture()
+
+    expect(await main([dir, '--compare'], io)).toBe(EXIT.error)
+    expect(chunks.err).toContain('恰好两条')
+  })
+
+  it('gates only the candidate, not the baseline', async () => {
+    const dir = tempDir()
+    trace(dir, 'a.json', CLEAN)
+    trace(dir, 'b.json', BROKEN)
+
+    // 基准 100、对照 54：门限 80 只该判「对照」不合格。
+    const { io } = capture()
+    expect(await main([dir, '--compare', '--fail-below', '80', '--quiet'], io)).toBe(EXIT.gate)
+
+    const relaxed = capture()
+    expect(await main([dir, '--compare', '--fail-below', '10', '--quiet'], relaxed.io)).toBe(EXIT.ok)
+  })
+})
+
 describe('semantic review', () => {
   const JUDGEMENT = JSON.stringify({
     choices: [

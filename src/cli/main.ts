@@ -10,6 +10,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { analyze } from '../core/analysis'
+import { buildComparisonJson, buildComparisonReport } from '../lib/report'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
 import { BUILTIN_PACK_EN } from '../core/rules/builtin-pack-en'
 import { validatePack } from '../core/rules/contract'
@@ -281,6 +282,47 @@ export async function main(
   if (result.entries.length === 0) {
     stderr(`✗ ${t('cli.nothingAnalyzable')}\n`)
     return EXIT.error
+  }
+
+  if (options.compare) {
+    if (result.entries.length !== 2) {
+      stderr(`✗ ${t('cli.err.compareNeedsTwo', { count: result.entries.length })}\n`)
+      return EXIT.error
+    }
+    const [base, target] = result.entries as [(typeof result.entries)[0], (typeof result.entries)[0]]
+    const generatedAt = new Date()
+    const markdown = buildComparisonReport({ base, target, generatedAt, locale })
+    const json = buildComparisonJson({ base, target, generatedAt, locale })
+
+    stdout(
+      `${t('cli.compareLine', {
+        base: base.trajectory.label,
+        baseScore: base.card.overall,
+        target: target.trajectory.label,
+        targetScore: target.card.overall,
+        delta: target.card.overall - base.card.overall,
+      })}\n`,
+    )
+
+    if (options.out) {
+      const dir = resolve(options.out)
+      mkdirSync(dir, { recursive: true })
+      const written: string[] = []
+      if (options.format !== 'json') {
+        const path = join(dir, 'compare.md')
+        writeFileSync(path, markdown, 'utf8')
+        written.push(path)
+      }
+      if (options.format !== 'md') {
+        const path = join(dir, 'compare.json')
+        writeFileSync(path, json, 'utf8')
+        written.push(path)
+      }
+      for (const path of written) stdout(`${t('cli.wrote', { path })}\n`)
+    }
+
+    // 门禁只卡「对照」那一份：基准是旧版本，不该被要求达标。
+    return options.failBelow !== null && target.card.overall < options.failBelow ? EXIT.gate : EXIT.ok
   }
 
   if (options.out) {

@@ -71,6 +71,22 @@ try {
   check('写出 report.json', existsSync(join(outDir, 'report.json')))
   check('报告含标题', readFileSync(join(outDir, 'report.md'), 'utf8').startsWith('# '))
 
+  const cmpDir = join(outDir, 'cmp')
+  const cmp = run([
+    'examples/healthy.json',
+    'examples/tool-failure.json',
+    '--compare',
+    '--out',
+    cmpDir,
+    '--quiet',
+  ])
+  check('--compare 退出码 0', cmp.code === 0, `实际 ${cmp.code}：${cmp.stderr.trim()}`)
+  check('写出 compare.md', existsSync(join(cmpDir, 'compare.md')))
+  check('对比报告含标题', readFileSync(join(cmpDir, 'compare.md'), 'utf8').startsWith('# '))
+
+  const cmpBad = run(['examples/healthy.json', '--compare', '--quiet'])
+  check('单文件对比退出码 2', cmpBad.code === 2, `实际 ${cmpBad.code}`)
+
   const enDir = join(outDir, 'en')
   const englishPack = run(['examples', '--pack', 'en', '--locale', 'en', '--out', enDir, '--quiet'])
   check('--pack en 退出码 0', englishPack.code === 0, `实际 ${englishPack.code}`)
@@ -86,4 +102,4 @@ if (problems.length > 0) {
   process.exit(1)
 }
 
-console.log('✓ CLI 冒烟通过：help / 通过 / 门禁 / 用法错误 / 英文 / 英文包 / 语义试跑 / 落盘')
+console.log('✓ CLI 冒烟通过：help / 通过 / 门禁 / 用法错误 / 英文 / 英文包 / 语义试跑 / 对比 / 落盘')

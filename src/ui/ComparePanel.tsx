@@ -3,6 +3,8 @@ import type { ScoreCard, SessionAnalysis } from '../core/analysis'
 import { alignSteps, compareCards, diffFindings, summarizeAlignment, type AlignStatus } from '../core/compare'
 import type { Finding, Step } from '../core/model'
 import { useI18n } from '../i18n'
+import { downloadFile, nowStamp } from '../lib/format'
+import { buildComparisonReport } from '../lib/report'
 import type { MessageKey } from '../i18n'
 import { cx, truncate } from '../lib/format'
 import { Icon } from './Icons'
@@ -38,7 +40,7 @@ function preview(step: Step | undefined): string {
 }
 
 export function ComparePanel({ sessions, cards, initialBaseId, onClose }: Props) {
-  const { t } = useI18n()
+  const { locale, t } = useI18n()
   const firstId = initialBaseId ?? sessions[0]?.id ?? ''
   const [baseId, setBaseId] = useState(firstId)
   const [targetId, setTargetId] = useState(sessions.find((session) => session.id !== firstId)?.id ?? firstId)
@@ -103,6 +105,25 @@ export function ComparePanel({ sessions, cards, initialBaseId, onClose }: Props)
           {alignment.summary.added + alignment.summary.removed} {t('compare.structural')}
         </span>
         <span className="grow" />
+        <button
+          type="button"
+          className="btn ghost sm"
+          onClick={() => {
+            const baseCard = cards.get(base.id)
+            const targetCard = cards.get(target.id)
+            if (!baseCard || !targetCard) return
+            const markdown = buildComparisonReport({
+              base: { trajectory: base.trajectory, card: baseCard },
+              target: { trajectory: target.trajectory, card: targetCard },
+              generatedAt: new Date(),
+              locale,
+            })
+            downloadFile(`trajectory-compare-${nowStamp()}.md`, markdown, 'text/markdown')
+          }}
+        >
+          <Icon name="download" size={12} />
+          {t('compare.export')}
+        </button>
         <button type="button" className="btn ghost sm" onClick={onClose}>
           <Icon name="close" size={12} />
           {t('compare.close')}

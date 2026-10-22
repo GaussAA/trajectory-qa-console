@@ -110,6 +110,21 @@ node dist-cli/qa.mjs traces --semantic --fail-below 80
 - 失败降级：单次调用失败只记 issue，整批继续、退出码不变。
 - **界面不接模型**：守住离线承诺、CORS 与密钥托管三条线（ADR-0011）。
 
+### 对比报告
+
+同一份 diff 两个出口：界面「导出对比」下载 Markdown；CLI `--compare` 写
+`compare.md` / `compare.json`。两者都调 `buildComparisonReport`（`src/lib/report.ts`），
+与对比视图共用 `core/compare`，数字不会分叉。
+
+```bash
+node dist-cli/qa.mjs a.json b.json --compare --out ./cmp        # 第一份为基准
+node dist-cli/qa.mjs a.json b.json --compare --fail-below 80    # 只卡「对照」
+```
+
+- 对比模式要求**恰好两条**可分析轨迹，多一条少一条都报错。
+- 对比模式只产出 `compare.md` / `compare.json`，不再写逐会话报告。
+- 报告不含人工标注（与 ADR-0010 一致）。
+
 ## 质量门槛
 
 `pnpm verify` = typecheck + lint + 覆盖率测试 + 构建。覆盖率门槛：行/函数/语句 ≥85%，分支 ≥75%。

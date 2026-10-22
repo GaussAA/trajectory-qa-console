@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, describe, expect, it } from 'vitest'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { analyze } from '../core/analysis'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
 import { scoreSession } from '../core/analysis'
@@ -89,6 +89,31 @@ describe('ComparePanel', () => {
 
     const deltas = [...container.querySelectorAll('.compare-delta')].map((node) => node.textContent ?? '')
     expect(deltas.some((delta) => delta.startsWith('+'))).toBe(true)
+  })
+
+  it('exports the comparison as markdown', async () => {
+    const bodies: string[] = []
+    const originalUrl = URL.createObjectURL
+    const originalRevoke = URL.revokeObjectURL
+    URL.createObjectURL = ((blob: Blob) => {
+      void blob.text().then((text) => bodies.push(text))
+      return 'blob:mock'
+    }) as typeof URL.createObjectURL
+    URL.revokeObjectURL = (() => undefined) as typeof URL.revokeObjectURL
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
+
+    try {
+      setup()
+      fireEvent.click(screen.getByRole('button', { name: /导出对比/ }))
+      await waitFor(() => expect(bodies).toHaveLength(1))
+      expect(bodies[0]).toContain('# 轨迹对比报告')
+      expect(bodies[0]).toContain('| 项目 | 基准 | 对照 | 变化 |')
+      expect(click).toHaveBeenCalled()
+    } finally {
+      URL.createObjectURL = originalUrl
+      URL.revokeObjectURL = originalRevoke
+      click.mockRestore()
+    }
   })
 
   it('renders in English', () => {

@@ -3,7 +3,7 @@ import { parseTrajectory } from '../core/parsing'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
 import { runRules } from '../core/rules/engine'
 import { scoreTrajectory } from '../core/analysis/score'
-import { buildJsonReport, buildMarkdownReport } from './report'
+import { buildComparisonJson, buildComparisonReport, buildJsonReport, buildMarkdownReport } from './report'
 
 const TRACE = JSON.stringify([
   { role: 'system', content: '你是助手' },
@@ -100,5 +100,63 @@ describe('report builders', () => {
     expect(zh.sessions[0].dimensions[0].label).toBe('结构合法性')
     expect(en.sessions[0].dimensions[0].label).toBe('Structure')
     expect(en.locale).toBe('en')
+  })
+
+  it('builds a comparison report with score, dimension and step tables', () => {
+    const clean = parseTrajectory(
+      JSON.stringify([
+        { role: 'system', content: '你是助手' },
+        { role: 'user', content: '查一下' },
+        { role: 'assistant', content: '好的' },
+      ]),
+      'clean.json',
+    )
+    if (!clean.ok) throw new Error(clean.error.message)
+    const cleanTrajectory = clean.value[0] as NonNullable<(typeof clean.value)[0]>
+    const cleanRun = runRules(cleanTrajectory, DEFAULT_PACK)
+    const cleanCard = scoreTrajectory(cleanRun.findings, DEFAULT_PACK.dimensions, cleanRun.ruleIssues)
+
+    const input = {
+      base: { trajectory: cleanTrajectory, card: cleanCard },
+      target: entries[0] as (typeof entries)[number],
+      generatedAt: new Date('2026-10-22T12:00:00Z'),
+      locale: 'zh-CN' as const,
+    }
+    const markdown = buildComparisonReport(input)
+
+    expect(markdown).toContain('# 轨迹对比报告')
+    expect(markdown).toContain('| 项目 | 基准 | 对照 | 变化 |')
+    expect(markdown).toContain('| 维度 | 基准 | 对照 | 变化 |')
+    expect(markdown).toContain('## 步骤差异')
+    expect(markdown).toContain('| 状态 | 基准步 | 对照步 | 基准内容 | 对照内容 |')
+    // 等级行不该显示分数差
+    expect(markdown).toMatch(/\| 等级 \| [A-E] \| [A-E] \| — \|/)
+  })
+
+  it('localizes the comparison report and caps the step table', () => {
+    const input = {
+      base: entries[0] as (typeof entries)[number],
+      target: entries[0] as (typeof entries)[number],
+      generatedAt: new Date('2026-10-22T12:00:00Z'),
+      locale: 'en' as const,
+      maxStepRows: 1,
+    }
+    const markdown = buildComparisonReport(input)
+    expect(markdown).toContain('# Trajectory Comparison')
+    expect(markdown).toContain('| Item | Baseline | Candidate | Delta |')
+    expect(markdown).toContain('The two traces are identical.')
+  })
+
+  it('emits a machine-readable comparison', () => {
+    const input = {
+      base: entries[0] as (typeof entries)[number],
+      target: entries[0] as (typeof entries)[number],
+      generatedAt: new Date('2026-10-22T12:00:00Z'),
+      locale: 'zh-CN' as const,
+    }
+    const json = JSON.parse(buildComparisonJson(input))
+    expect(json.score.overall.delta).toBe(0)
+    expect(json.findings.added).toBe(0)
+    expect(json.base.label).toBe('trace.json')
   })
 })
