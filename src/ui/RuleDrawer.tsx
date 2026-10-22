@@ -3,7 +3,7 @@ import type { ScoreCard } from '../core/analysis'
 import { EXPR_FUNCTIONS } from '../core/expr'
 import type { RuleIssue, RulePack } from '../core/model'
 import { fieldsForScope, formatPackErrors, validatePack } from '../core/rules/contract'
-import { SEVERITY_LABEL } from '../core/model'
+import { useI18n } from '../i18n'
 import { downloadFile, nowStamp } from '../lib/format'
 import { Icon } from './Icons'
 import { useFocusTrap } from './useFocusTrap'
@@ -18,6 +18,7 @@ interface Props {
 }
 
 export function RuleDrawer({ open, pack, card, ruleIssues, onClose, onApply }: Props) {
+  const { t } = useI18n()
   const [draft, setDraft] = useState('')
   const [errors, setErrors] = useState<string[]>([])
   const [status, setStatus] = useState('')
@@ -50,7 +51,7 @@ export function RuleDrawer({ open, pack, card, ruleIssues, onClose, onApply }: P
     try {
       parsed = JSON.parse(draft)
     } catch (error) {
-      setErrors([`JSON 解析失败：${error instanceof Error ? error.message : String(error)}`])
+      setErrors([t('rules.jsonError', { message: error instanceof Error ? error.message : String(error) })])
       return
     }
     const result = validatePack(parsed)
@@ -60,7 +61,9 @@ export function RuleDrawer({ open, pack, card, ruleIssues, onClose, onApply }: P
     }
     setErrors([])
     onApply(result.pack)
-    setStatus(`已应用：${result.pack.rules.length} 条规则 / ${result.pack.dimensions.length} 个维度`)
+    setStatus(
+      t('rules.applied', { rules: result.pack.rules.length, dimensions: result.pack.dimensions.length }),
+    )
   }
 
   const reset = () => {
@@ -74,7 +77,7 @@ export function RuleDrawer({ open, pack, card, ruleIssues, onClose, onApply }: P
     const text = await file.text()
     setDraft(text)
     setErrors([])
-    setStatus(`已载入 ${file.name}，尚未应用`)
+    setStatus(t('rules.imported', { file: file.name }))
   }
 
   const uniqueIssues = new Map<string, string>()
@@ -96,18 +99,21 @@ export function RuleDrawer({ open, pack, card, ruleIssues, onClose, onApply }: P
         ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-label="规则包编辑"
+        aria-label={t('rules.title')}
         onMouseDown={(event) => event.stopPropagation()}
       >
         <header className="drawer-head">
           <div>
-            <h3>规则包</h3>
-            <p>
-              维度与规则都是数据。保存前会做结构校验与表达式编译，字段拼错会给出建议；
-              表达式在沙箱内求值，不会执行任意代码。
-            </p>
+            <h3>{t('rules.title')}</h3>
+            <p>{t('rules.description')}</p>
           </div>
-          <button type="button" className="icon-btn" onClick={onClose} title="关闭（Esc）" aria-label="关闭">
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={onClose}
+            title={t('rules.closeHint')}
+            aria-label={t('common.close')}
+          >
             <Icon name="close" size={16} />
           </button>
         </header>
@@ -131,7 +137,7 @@ export function RuleDrawer({ open, pack, card, ruleIssues, onClose, onApply }: P
 
           {uniqueIssues.size > 0 && (
             <div className="drawer-issues">
-              <span>当前会话中的规则异常</span>
+              <span>{t('rules.currentIssues')}</span>
               <ul>
                 {[...uniqueIssues.entries()].map(([key, message]) => (
                   <li key={key}>
@@ -143,7 +149,7 @@ export function RuleDrawer({ open, pack, card, ruleIssues, onClose, onApply }: P
           )}
 
           <details className="drawer-help">
-            <summary>规则命中情况（当前会话）</summary>
+            <summary>{t('rules.hits')}</summary>
             <div className="hit-list">
               {pack.rules.map((rule) => {
                 const count = hits.get(rule.id) ?? 0
@@ -151,7 +157,7 @@ export function RuleDrawer({ open, pack, card, ruleIssues, onClose, onApply }: P
                   <div key={rule.id} className={count > 0 ? 'hit-row hit' : 'hit-row'}>
                     <span className="mono">{rule.id}</span>
                     <span className="hit-meta">
-                      {SEVERITY_LABEL[rule.severity]} · 权重 {rule.scoreImpact}
+                      {t(`severity.${rule.severity}`)} · {t('rules.weight', { value: rule.scoreImpact })}
                     </span>
                     <span className="hit-count">{count}</span>
                   </div>
@@ -161,10 +167,10 @@ export function RuleDrawer({ open, pack, card, ruleIssues, onClose, onApply }: P
           </details>
 
           <details className="drawer-help">
-            <summary>字段与语法参考</summary>
+            <summary>{t('rules.help')}</summary>
             <div className="field-groups">
               <div>
-                <h5>step 作用域（{stepFields.length} 个字段）</h5>
+                <h5>{t('rules.stepScope', { count: stepFields.length })}</h5>
                 <ul>
                   {stepFields.map((field) => (
                     <li key={field.name}>
@@ -177,7 +183,7 @@ export function RuleDrawer({ open, pack, card, ruleIssues, onClose, onApply }: P
                 </ul>
               </div>
               <div>
-                <h5>trajectory 作用域（{trajectoryFields.length} 个字段）</h5>
+                <h5>{t('rules.trajectoryScope', { count: trajectoryFields.length })}</h5>
                 <ul>
                   {trajectoryFields.map((field) => (
                     <li key={field.name}>
@@ -190,7 +196,7 @@ export function RuleDrawer({ open, pack, card, ruleIssues, onClose, onApply }: P
                 </ul>
               </div>
               <div>
-                <h5>可用函数</h5>
+                <h5>{t('rules.functions')}</h5>
                 <ul>
                   {EXPR_FUNCTIONS.map((fn) => (
                     <li key={fn.name}>
@@ -201,10 +207,7 @@ export function RuleDrawer({ open, pack, card, ruleIssues, onClose, onApply }: P
                 </ul>
               </div>
             </div>
-            <p className="hint">
-              消息模板用 {'{字段名}'} 插入上下文值，例如「第 {'{step}'} 步有 {'{unpairedCalls}'}{' '}
-              个未配对调用」。
-            </p>
+            <p className="hint">{t('rules.templateHint')}</p>
           </details>
         </div>
 
@@ -220,24 +223,24 @@ export function RuleDrawer({ open, pack, card, ruleIssues, onClose, onApply }: P
             }}
           />
           <button type="button" className="btn ghost sm" onClick={() => fileRef.current?.click()}>
-            导入
+            {t('common.import')}
           </button>
           <button
             type="button"
             className="btn ghost sm"
             onClick={() => downloadFile(`rule-pack-${nowStamp()}.json`, draft, 'application/json')}
           >
-            导出
+            {t('common.export')}
           </button>
           <button type="button" className="btn ghost sm" onClick={reset}>
-            还原
+            {t('common.reset')}
           </button>
           <span className="grow" />
           <button type="button" className="btn ghost sm" onClick={onClose}>
-            取消
+            {t('common.cancel')}
           </button>
           <button type="button" className="btn primary sm" onClick={apply}>
-            校验并应用
+            {t('common.apply')}
           </button>
         </footer>
       </div>

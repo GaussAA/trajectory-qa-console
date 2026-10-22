@@ -1,5 +1,6 @@
 import type { ScoreCard, SessionAnalysis } from '../core/analysis'
 import { formatTokens } from '../core/estimate'
+import { useT } from '../i18n'
 import { cx, GRADE_COLOR, truncate } from '../lib/format'
 import { Icon } from './Icons'
 
@@ -13,10 +14,12 @@ interface Props {
 }
 
 export function SessionList({ sessions, cards, selectedId, onSelect, onAdd, onClear }: Props) {
+  const t = useT()
+
   return (
     <section className="panel session-panel glass">
       <header className="panel-head">
-        <span className="panel-title">会话</span>
+        <span className="panel-title">{t('session.title')}</span>
         <span className="panel-sub">{sessions.length}</span>
       </header>
 
@@ -42,8 +45,11 @@ export function SessionList({ sessions, cards, selectedId, onSelect, onAdd, onCl
               <span className="session-copy">
                 <span className="session-name">{truncate(session.trajectory.label, 26)}</span>
                 <span className="session-meta">
-                  {session.trajectory.steps.length} 步 · {formatTokens(session.trajectory.meta.totalTokens)} ·{' '}
-                  {card?.overall ?? '—'} 分
+                  {t('session.meta', {
+                    steps: session.trajectory.steps.length,
+                    tokens: formatTokens(session.trajectory.meta.totalTokens),
+                    score: card?.overall ?? '—',
+                  })}
                 </span>
               </span>
               {card !== undefined && card.counts.error > 0 && (
@@ -57,10 +63,10 @@ export function SessionList({ sessions, cards, selectedId, onSelect, onAdd, onCl
       <footer className="session-foot">
         <button type="button" className="btn subtle sm" onClick={onAdd}>
           <Icon name="plus" size={13} />
-          追加文件
+          {t('action.appendFile')}
         </button>
         <button type="button" className="btn ghost sm" onClick={onClear}>
-          清空
+          {t('common.clear')}
         </button>
       </footer>
     </section>

@@ -1,7 +1,8 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
+import { useT, type MessageKey } from '../i18n'
 
 interface Props {
-  name: string
+  nameKey: MessageKey
   children: ReactNode
   onError?: (error: Error, info: ErrorInfo) => void
   compact?: boolean
@@ -9,6 +10,32 @@ interface Props {
 
 interface State {
   error: Error | null
+}
+
+function BoundaryFallback({
+  nameKey,
+  message,
+  onRetry,
+  compact,
+}: {
+  nameKey: MessageKey
+  message: string
+  onRetry: () => void
+  compact?: boolean
+}) {
+  const t = useT()
+  return (
+    <div className={compact ? 'panel-fallback compact' : 'panel-fallback'} role="alert">
+      <div className="fallback-title">{t('boundary.unavailable', { name: t(nameKey) })}</div>
+      <div className="fallback-message">{message || t('common.unknownError')}</div>
+      <div className="fallback-actions">
+        <button type="button" className="btn ghost sm" onClick={onRetry}>
+          {t('boundary.retry')}
+        </button>
+      </div>
+      <p className="fallback-hint">{t('boundary.hint')}</p>
+    </div>
+  )
 }
 
 /** Contains a render failure to one panel instead of the whole document. */
@@ -32,16 +59,12 @@ export class ErrorBoundary extends Component<Props, State> {
     if (!error) return this.props.children
 
     return (
-      <div className={this.props.compact ? 'panel-fallback compact' : 'panel-fallback'} role="alert">
-        <div className="fallback-title">{this.props.name}不可用</div>
-        <div className="fallback-message">{error.message || '渲染时发生未知错误'}</div>
-        <div className="fallback-actions">
-          <button type="button" className="btn ghost sm" onClick={this.reset}>
-            重试该面板
-          </button>
-        </div>
-        <p className="fallback-hint">其余面板不受影响；诊断面板中可导出本次现场。</p>
-      </div>
+      <BoundaryFallback
+        nameKey={this.props.nameKey}
+        message={error.message}
+        onRetry={this.reset}
+        compact={this.props.compact}
+      />
     )
   }
 }

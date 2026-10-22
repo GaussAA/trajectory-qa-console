@@ -2,9 +2,9 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { formatClock, formatDuration, formatTokens } from '../core/estimate'
 import { computeMetrics } from '../core/analysis'
 import type { Annotation, Dimension, Severity, Step, Trajectory } from '../core/model'
-import { SEVERITY_LABEL } from '../core/model'
+import { hasMessage, useI18n } from '../i18n'
 import type { ScoreCard } from '../core/analysis'
-import { ROLE_COLOR, ROLE_LABEL, SEVERITY_COLOR, cx, prettyJson, truncate } from '../lib/format'
+import { ROLE_COLOR, SEVERITY_COLOR, cx, prettyJson, truncate } from '../lib/format'
 
 interface Props {
   trajectory: Trajectory
@@ -40,38 +40,47 @@ export function Inspector({
   const [severity, setSeverity] = useState<Severity>('warn')
   const [note, setNote] = useState('')
   const metrics = useMemo(() => computeMetrics(trajectory), [trajectory])
+  const { locale, t } = useI18n()
+
+  const dimensionName = (item: Dimension) => {
+    const key = `dimension.${item.id}`
+    return hasMessage(locale, key) ? t(key) : item.label
+  }
 
   if (!step) {
     return (
       <section className="panel inspector glass">
         <header className="panel-head">
-          <span className="panel-title">会话概览</span>
-          <span className="panel-sub">未选中步骤</span>
+          <span className="panel-title">{t('inspector.overview')}</span>
+          <span className="panel-sub">{t('inspector.noSelection')}</span>
         </header>
         <div className="inspector-body">
           <div className="metric-grid">
-            <Metric label="步骤" value={metrics.stepCount} />
-            <Metric label="工具调用" value={metrics.toolCalls} />
+            <Metric label={t('metrics.steps')} value={metrics.stepCount} />
+            <Metric label={t('metrics.toolCalls')} value={metrics.toolCalls} />
             <Metric
-              label="失败"
+              label={t('metrics.errors')}
               value={metrics.toolErrors}
               tone={metrics.toolErrors > 0 ? '#fb7185' : undefined}
             />
-            <Metric label="失败率" value={`${metrics.errorRatePercent}%`} />
+            <Metric label={t('metrics.errorRate')} value={`${metrics.errorRatePercent}%`} />
             <Metric
-              label="未配对"
+              label={t('metrics.unpaired')}
               value={metrics.unpairedCalls}
               tone={metrics.unpairedCalls > 0 ? '#fb7185' : undefined}
             />
-            <Metric label="重复调用" value={metrics.duplicateCalls} />
+            <Metric label={t('metrics.duplicateCalls')} value={metrics.duplicateCalls} />
             <Metric label="tokens" value={formatTokens(metrics.totalTokens)} />
-            <Metric label="重复最长" value={`${metrics.maxRepeatRun} 次`} />
+            <Metric
+              label={t('metrics.maxRepeat')}
+              value={t('metrics.repeatTimes', { count: metrics.maxRepeatRun })}
+            />
           </div>
 
           <div className="section">
-            <h4>解析备注</h4>
+            <h4>{t('inspector.parseNotes')}</h4>
             {trajectory.parseNotes.length === 0 ? (
-              <p className="hint">结构完整，未产生解析告警。</p>
+              <p className="hint">{t('inspector.noParseNotes')}</p>
             ) : (
               <ul className="note-list">
                 {trajectory.parseNotes.map((item, index) => (
@@ -81,7 +90,7 @@ export function Inspector({
             )}
           </div>
 
-          <p className="hint">点击左侧任一步骤，查看消息内容、工具参数与证据。</p>
+          <p className="hint">{t('inspector.emptyHint')}</p>
         </div>
       </section>
     )
@@ -111,9 +120,9 @@ export function Inspector({
     <section className="panel inspector glass">
       <header className="panel-head">
         <span className="panel-title">
-          第 {step.index + 1} 步
+          {t('inspector.stepTitle', { index: step.index + 1 })}
           <span className="role-pill inline" style={{ color: roleColor, background: `${roleColor}14` }}>
-            {ROLE_LABEL[step.role]}
+            {t(`role.${step.role}`)}
           </span>
         </span>
         <span className="panel-sub">
@@ -124,7 +133,7 @@ export function Inspector({
       <div className="inspector-body">
         {step.text && (
           <div className="section">
-            <h4>内容</h4>
+            <h4>{t('inspector.content')}</h4>
             <pre className="text-block">{step.text}</pre>
           </div>
         )}
@@ -132,7 +141,7 @@ export function Inspector({
         {step.reasoning && (
           <details className="section collapse">
             <summary>
-              推理过程 <em>{step.reasoning.length} 字符</em>
+              {t('inspector.reasoning')} <em>{t('inspector.chars', { count: step.reasoning.length })}</em>
             </summary>
             <pre className="text-block dim">{step.reasoning}</pre>
           </details>
@@ -140,7 +149,7 @@ export function Inspector({
 
         {step.toolCalls.length > 0 && (
           <div className="section">
-            <h4>工具调用</h4>
+            <h4>{t('inspector.toolCalls')}</h4>
             {step.toolCalls.map((call) => {
               const state = !call.result ? 'pending' : call.result.isError ? 'error' : 'ok'
               return (
@@ -148,22 +157,26 @@ export function Inspector({
                   <div className="call-head">
                     <span className="mono call-name">{call.name}</span>
                     <span className={cx('call-state', state)}>
-                      {state === 'ok' ? '成功' : state === 'error' ? '失败' : '无结果'}
+                      {state === 'ok'
+                        ? t('inspector.callOk')
+                        : state === 'error'
+                          ? t('inspector.callError')
+                          : t('inspector.callPending')}
                     </span>
                   </div>
-                  <div className="kv">入参</div>
+                  <div className="kv">{t('inspector.arguments')}</div>
                   <pre className="code-block">{prettyJson(call.args)}</pre>
                   {call.result ? (
                     <>
-                      <div className="kv">返回</div>
+                      <div className="kv">{t('inspector.result')}</div>
                       <pre className={cx('code-block', call.result.isError && 'error')}>
-                        {call.result.content || '（空）'}
+                        {call.result.content || t('common.emptyValue')}
                       </pre>
                     </>
                   ) : (
-                    <p className="hint warn-text">未找到配对的 tool 结果，链路在此中断。</p>
+                    <p className="hint warn-text">{t('inspector.unpaired')}</p>
                   )}
-                  {!call.argsValid && <p className="hint warn-text">参数不是合法 JSON，已按原文保留。</p>}
+                  {!call.argsValid && <p className="hint warn-text">{t('inspector.invalidArgs')}</p>}
                   <div className="call-id mono">{call.id}</div>
                 </div>
               )
@@ -173,19 +186,20 @@ export function Inspector({
 
         {step.role === 'tool' && step.result && (
           <div className="section">
-            <h4>工具结果</h4>
+            <h4>{t('inspector.toolResult')}</h4>
             <pre className={cx('text-block', step.result.isError && 'error')}>
-              {step.result.content || '（空）'}
+              {step.result.content || t('common.emptyValue')}
             </pre>
             <p className="hint mono">
-              {step.result.isError ? '错误返回' : '正常返回'} · 关联 {step.forCallId ?? '未配对'}
+              {t(step.result.isError ? 'inspector.errorReturn' : 'inspector.normalReturn')} ·{' '}
+              {t('inspector.linkBroken', { id: step.forCallId ?? '—' })}
             </p>
           </div>
         )}
 
         {step.parseNotes.length > 0 && (
           <div className="section">
-            <h4>解析备注</h4>
+            <h4>{t('inspector.parseNotes')}</h4>
             <ul className="note-list">
               {step.parseNotes.map((item, index) => (
                 <li key={index}>{item}</li>
@@ -196,7 +210,7 @@ export function Inspector({
 
         {stepFindings.length > 0 && (
           <div className="section">
-            <h4>本步问题 {stepFindings.length}</h4>
+            <h4>{t('inspector.stepIssues', { count: stepFindings.length })}</h4>
             <div className="mini-findings">
               {stepFindings.map((finding) => (
                 <div className="mini-finding" key={finding.id}>
@@ -212,7 +226,7 @@ export function Inspector({
         )}
 
         <div className="section">
-          <h4>人工标注 · 语义维度</h4>
+          <h4>{t('inspector.annotation')}</h4>
           {stepAnnotations.length > 0 && (
             <div className="annotation-list">
               {stepAnnotations.map((annotation) => (
@@ -222,7 +236,7 @@ export function Inspector({
                   <button
                     type="button"
                     className="icon-btn"
-                    title="删除标注"
+                    title={t('inspector.removeAnnotation')}
                     onClick={() => onRemoveAnnotation(annotation.id)}
                   >
                     ×
@@ -235,37 +249,37 @@ export function Inspector({
             <select
               value={dimension}
               onChange={(event) => setDimension(event.target.value)}
-              aria-label="标注维度"
+              aria-label={t('inspector.annotationDimension')}
             >
               {dimensions.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.label}
+                  {dimensionName(item)}
                 </option>
               ))}
             </select>
             <select
               value={severity}
               onChange={(event) => setSeverity(event.target.value as Severity)}
-              aria-label="标注严重度"
+              aria-label={t('inspector.annotationSeverity')}
             >
-              <option value="error">{SEVERITY_LABEL.error}</option>
-              <option value="warn">{SEVERITY_LABEL.warn}</option>
-              <option value="info">{SEVERITY_LABEL.info}</option>
+              <option value="error">{t('severity.error')}</option>
+              <option value="warn">{t('severity.warn')}</option>
+              <option value="info">{t('severity.info')}</option>
             </select>
             <input
               value={note}
               onChange={(event) => setNote(event.target.value)}
-              placeholder="例如：结论无引用、答非所问、越权写入"
-              aria-label="人工标注内容"
+              placeholder={t('inspector.annotationPlaceholder')}
+              aria-label={t('inspector.annotationNote')}
             />
             <button type="submit" className="btn subtle sm" disabled={!note.trim()}>
-              标记
+              {t('inspector.annotate')}
             </button>
           </form>
         </div>
 
         <details className="section collapse">
-          <summary>原始数据</summary>
+          <summary>{t('inspector.raw')}</summary>
           <pre className="code-block raw">{truncate(JSON.stringify(step.raw, null, 2), 6000)}</pre>
         </details>
       </div>

@@ -20,7 +20,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "verify": "pnpm typecheck && pnpm lint && pnpm test:coverage && vite build && node scripts/check-artifact.mjs",
+    "verify": "pnpm typecheck && pnpm lint && pnpm test:coverage && node scripts/check-i18n.mjs && vite build && node scripts/check-artifact.mjs",
     "ci": "pnpm verify"
   },
   "dependencies": {

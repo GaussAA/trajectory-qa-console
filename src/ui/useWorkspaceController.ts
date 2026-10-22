@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import type { ScoreCard, SessionAnalysis } from '../core/analysis'
 import type { Annotation, RulePack, Severity } from '../core/model'
+import type { MessageKey, TranslateParams } from '../i18n'
 import { buildStressTrace } from '../core/sample'
 import { createAnalyzer, type AnalyzerPort } from '../app/analyzer'
 import { buildDiagnostics, buildReportBundle, downloadText } from '../app/exporters'
@@ -23,6 +24,8 @@ import {
   type WorkspaceState,
 } from '../app/workspace'
 import { downloadFile, nowStamp } from '../lib/format'
+
+export type ToastMessage = { key: MessageKey; params?: TranslateParams } | { text: string }
 
 function uid(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -48,7 +51,7 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
 
   const port = useMemo(() => analyzer ?? createAnalyzer(), [analyzer])
   const abortRef = useRef<AbortController | null>(null)
-  const [toast, setToast] = useState<string | null>(null)
+  const [toast, setToast] = useState<ToastMessage | null>(null)
   const [events, setEvents] = useState<TelemetryEvent[]>(() => telemetry.snapshot())
 
   useEffect(() => telemetry.subscribe(() => setEvents(telemetry.snapshot())), [telemetry])
@@ -148,17 +151,17 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
       })
 
       if (collected.length === 0) {
-        const message = issues[0]?.message ?? '没有可用的轨迹'
+        const message = issues[0]?.message ?? 'No usable traces'
         dispatch({ type: 'ingest/failure', error: { code: 'analysis-failed', message } })
-        setToast(message)
+        setToast(issues[0] ? { text: issues[0].message } : { key: 'toast.nothingUsable' })
         return
       }
 
       dispatch({ type: 'ingest/success', sessions: collected, issues })
       setToast(
         issues.length > 0
-          ? `已载入 ${collected.length} 条，${issues.length} 个文件失败`
-          : `已载入 ${collected.length} 条轨迹`,
+          ? { key: 'toast.loadedPartial', params: { loaded: collected.length, failed: issues.length } }
+          : { key: 'toast.loaded', params: { count: collected.length } },
       )
     },
     [port, telemetry],
@@ -174,9 +177,9 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
         ms: Date.now() - started,
       })
       if (inputs.length === 0) {
-        const message = issues[0]?.message ?? '没有可读取的文件'
+        const message = issues[0]?.message ?? 'No readable files'
         dispatch({ type: 'ingest/failure', error: { code: 'analysis-failed', message } })
-        setToast(message)
+        setToast(issues[0] ? { text: issues[0].message } : { key: 'toast.nothingReadable' })
         return
       }
       await ingest(inputs)
@@ -212,7 +215,7 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
   const clear = useCallback(() => {
     dispatch({ type: 'workspace/clear' })
     telemetry.emit('workspace:clear')
-    setToast('已清空工作区')
+    setToast({ key: 'toast.cleared' })
   }, [telemetry])
 
   const chooseSession = useCallback((id: string) => dispatch({ type: 'session/select', id }), [])
@@ -222,7 +225,7 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
     (pack: RulePack) => {
       dispatch({ type: 'pack/apply', pack })
       telemetry.emit('pack:apply', { name: pack.name, rules: pack.rules.length })
-      setToast(`规则包已更新：${pack.rules.length} 条规则`)
+      setToast({ key: 'toast.packApplied', params: { count: pack.rules.length } })
     },
     [telemetry],
   )
@@ -241,7 +244,7 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
       }
       dispatch({ type: 'annotation/add', annotation })
       telemetry.emit('annotation:add', { dimension, severity })
-      setToast('已添加人工标注，计入该维度')
+      setToast({ key: 'toast.annotationAdded' })
     },
     [telemetry],
   )
@@ -255,7 +258,7 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
     const bundle = buildReportBundle(stateRef.current, cards)
     downloadFile(`trajectory-qa-${nowStamp()}.md`, bundle.markdown, 'text/markdown')
     telemetry.emit('export:markdown', { sessions: stateRef.current.sessions.length })
-    setToast('报告已导出')
+    setToast({ key: 'toast.reportExported' })
   }, [cards, telemetry])
 
   const exportJson = useCallback(() => {
@@ -263,14 +266,14 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
     const bundle = buildReportBundle(stateRef.current, cards)
     downloadFile(`trajectory-qa-${nowStamp()}.json`, bundle.json, 'application/json')
     telemetry.emit('export:json', { sessions: stateRef.current.sessions.length })
-    setToast('JSON 已导出')
+    setToast({ key: 'toast.jsonExported' })
   }, [cards, telemetry])
 
   const exportDiagnostics = useCallback(() => {
     const content = buildDiagnostics(stateRef.current, cards, telemetry.snapshot())
     downloadText(`diagnostics-${nowStamp()}.json`, content, 'application/json')
     telemetry.emit('export:diagnostics')
-    setToast('诊断包已导出')
+    setToast({ key: 'toast.diagnosticsExported' })
   }, [cards, telemetry])
 
   const clearTelemetry = useCallback(() => {

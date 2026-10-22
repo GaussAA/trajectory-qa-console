@@ -134,3 +134,30 @@ input::placeholder {
     scroll-behavior: auto !important;
   }
 }
+
+.lang-switch {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 9px;
+  background: rgba(148, 163, 184, 0.06);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.lang-btn {
+  border: 0;
+  background: transparent;
+  color: var(--text-mute);
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background 0.16s ease,
+    color 0.16s ease;
+}
+
+.lang-btn.active {
+  background: rgba(94, 234, 212, 0.14);
+  color: #d9fff8;
+}

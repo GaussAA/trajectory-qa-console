@@ -28,6 +28,11 @@ export const en: Record<MessageKey, string> = {
   'role.tool': 'Tool',
   'role.unknown': 'Unknown',
 
+  'dimension.structure': 'Structure',
+  'dimension.execution': 'Execution',
+  'dimension.efficiency': 'Efficiency',
+  'dimension.semantic': 'Semantics',
+
   'severity.error': 'Critical',
   'severity.warn': 'Warning',
   'severity.info': 'Info',
@@ -48,6 +53,19 @@ export const en: Record<MessageKey, string> = {
 
   'issues.filesFailed': '{count} file(s) failed',
 
+  'error.empty-input': 'Input is empty',
+  'error.invalid-json': 'Not valid JSON',
+  'error.unrecognized-structure': 'Unrecognized structure: no messages/steps array found',
+  'error.too-large': 'File exceeds the size limit',
+  'error.too-many-steps': 'Too many steps',
+  'error.invalid-pack': 'Invalid rule pack',
+  'error.analysis-failed': 'Analysis failed',
+  'error.aborted': 'Cancelled',
+  'error.read-failed': 'Read failed',
+  'error.empty-file': 'File is empty',
+  'error.total-limit': 'Total import size exceeded',
+  'error.too-many': 'Too many files',
+
   'loading.title': 'Analyzing traces…',
   'loading.description':
     'Parsing, metrics, rules and scoring run locally; large files switch to a background thread.',
@@ -59,9 +77,21 @@ export const en: Record<MessageKey, string> = {
   'empty.description':
     'Structure, execution health, cost and semantic quality in one pass. Everything runs in your browser; files never leave this machine and no requests are made.',
 
+  'panel.sessions': 'Sessions panel',
+  'panel.score': 'Score panel',
+  'panel.timeline': 'Timeline panel',
+  'panel.inspector': 'Inspector',
+  'panel.findings': 'Findings panel',
+
   'session.title': 'Sessions',
   'session.untitled': 'Untitled trace',
   'session.meta': '{steps} steps · {tokens} · {score} pts',
+
+  'grade.A': 'Excellent',
+  'grade.B': 'Good',
+  'grade.C': 'Pass',
+  'grade.D': 'Needs work',
+  'grade.E': 'Unusable',
 
   'score.gradeSuffix': 'Grade {grade}',
   'score.capped': 'Capped by errors',
@@ -103,6 +133,8 @@ export const en: Record<MessageKey, string> = {
   'inspector.removeAnnotation': 'Remove annotation',
   'inspector.raw': 'Raw payload',
   'inspector.parseNotes': 'Parse notes',
+  'inspector.noParseNotes': 'Structure looks complete — no parse warnings.',
+  'inspector.chars': '{count} chars',
   'inspector.linkBroken': 'linked to {id}',
   'inspector.normalReturn': 'Normal result',
   'inspector.errorReturn': 'Error result',
@@ -146,7 +178,7 @@ export const en: Record<MessageKey, string> = {
   'diag.title': 'Diagnostics',
   'diag.description':
     'Stage timings, rule issues and failure reasons live in this ring buffer; export it and attach it to a bug report.',
-  'diag.events': '{count} events',
+  'diag.events': 'events',
   'diag.errors': '{count} errors',
   'diag.warns': '{count} warnings',
   'diag.slowest': 'Slowest {name} {duration}',
@@ -156,6 +188,8 @@ export const en: Record<MessageKey, string> = {
   'diag.data': 'Data',
   'diag.noEvents': 'No events yet',
   'diag.sessionTiming': 'Session timings',
+  'diag.parse': 'parse',
+  'diag.rules': 'rules',
   'diag.export': 'Export diagnostics JSON',
 
   'boundary.unavailable': '{name} unavailable',

@@ -6,13 +6,18 @@ import { createSyncAnalyzer } from '../app/analyzer'
 import { createMemoryStorage, createPersistence } from '../app/persistence'
 import { createTelemetry } from '../app/telemetry'
 import App from './App'
+import { I18nProvider, type Locale } from '../i18n'
 
 afterEach(cleanup)
 
-function setup() {
+function setup(locale: Locale = 'zh-CN') {
   const telemetry = createTelemetry()
   const persistence = createPersistence(createMemoryStorage())
-  render(<App analyzer={createSyncAnalyzer()} persistence={persistence} telemetry={telemetry} />)
+  render(
+    <I18nProvider initialLocale={locale}>
+      <App analyzer={createSyncAnalyzer()} persistence={persistence} telemetry={telemetry} />
+    </I18nProvider>,
+  )
   return { user: userEvent.setup(), telemetry }
 }
 
@@ -57,6 +62,16 @@ describe('App smoke', () => {
     expect(matches.length).toBeGreaterThan(0)
   })
 
+  it('renders the whole shell in English when the locale is en', async () => {
+    const { user } = setup('en')
+    expect(screen.getByText('Drop a trace, get a four-axis checkup')).toBeTruthy()
+
+    await user.click(screen.getByRole('button', { name: /Load samples/ }))
+    expect(await screen.findByText('Timeline')).toBeTruthy()
+    expect(screen.getByText('Findings')).toBeTruthy()
+    expect(screen.getAllByText('Sessions').length).toBeGreaterThan(0)
+  })
+
   it('records ingest and annotation actions in telemetry', async () => {
     const { user, telemetry } = setup()
     await loadSamples(user)
@@ -70,7 +85,7 @@ describe('App smoke', () => {
     await loadSamples(user)
 
     await user.click(screen.getByRole('button', { name: '规则包' }))
-    expect(await screen.findByRole('dialog', { name: '规则包编辑' })).toBeTruthy()
+    expect(await screen.findByRole('dialog', { name: '规则包' })).toBeTruthy()
 
     await user.keyboard('{Escape}')
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())

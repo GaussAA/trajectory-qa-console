@@ -26,6 +26,11 @@ export const zhCN = {
   'role.tool': '工具',
   'role.unknown': '未知',
 
+  'dimension.structure': '结构合法性',
+  'dimension.execution': '执行健康度',
+  'dimension.efficiency': '效率与成本',
+  'dimension.semantic': '语义质量',
+
   'severity.error': '严重',
   'severity.warn': '警告',
   'severity.info': '提示',
@@ -46,6 +51,19 @@ export const zhCN = {
 
   'issues.filesFailed': '{count} 个文件失败',
 
+  'error.empty-input': '输入为空',
+  'error.invalid-json': '不是合法的 JSON',
+  'error.unrecognized-structure': '结构无法识别：未找到 messages / steps 数组',
+  'error.too-large': '文件超过大小上限',
+  'error.too-many-steps': '步数超过上限',
+  'error.invalid-pack': '规则包不合法',
+  'error.analysis-failed': '分析失败',
+  'error.aborted': '已取消',
+  'error.read-failed': '读取失败',
+  'error.empty-file': '文件内容为空',
+  'error.total-limit': '累计导入超过上限',
+  'error.too-many': '文件数量超过上限',
+
   'loading.title': '正在分析轨迹…',
   'loading.description': '解析、指标、规则与评分在本地完成；大文件会自动转入后台线程。',
 
@@ -56,9 +74,21 @@ export const zhCN = {
   'empty.description':
     '结构合法性、执行健康度、效率与成本、语义质量一次跑完。解析与质检全部在浏览器内完成，文件不出本机，也没有任何网络请求。',
 
+  'panel.sessions': '会话面板',
+  'panel.score': '评分面板',
+  'panel.timeline': '时间线面板',
+  'panel.inspector': '检视器',
+  'panel.findings': '问题清单面板',
+
   'session.title': '会话',
   'session.untitled': '未命名轨迹',
   'session.meta': '{steps} 步 · {tokens} · {score} 分',
+
+  'grade.A': '优秀',
+  'grade.B': '良好',
+  'grade.C': '合格',
+  'grade.D': '待修',
+  'grade.E': '不可用',
 
   'score.gradeSuffix': '{grade} 级',
   'score.capped': '严重问题封顶',
@@ -100,6 +130,8 @@ export const zhCN = {
   'inspector.removeAnnotation': '删除标注',
   'inspector.raw': '原始数据',
   'inspector.parseNotes': '解析备注',
+  'inspector.noParseNotes': '结构完整，未产生解析告警。',
+  'inspector.chars': '{count} 字符',
   'inspector.linkBroken': '关联 {id}',
   'inspector.normalReturn': '正常返回',
   'inspector.errorReturn': '错误返回',
@@ -142,7 +174,7 @@ export const zhCN = {
 
   'diag.title': '诊断',
   'diag.description': '阶段耗时、规则异常与失败原因都记在这条环形日志里；导出后可直接附在问题报告里。',
-  'diag.events': '{count} 事件',
+  'diag.events': '事件',
   'diag.errors': '{count} 错误',
   'diag.warns': '{count} 警告',
   'diag.slowest': '最慢 {name} {duration}',
@@ -152,6 +184,8 @@ export const zhCN = {
   'diag.data': '数据',
   'diag.noEvents': '暂无事件',
   'diag.sessionTiming': '会话耗时',
+  'diag.parse': '解析',
+  'diag.rules': '规则',
   'diag.export': '导出诊断 JSON',
 
   'boundary.unavailable': '{name}不可用',

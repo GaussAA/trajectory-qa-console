@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { formatDuration, formatTokens } from '../core/estimate'
 import type { ScoreCard } from '../core/analysis'
 import type { Step, ToolCall, Trajectory } from '../core/model'
-import { ROLE_COLOR, ROLE_LABEL, cx, truncate } from '../lib/format'
+import { useT } from '../i18n'
+import { ROLE_COLOR, cx, truncate } from '../lib/format'
 import { bucketizeSteps, computeWindow } from './windowing'
 
 interface Props {
@@ -21,15 +22,17 @@ function callState(call: ToolCall): 'ok' | 'error' | 'pending' {
   return call.result.isError ? 'error' : 'ok'
 }
 
-function previewOf(step: Step): string {
+function previewOf(step: Step, t: ReturnType<typeof useT>): string {
   const text = step.text.trim().replace(/\s+/g, ' ')
   if (text) return truncate(text, 220)
-  if (step.toolCalls.length > 0) return `调用 ${step.toolCalls.map((call) => call.name).join('、')}`
+  if (step.toolCalls.length > 0) {
+    return t('timeline.callPrefix', { names: step.toolCalls.map((call) => call.name).join(', ') })
+  }
   if (step.role === 'tool') {
     const content = (step.result?.content ?? '').trim().replace(/\s+/g, ' ')
-    return content ? truncate(content, 220) : '（工具返回空内容）'
+    return content ? truncate(content, 220) : t('timeline.toolEmpty')
   }
-  return '（空）'
+  return t('common.emptyValue')
 }
 
 interface RowProps {
@@ -43,6 +46,7 @@ interface RowProps {
 }
 
 function StepRow({ step, duration, compact, selected, issues, maxTokens, onSelect }: RowProps) {
+  const t = useT()
   const roleColor = ROLE_COLOR[step.role]
   const issueCount = (issues?.error ?? 0) + (issues?.warn ?? 0) + (issues?.info ?? 0)
 
@@ -59,9 +63,9 @@ function StepRow({ step, duration, compact, selected, issues, maxTokens, onSelec
       <span className="step-body">
         <span className="step-line">
           <span className="role-pill" style={{ color: roleColor, background: `${roleColor}14` }}>
-            {ROLE_LABEL[step.role]}
+            {t(`role.${step.role}`)}
           </span>
-          <span className="step-preview">{previewOf(step)}</span>
+          <span className="step-preview">{previewOf(step, t)}</span>
         </span>
 
         {!compact && (step.toolCalls.length > 0 || step.parseNotes.length > 0) && (
@@ -78,7 +82,7 @@ function StepRow({ step, duration, compact, selected, issues, maxTokens, onSelec
             })}
             {step.parseNotes.length > 0 && (
               <span className="note-chip" title={step.parseNotes.join('\n')}>
-                {step.parseNotes.length} 条解析备注
+                {t('timeline.parseNotes', { count: step.parseNotes.length })}
               </span>
             )}
           </span>
@@ -103,6 +107,7 @@ function StepRow({ step, duration, compact, selected, issues, maxTokens, onSelec
 }
 
 export function Timeline({ trajectory, card, selectedStep, onSelectStep }: Props) {
+  const t = useT()
   const compact = trajectory.steps.length > COMPACT_THRESHOLD
   const scrollRef = useRef<HTMLDivElement>(null)
   const [viewport, setViewport] = useState({ top: 0, height: VIEWPORT_FALLBACK })
@@ -187,11 +192,12 @@ export function Timeline({ trajectory, card, selectedStep, onSelectStep }: Props
   return (
     <section className="panel timeline-panel glass">
       <header className="panel-head">
-        <span className="panel-title">时间线</span>
+        <span className="panel-title">{t('timeline.title')}</span>
         <span className="panel-sub">
-          {trajectory.steps.length} 步 · {formatTokens(trajectory.meta.totalTokens)} tokens
+          {t('score.stepUnit', { count: trajectory.steps.length })} ·{' '}
+          {formatTokens(trajectory.meta.totalTokens)} {t('kpi.tokens')}
           {duration !== undefined ? ` · ${formatDuration(duration)}` : ''}
-          {compact ? ' · 仅渲染可视区' : ''}
+          {compact ? ` · ${t('timeline.visibleOnly')}` : ''}
         </span>
       </header>
 
@@ -208,8 +214,12 @@ export function Timeline({ trajectory, card, selectedStep, onSelectStep }: Props
                 height: `${bucket.height}px`,
                 background: bucket.error ? '#fb7185' : ROLE_COLOR[bucket.role],
               }}
-              title={span === 1 ? `第 ${bucket.start + 1} 步` : `第 ${bucket.start + 1}–${bucket.end} 步`}
-              aria-label={`跳转到第 ${bucket.start + 1} 步`}
+              title={
+                span === 1
+                  ? t('timeline.stepBadge', { index: bucket.start + 1 })
+                  : t('timeline.range', { start: bucket.start + 1, end: bucket.end })
+              }
+              aria-label={t('timeline.jumpTo', { index: bucket.start + 1 })}
               onClick={() => onSelectStep(bucket.start)}
             />
           )

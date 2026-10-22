@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import type { ReactElement } from 'react'
+import { I18nProvider } from '../i18n'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { scoreTrajectory } from '../core/analysis'
 import { DIMENSIONS } from '../core/rules/builtin-pack'
@@ -7,6 +9,10 @@ import type { Step, Trajectory } from '../core/model'
 import { Timeline } from './Timeline'
 
 afterEach(cleanup)
+
+function renderTimeline(ui: ReactElement) {
+  return render(<I18nProvider initialLocale="zh-CN">{ui}</I18nProvider>)
+}
 
 function syntheticTrajectory(count: number): Trajectory {
   const steps: Step[] = Array.from({ length: count }, (_, index) => ({
@@ -35,7 +41,7 @@ describe('Timeline virtualization', () => {
   it('renders a bounded number of rows for a 10,000-step trace', () => {
     const trajectory = syntheticTrajectory(10_000)
     const card = scoreTrajectory([], DIMENSIONS)
-    const { container } = render(
+    const { container } = renderTimeline(
       <Timeline trajectory={trajectory} card={card} selectedStep={null} onSelectStep={() => undefined} />,
     )
 
@@ -49,7 +55,7 @@ describe('Timeline virtualization', () => {
   it('keeps the overview strip bounded as well', () => {
     const trajectory = syntheticTrajectory(5000)
     const card = scoreTrajectory([], DIMENSIONS)
-    const { container } = render(
+    const { container } = renderTimeline(
       <Timeline trajectory={trajectory} card={card} selectedStep={null} onSelectStep={() => undefined} />,
     )
 
@@ -60,7 +66,7 @@ describe('Timeline virtualization', () => {
     const trajectory = syntheticTrajectory(1000)
     const card = scoreTrajectory([], DIMENSIONS)
     const onSelectStep = vi.fn()
-    const { container } = render(
+    const { container } = renderTimeline(
       <Timeline trajectory={trajectory} card={card} selectedStep={null} onSelectStep={onSelectStep} />,
     )
 
@@ -73,7 +79,7 @@ describe('Timeline virtualization', () => {
   it('renders every row for a small trace', () => {
     const trajectory = syntheticTrajectory(12)
     const card = scoreTrajectory([], DIMENSIONS)
-    const { container } = render(
+    const { container } = renderTimeline(
       <Timeline trajectory={trajectory} card={card} selectedStep={null} onSelectStep={() => undefined} />,
     )
 

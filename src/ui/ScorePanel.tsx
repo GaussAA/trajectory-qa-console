@@ -1,6 +1,7 @@
 import { formatDuration, formatTokens } from '../core/estimate'
 import type { ScoreCard } from '../core/analysis'
 import type { Trajectory } from '../core/model'
+import { hasMessage, useI18n } from '../i18n'
 import { cx, GRADE_COLOR } from '../lib/format'
 
 interface Props {
@@ -13,6 +14,7 @@ const RING_RADIUS = 42
 const CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS
 
 export function ScorePanel({ card, trajectory, ruleIssueCount }: Props) {
+  const { locale, t } = useI18n()
   const gradeColor = GRADE_COLOR[card.grade] ?? '#e9eef8'
   const dash = (card.overall / 100) * CIRCUMFERENCE
   const duration =
@@ -20,11 +22,19 @@ export function ScorePanel({ card, trajectory, ruleIssueCount }: Props) {
       ? trajectory.meta.endedAt - trajectory.meta.startedAt
       : undefined
 
+  const gradeKey = `grade.${card.grade}`
+  const gradeLabel = hasMessage(locale, gradeKey) ? t(gradeKey) : card.gradeLabel
+
+  const dimensionName = (id: string, fallback: string) => {
+    const key = `dimension.${id}`
+    return hasMessage(locale, key) ? t(key) : fallback
+  }
+
   return (
     <section className="panel score-panel glass">
       <div className="score-main">
         <div className="ring-wrap">
-          <svg width="112" height="112" viewBox="0 0 112 112" role="img" aria-label={`总分 ${card.overall}`}>
+          <svg width="112" height="112" viewBox="0 0 112 112" role="img" aria-label={`${card.overall}`}>
             <defs>
               <linearGradient id="score-ring" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor="#5eead4" />
@@ -55,7 +65,7 @@ export function ScorePanel({ card, trajectory, ruleIssueCount }: Props) {
               {card.overall}
             </text>
             <text x="56" y="76" textAnchor="middle" fontSize="11" fill="#9aa6bd">
-              {card.grade} · {card.gradeLabel}
+              {card.grade} · {gradeLabel}
             </text>
           </svg>
         </div>
@@ -67,13 +77,15 @@ export function ScorePanel({ card, trajectory, ruleIssueCount }: Props) {
               className="grade-chip"
               style={{ color: gradeColor, borderColor: `${gradeColor}55`, background: `${gradeColor}14` }}
             >
-              {card.grade} 级
+              {t('score.gradeSuffix', { grade: card.grade })}
             </span>
           </div>
           <div className="score-meta">
-            <span>{trajectory.steps.length} 步</span>
+            <span>{t('score.stepUnit', { count: trajectory.steps.length })}</span>
             <span className="sep" />
-            <span>{formatTokens(trajectory.meta.totalTokens)} tokens</span>
+            <span>
+              {formatTokens(trajectory.meta.totalTokens)} {t('kpi.tokens')}
+            </span>
             <span className="sep" />
             <span>{formatDuration(duration)}</span>
             {trajectory.meta.model && (
@@ -82,18 +94,26 @@ export function ScorePanel({ card, trajectory, ruleIssueCount }: Props) {
                 <span className="mono">{trajectory.meta.model}</span>
               </>
             )}
-            {trajectory.meta.estimatedTokens && <span className="tag-dim">token 为估算</span>}
+            {trajectory.meta.estimatedTokens && <span className="tag-dim">{t('score.tokenEstimated')}</span>}
           </div>
           <div className="score-counts">
-            <span className="count-pill error">{card.counts.error} 严重</span>
-            <span className="count-pill warn">{card.counts.warn} 警告</span>
-            <span className="count-pill info">{card.counts.info} 提示</span>
+            <span className="count-pill error">
+              {card.counts.error} {t('severity.error')}
+            </span>
+            <span className="count-pill warn">
+              {card.counts.warn} {t('severity.warn')}
+            </span>
+            <span className="count-pill info">
+              {card.counts.info} {t('severity.info')}
+            </span>
             {card.capped && (
-              <span className="count-pill rule" title={`加权分 ${card.rawOverall}，因存在严重问题封顶`}>
-                严重问题封顶
+              <span className="count-pill rule" title={t('score.capped')}>
+                {t('score.capped')}
               </span>
             )}
-            {ruleIssueCount > 0 && <span className="count-pill rule">规则异常 {ruleIssueCount}</span>}
+            {ruleIssueCount > 0 && (
+              <span className="count-pill rule">{t('score.ruleIssues', { count: ruleIssueCount })}</span>
+            )}
           </div>
         </div>
       </div>
@@ -103,7 +123,7 @@ export function ScorePanel({ card, trajectory, ruleIssueCount }: Props) {
           <div className={cx('dim-row', dimension.findings === 0 && 'dim-clean')} key={dimension.id}>
             <span className="dim-name">
               <i style={{ background: dimension.color }} />
-              {dimension.label}
+              {dimensionName(dimension.id, dimension.label)}
               <em>{Math.round(dimension.weight * 100)}%</em>
             </span>
             <span className="dim-track">
@@ -112,7 +132,7 @@ export function ScorePanel({ card, trajectory, ruleIssueCount }: Props) {
             <span className="dim-score" style={{ color: dimension.score >= 80 ? '#e9eef8' : '#fbbf24' }}>
               {dimension.score}
             </span>
-            <span className="dim-issues" title="该维度问题数">
+            <span className="dim-issues" title={t('findings.title')}>
               {dimension.findings > 0 ? dimension.findings : ''}
             </span>
           </div>

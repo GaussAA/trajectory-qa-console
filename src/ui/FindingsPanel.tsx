@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { Dimension, Severity } from '../core/model'
-import { SEVERITY_LABEL } from '../core/model'
 import type { ScoreCard } from '../core/analysis'
+import { hasMessage, useI18n } from '../i18n'
 import { SEVERITY_COLOR, cx, truncate } from '../lib/format'
 
 interface Props {
@@ -13,14 +13,18 @@ interface Props {
 type SeverityFilter = 'all' | Severity
 
 export function FindingsPanel({ card, dimensions, onLocate }: Props) {
+  const { locale, t } = useI18n()
   const [severity, setSeverity] = useState<SeverityFilter>('all')
   const [dimension, setDimension] = useState<string>('all')
 
   const dimensionLabel = useMemo(() => {
     const map = new Map<string, string>()
-    for (const item of dimensions) map.set(item.id, item.label)
+    for (const item of dimensions) {
+      const key = `dimension.${item.id}`
+      map.set(item.id, hasMessage(locale, key) ? t(key) : item.label)
+    }
     return map
-  }, [dimensions])
+  }, [dimensions, locale, t])
 
   const visible = card.findings.filter(
     (finding) =>
@@ -31,7 +35,7 @@ export function FindingsPanel({ card, dimensions, onLocate }: Props) {
   return (
     <section className="panel findings-panel glass">
       <header className="panel-head">
-        <span className="panel-title">问题清单</span>
+        <span className="panel-title">{t('findings.title')}</span>
         <span className="panel-sub">
           {visible.length} / {card.findings.length}
         </span>
@@ -50,7 +54,7 @@ export function FindingsPanel({ card, dimensions, onLocate }: Props) {
                 item === 'all' ? undefined : { color: severity === item ? SEVERITY_COLOR[item] : undefined }
               }
             >
-              {item === 'all' ? '全部' : SEVERITY_LABEL[item]}
+              {item === 'all' ? t('common.all') : t(`severity.${item}`)}
               {item !== 'all' && <b>{card.findings.filter((finding) => finding.severity === item).length}</b>}
             </button>
           ))}
@@ -58,12 +62,12 @@ export function FindingsPanel({ card, dimensions, onLocate }: Props) {
         <select
           value={dimension}
           onChange={(event) => setDimension(event.target.value)}
-          aria-label="按维度筛选问题"
+          aria-label={t('findings.filterDimension')}
         >
-          <option value="all">全部维度</option>
+          <option value="all">{t('findings.allDimensions')}</option>
           {dimensions.map((item) => (
             <option key={item.id} value={item.id}>
-              {item.label}
+              {dimensionLabel.get(item.id) ?? item.label}
             </option>
           ))}
         </select>
@@ -72,8 +76,8 @@ export function FindingsPanel({ card, dimensions, onLocate }: Props) {
       <div className="finding-scroll">
         {visible.length === 0 ? (
           <div className="empty-inline">
-            <span>当前筛选下没有问题</span>
-            <em>调整筛选，或该维度确实干净</em>
+            <span>{t('findings.empty')}</span>
+            <em>{t('findings.emptyHint')}</em>
           </div>
         ) : (
           visible.map((finding) => (
@@ -90,7 +94,7 @@ export function FindingsPanel({ card, dimensions, onLocate }: Props) {
                 <span className="finding-head">
                   <b>{finding.ruleTitle}</b>
                   <em>{dimensionLabel.get(finding.dimension) ?? finding.dimension}</em>
-                  {finding.manual && <span className="manual-tag">人工</span>}
+                  {finding.manual && <span className="manual-tag">{t('findings.manual')}</span>}
                 </span>
                 <span className="finding-msg">{finding.message}</span>
                 {finding.evidence && <span className="finding-ev">{truncate(finding.evidence, 80)}</span>}
@@ -105,7 +109,7 @@ export function FindingsPanel({ card, dimensions, onLocate }: Props) {
 
       {card.ruleIssues.length > 0 && (
         <footer className="rule-issues">
-          <span>规则异常</span>
+          <span>{t('findings.ruleIssues')}</span>
           <ul>
             {card.ruleIssues.map((issue, index) => (
               <li key={`${issue.ruleId}-${index}`}>

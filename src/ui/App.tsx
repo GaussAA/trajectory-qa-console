@@ -14,6 +14,8 @@ import { ScorePanel } from './ScorePanel'
 import { SessionList } from './SessionList'
 import { Timeline } from './Timeline'
 import { useWorkspaceController } from './useWorkspaceController'
+import { LOCALES, useI18n } from '../i18n'
+import { cx } from '../lib/format'
 
 export interface AppProps {
   analyzer?: AnalyzerPort
@@ -34,6 +36,12 @@ export default function App({
 
   const controller = useWorkspaceController({ analyzer, telemetry, persistence })
   const { state, session, card, step, cards, totals, events, actions } = controller
+  const { locale, t, setLocale } = useI18n()
+  const toastText = controller.toast
+    ? 'key' in controller.toast
+      ? t(controller.toast.key, controller.toast.params)
+      : controller.toast.text
+    : null
 
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false)
@@ -109,8 +117,8 @@ export default function App({
             <Icon name="spark" size={18} />
           </span>
           <div>
-            <h1>轨迹质检台</h1>
-            <span className="brand-sub">Trajectory QA Console</span>
+            <h1>{t('app.name')}</h1>
+            <span className="brand-sub">{t('app.subtitle')}</span>
           </div>
         </div>
 
@@ -118,22 +126,22 @@ export default function App({
           <div className="kpis">
             <span className="kpi">
               <b>{totals.sessions}</b>
-              <span>会话</span>
+              <span>{t('kpi.sessions')}</span>
             </span>
             <i className="kpi-sep" />
             <span className="kpi">
               <b>{totals.steps}</b>
-              <span>步骤</span>
+              <span>{t('kpi.steps')}</span>
             </span>
             <i className="kpi-sep kpi-optional" />
             <span className="kpi kpi-optional">
               <b>{formatTokens(totals.tokens)}</b>
-              <span>tokens</span>
+              <span>{t('kpi.tokens')}</span>
             </span>
             <i className="kpi-sep" />
             <span className="kpi">
               <b>{totals.average}</b>
-              <span>平均分</span>
+              <span>{t('kpi.average')}</span>
             </span>
           </div>
         )}
@@ -147,20 +155,34 @@ export default function App({
             title={state.issues.map((issue) => `${issue.file}：${issue.message}`).join('\n')}
             onClick={() => setDiagnosticsOpen(true)}
           >
-            {state.issues.length} 个文件失败
+            {t('issues.filesFailed', { count: state.issues.length })}
           </button>
         )}
 
+        <div className="lang-switch" role="group" aria-label="Language">
+          {LOCALES.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={cx('lang-btn', locale === item.id && 'active')}
+              aria-pressed={locale === item.id}
+              onClick={() => setLocale(item.id)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+
         <div className="topbar-actions">
           <button type="button" className="btn ghost sm" onClick={() => actions.loadSamples()}>
-            示例轨迹
+            {t('action.samples')}
           </button>
           <button type="button" className="btn ghost sm" onClick={() => setDrawerOpen(true)}>
             <Icon name="sliders" size={13} />
-            规则包
+            {t('action.rules')}
           </button>
           <button type="button" className="btn ghost sm" onClick={() => setDiagnosticsOpen(true)}>
-            诊断
+            {t('action.diagnostics')}
           </button>
           <button type="button" className="btn ghost sm" onClick={actions.exportJson} disabled={!hasData}>
             JSON
@@ -172,7 +194,7 @@ export default function App({
             disabled={!hasData}
           >
             <Icon name="download" size={13} />
-            导出报告
+            {t('action.exportReport')}
           </button>
         </div>
       </header>
@@ -197,9 +219,9 @@ export default function App({
           issues={state.issues}
         />
       ) : (
-        <main className="main-grid" aria-label="质检工作区">
+        <main className="main-grid" aria-label={t('app.name')}>
           <div className="col col-left">
-            <ErrorBoundary name="会话面板" compact onError={reportBoundaryError('sessions')}>
+            <ErrorBoundary nameKey="panel.sessions" compact onError={reportBoundaryError('sessions')}>
               <SessionList
                 sessions={state.sessions}
                 cards={cards}
@@ -212,14 +234,14 @@ export default function App({
           </div>
 
           <div className="col col-center">
-            <ErrorBoundary name="评分面板" compact onError={reportBoundaryError('score')}>
+            <ErrorBoundary nameKey="panel.score" compact onError={reportBoundaryError('score')}>
               <ScorePanel
                 card={card}
                 trajectory={session.trajectory}
                 ruleIssueCount={card.ruleIssues.length}
               />
             </ErrorBoundary>
-            <ErrorBoundary name="时间线" compact onError={reportBoundaryError('timeline')}>
+            <ErrorBoundary nameKey="panel.timeline" compact onError={reportBoundaryError('timeline')}>
               <Timeline
                 trajectory={session.trajectory}
                 card={card}
@@ -230,7 +252,7 @@ export default function App({
           </div>
 
           <div className="col col-right">
-            <ErrorBoundary name="检视器" compact onError={reportBoundaryError('inspector')}>
+            <ErrorBoundary nameKey="panel.inspector" compact onError={reportBoundaryError('inspector')}>
               <Inspector
                 trajectory={session.trajectory}
                 step={step}
@@ -241,7 +263,7 @@ export default function App({
                 onRemoveAnnotation={actions.removeAnnotation}
               />
             </ErrorBoundary>
-            <ErrorBoundary name="问题清单" compact onError={reportBoundaryError('findings')}>
+            <ErrorBoundary nameKey="panel.findings" compact onError={reportBoundaryError('findings')}>
               <FindingsPanel card={card} dimensions={state.pack.dimensions} onLocate={actions.chooseStep} />
             </ErrorBoundary>
           </div>
@@ -274,11 +296,11 @@ export default function App({
           <div className="loading-card glass">
             <span className="spinner" />
             <div>
-              <b>正在分析轨迹…</b>
-              <p>解析、指标、规则与评分在本地完成；大文件会自动转入后台线程。</p>
+              <b>{t('loading.title')}</b>
+              <p>{t('loading.description')}</p>
             </div>
             <button type="button" className="btn ghost sm" onClick={actions.cancel}>
-              取消
+              {t('common.cancel')}
             </button>
           </div>
         </div>
@@ -286,12 +308,12 @@ export default function App({
 
       {controller.toast && (
         <div className="toast" role="status" aria-live="polite">
-          {controller.toast}
+          {toastText}
         </div>
       )}
       {dragging && (
         <div className="drag-overlay" role="presentation">
-          松手即导入 · 全程本地解析
+          {t('drop.overlay')}
         </div>
       )}
     </div>

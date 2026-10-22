@@ -48,6 +48,10 @@ export function interpolate(template: string, params?: TranslateParams): string 
   })
 }
 
+export function hasMessage(locale: Locale, key: string): key is MessageKey {
+  return Object.prototype.hasOwnProperty.call(DICTIONARIES[locale], key)
+}
+
 export function translate(locale: Locale, key: MessageKey, params?: TranslateParams): string {
   const template = DICTIONARIES[locale][key]
   return interpolate(template ?? key, params)
