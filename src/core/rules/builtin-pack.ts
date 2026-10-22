@@ -37,9 +37,7 @@ export const DIMENSIONS: Dimension[] = [
   },
 ]
 
-function rule(
-  partial: Omit<Rule, 'enabled' | 'builtin'> & Partial<Pick<Rule, 'enabled' | 'builtin'>>,
-): Rule {
+function rule(partial: Omit<Rule, 'enabled' | 'builtin'> & Partial<Pick<Rule, 'enabled' | 'builtin'>>): Rule {
   return { enabled: true, builtin: true, ...partial }
 }
 

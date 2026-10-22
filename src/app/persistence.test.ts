@@ -9,9 +9,11 @@ describe('persistence', () => {
     const port = createPersistence(store)
 
     expect(port.savePack(DEFAULT_PACK)).toBe(true)
-    expect(port.saveAnnotations([
-      { id: 'a1', trajectoryId: 't1', stepIndex: 2, dimension: 'semantic', severity: 'warn', note: '偏题' },
-    ])).toBe(true)
+    expect(
+      port.saveAnnotations([
+        { id: 'a1', trajectoryId: 't1', stepIndex: 2, dimension: 'semantic', severity: 'warn', note: '偏题' },
+      ]),
+    ).toBe(true)
 
     expect(port.loadPack().name).toBe(DEFAULT_PACK.name)
     expect(port.loadPack().rules).toHaveLength(DEFAULT_PACK.rules.length)
@@ -40,7 +42,9 @@ describe('persistence', () => {
     expect(telemetry.snapshot().some((event) => event.name === 'storage:pack-corrupt')).toBe(true)
 
     const invalid = createPersistence(
-      createMemoryStorage({ [STORAGE_KEYS.pack]: JSON.stringify({ schemaVersion: 1, data: { version: 1 } }) }),
+      createMemoryStorage({
+        [STORAGE_KEYS.pack]: JSON.stringify({ schemaVersion: 1, data: { version: 1 } }),
+      }),
       telemetry,
     )
     expect(invalid.loadPack()).toBe(DEFAULT_PACK)

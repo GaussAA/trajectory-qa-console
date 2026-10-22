@@ -29,7 +29,9 @@ describe('ingest', () => {
   })
 
   it('caps the number of files per drop', async () => {
-    const files = Array.from({ length: INGEST_LIMITS.maxFiles + 2 }, (_, i) => fakeFile(`f${i}.json`, '[]', 2))
+    const files = Array.from({ length: INGEST_LIMITS.maxFiles + 2 }, (_, i) =>
+      fakeFile(`f${i}.json`, '[]', 2),
+    )
     const result = await readFiles(files)
     expect(result.inputs).toHaveLength(INGEST_LIMITS.maxFiles)
     expect(result.issues.some((issue) => issue.code === 'too-many')).toBe(true)

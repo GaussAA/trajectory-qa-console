@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { analyze, type SessionAnalysis } from '../core/analysis'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
 import { buildDiagnostics, buildReportBundle } from './exporters'
-import { createInitialState, selectCards, workspaceReducer } from './workspace'
+import { createInitialState, scoreCards, workspaceReducer } from './workspace'
 
 const TRACE = JSON.stringify([
   { role: 'system', content: '你是助手' },
@@ -19,7 +19,7 @@ function fixtureState() {
     sessions: [analysis],
     issues: [],
   })
-  return { state, cards: selectCards(state) }
+  return { state, cards: scoreCards(state.sessions, state.pack, state.annotations) }
 }
 
 describe('exporters', () => {
@@ -39,7 +39,12 @@ describe('exporters', () => {
   it('builds a diagnostics bundle with timings, issues and events', () => {
     const { state, cards } = fixtureState()
     const diagnostics = JSON.parse(
-      buildDiagnostics(state, cards, [{ seq: 1, at: 0, level: 'info', name: 'test' }], new Date('2026-10-22T12:00:00Z')),
+      buildDiagnostics(
+        state,
+        cards,
+        [{ seq: 1, at: 0, level: 'info', name: 'test' }],
+        new Date('2026-10-22T12:00:00Z'),
+      ),
     )
 
     expect(diagnostics.sessions[0].diagnostics.stepCount).toBe(3)

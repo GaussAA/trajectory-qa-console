@@ -71,7 +71,9 @@ function readUsage(record: Record<string, unknown>): Usage | undefined {
   if (isRecord(source)) {
     const number = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? value : 0)
     const input = number(pick(source, ['prompt_tokens', 'input_tokens', 'promptTokens', 'inputTokens']))
-    const output = number(pick(source, ['completion_tokens', 'output_tokens', 'completionTokens', 'outputTokens']))
+    const output = number(
+      pick(source, ['completion_tokens', 'output_tokens', 'completionTokens', 'outputTokens']),
+    )
     const total = number(pick(source, ['total_tokens', 'totalTokens'])) || input + output
     if (total > 0) return { input, output, total }
   }
@@ -112,7 +114,7 @@ function toCallDraft(value: unknown, notes: string[]): CallDraft | undefined {
   if (typeof rawArgsValue === 'string') rawArgs = rawArgsValue
   else if (rawArgsValue !== undefined) rawArgs = JSON.stringify(rawArgsValue)
 
-  let args: unknown = {}
+  let args: unknown
   let argsValid = true
   if (rawArgs.trim() === '') {
     args = {}
@@ -242,7 +244,10 @@ function readContentDraft(message: Record<string, unknown>): ContentDraft {
 export function looksLikeMessage(value: unknown): boolean {
   if (!isRecord(value)) return false
   if (typeof value.role === 'string') return true
-  if (typeof value.type === 'string' && (TOOL_USE_TYPES.has(value.type) || TOOL_RESULT_TYPES.has(value.type))) {
+  if (
+    typeof value.type === 'string' &&
+    (TOOL_USE_TYPES.has(value.type) || TOOL_RESULT_TYPES.has(value.type))
+  ) {
     return true
   }
   return 'content' in value || 'tool_calls' in value
@@ -286,11 +291,7 @@ export function toStep(raw: unknown, index: number): Step {
     const callIdRaw = pick(raw, ['tool_call_id', 'toolCallId', 'call_id', 'tool_use_id'])
     const noteCallId = draft.notes.find((note) => note.startsWith('RESULT_CALL_ID:'))
     const callId =
-      typeof callIdRaw === 'string'
-        ? callIdRaw
-        : noteCallId
-          ? noteCallId.slice('RESULT_CALL_ID:'.length)
-          : ''
+      typeof callIdRaw === 'string' ? callIdRaw : noteCallId ? noteCallId.slice('RESULT_CALL_ID:'.length) : ''
     const content = draft.resultContent ?? readText(pick(raw, ['content', 'output', 'result']))
     const flagError = Boolean(raw.is_error ?? raw.isError) || Boolean(draft.resultIsError)
     const prefixedError = /^\s*(error|exception|traceback)\b/i.test(content)

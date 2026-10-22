@@ -14,10 +14,10 @@ import type { PersistencePort } from '../app/persistence'
 import type { Telemetry, TelemetryEvent } from '../app/telemetry'
 import {
   createInitialState,
-  selectCards,
-  selectSelectedCard,
-  selectSelectedStep,
-  selectSession,
+  findSessionById,
+  scoreCards,
+  scoreFor,
+  stepAt,
   workspaceReducer,
   type WorkspaceState,
 } from '../app/workspace'
@@ -67,19 +67,19 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
   }, [toast])
 
   const cards = useMemo<Map<string, ScoreCard>>(
-    () => selectCards(state),
+    () => scoreCards(state.sessions, state.pack, state.annotations),
     [state.sessions, state.pack, state.annotations],
   )
 
-  const session = useMemo(() => selectSession(state), [state.sessions, state.selectedId])
+  const session = useMemo(
+    () => findSessionById(state.sessions, state.selectedId),
+    [state.sessions, state.selectedId],
+  )
   const card = useMemo(
-    () => selectSelectedCard(state),
-    [state.sessions, state.selectedId, state.pack, state.annotations],
+    () => (session ? scoreFor(session, state.pack, state.annotations) : null),
+    [session, state.pack, state.annotations],
   )
-  const step = useMemo(
-    () => selectSelectedStep(state),
-    [state.sessions, state.selectedId, state.selectedStep],
-  )
+  const step = useMemo(() => stepAt(session, state.selectedStep), [session, state.selectedStep])
 
   const totals = useMemo(() => {
     const steps = state.sessions.reduce((sum, item) => sum + item.trajectory.steps.length, 0)
@@ -187,7 +187,9 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
     (index?: number) => {
       const inputs = sampleInputs()
       const picked =
-        typeof index === 'number' && index >= 0 && index < inputs.length ? [inputs[index] as TextInput] : inputs
+        typeof index === 'number' && index >= 0 && index < inputs.length
+          ? [inputs[index] as TextInput]
+          : inputs
       void ingest(picked)
     },
     [ingest],
@@ -204,14 +206,8 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
     setToast('已清空工作区')
   }, [telemetry])
 
-  const chooseSession = useCallback(
-    (id: string) => dispatch({ type: 'session/select', id }),
-    [],
-  )
-  const chooseStep = useCallback(
-    (index: number | null) => dispatch({ type: 'step/select', index }),
-    [],
-  )
+  const chooseSession = useCallback((id: string) => dispatch({ type: 'session/select', id }), [])
+  const chooseStep = useCallback((index: number | null) => dispatch({ type: 'step/select', index }), [])
 
   const applyPack = useCallback(
     (pack: RulePack) => {
@@ -224,7 +220,7 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
 
   const addAnnotation = useCallback(
     (stepIndex: number, dimension: string, severity: Severity, note: string) => {
-      const current = selectSession(stateRef.current)
+      const current = findSessionById(stateRef.current.sessions, stateRef.current.selectedId)
       if (!current) return
       const annotation: Annotation = {
         id: uid(),

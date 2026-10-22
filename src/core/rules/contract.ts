@@ -129,13 +129,13 @@ const TRAJECTORY_DESCRIPTIONS: Record<string, string> = {
   assistantWithoutTools: '有助手回复但全程未调用工具',
 }
 
-export const STEP_FIELDS: FieldSpec[] = (
-  Object.keys(STEP_FIELD_TYPES) as (keyof StepContext)[]
-).map((name) => ({
-  name,
-  type: STEP_FIELD_TYPES[name],
-  description: STEP_DESCRIPTIONS[name] ?? '',
-}))
+export const STEP_FIELDS: FieldSpec[] = (Object.keys(STEP_FIELD_TYPES) as (keyof StepContext)[]).map(
+  (name) => ({
+    name,
+    type: STEP_FIELD_TYPES[name],
+    description: STEP_DESCRIPTIONS[name] ?? '',
+  }),
+)
 
 export const TRAJECTORY_FIELDS: FieldSpec[] = (
   Object.keys(TRAJECTORY_FIELD_TYPES) as (keyof TrajectoryMetrics)[]
@@ -187,9 +187,7 @@ export interface PackError {
   message: string
 }
 
-export type PackValidation =
-  | { ok: true; pack: RulePack }
-  | { ok: false; errors: PackError[] }
+export type PackValidation = { ok: true; pack: RulePack } | { ok: false; errors: PackError[] }
 
 function editDistance(a: string, b: string): number {
   const rows = a.length + 1

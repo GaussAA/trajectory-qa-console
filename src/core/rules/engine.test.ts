@@ -12,9 +12,7 @@ const CLEAN_TRACE = JSON.stringify([
   { role: 'user', content: '报销标准是多少' },
   {
     role: 'assistant',
-    tool_calls: [
-      { id: 'c1', type: 'function', function: { name: 'search', arguments: '{"q":"报销"}' } },
-    ],
+    tool_calls: [{ id: 'c1', type: 'function', function: { name: 'search', arguments: '{"q":"报销"}' } }],
   },
   { role: 'tool', tool_call_id: 'c1', name: 'search', content: '住宿上限 500 元' },
   { role: 'assistant', content: '住宿上限为 500 元。' },
@@ -113,7 +111,14 @@ describe('rule engine', () => {
 
   it('keeps manual annotations as first-class findings', () => {
     const findings = annotationFindings('t1', [
-      { id: 'a1', trajectoryId: 't1', stepIndex: 2, dimension: 'semantic', severity: 'error', note: '答非所问' },
+      {
+        id: 'a1',
+        trajectoryId: 't1',
+        stepIndex: 2,
+        dimension: 'semantic',
+        severity: 'error',
+        note: '答非所问',
+      },
       { id: 'a2', trajectoryId: 't2', stepIndex: 0, dimension: 'semantic', severity: 'info', note: '忽略' },
       { id: 'a3', trajectoryId: 't1', dimension: 'semantic', severity: 'info', note: '   ' },
     ])

@@ -50,8 +50,26 @@ interface Token {
 }
 
 const OPERATORS = [
-  '&&', '||', '==', '!=', '>=', '<=', '>', '<',
-  '+', '-', '*', '/', '%', '!', '(', ')', '[', ']', ',', '.',
+  '&&',
+  '||',
+  '==',
+  '!=',
+  '>=',
+  '<=',
+  '>',
+  '<',
+  '+',
+  '-',
+  '*',
+  '/',
+  '%',
+  '!',
+  '(',
+  ')',
+  '[',
+  ']',
+  ',',
+  '.',
 ]
 
 const BLOCKED_KEYS = new Set([
@@ -533,7 +551,11 @@ class Parser {
       if (token.value === 'false') return { type: 'literal', value: false }
       if (token.value === 'null') return { type: 'literal', value: null }
 
-      if (Object.prototype.hasOwnProperty.call(FUNCTIONS, token.value) && this.peek().type === 'op' && this.peek().value === '(') {
+      if (
+        Object.prototype.hasOwnProperty.call(FUNCTIONS, token.value) &&
+        this.peek().type === 'op' &&
+        this.peek().value === '('
+      ) {
         this.next()
         const args: Node[] = []
         if (!this.matchOp(')')) {

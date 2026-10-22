@@ -31,6 +31,7 @@ export function SessionList({ sessions, cards, selectedId, onSelect, onAdd, onCl
               className={cx('session-item', session.id === selectedId && 'active')}
               onClick={() => onSelect(session.id)}
               title={session.trajectory.label}
+              aria-current={session.id === selectedId ? 'page' : undefined}
             >
               <span
                 className="session-grade"

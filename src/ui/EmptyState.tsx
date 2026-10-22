@@ -17,7 +17,7 @@ const SNIPPET = `[
 
 export function EmptyState({ onPick, onSample, issues }: Props) {
   return (
-    <div className="empty-wrap">
+    <main className="empty-wrap" aria-label="导入轨迹">
       <div className="empty-card glass">
         <div className="empty-icon">
           <Icon name="spark" size={26} />
@@ -59,6 +59,6 @@ export function EmptyState({ onPick, onSample, issues }: Props) {
           </div>
         )}
       </div>
-    </div>
+    </main>
   )
 }

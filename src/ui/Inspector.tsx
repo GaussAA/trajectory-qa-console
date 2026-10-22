@@ -232,7 +232,11 @@ export function Inspector({
             </div>
           )}
           <form className="annotate-form" onSubmit={submitNote}>
-            <select value={dimension} onChange={(event) => setDimension(event.target.value)}>
+            <select
+              value={dimension}
+              onChange={(event) => setDimension(event.target.value)}
+              aria-label="标注维度"
+            >
               {dimensions.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.label}
@@ -242,6 +246,7 @@ export function Inspector({
             <select
               value={severity}
               onChange={(event) => setSeverity(event.target.value as Severity)}
+              aria-label="标注严重度"
             >
               <option value="error">{SEVERITY_LABEL.error}</option>
               <option value="warn">{SEVERITY_LABEL.warn}</option>
@@ -251,6 +256,7 @@ export function Inspector({
               value={note}
               onChange={(event) => setNote(event.target.value)}
               placeholder="例如：结论无引用、答非所问、越权写入"
+              aria-label="人工标注内容"
             />
             <button type="submit" className="btn subtle sm" disabled={!note.trim()}>
               标记

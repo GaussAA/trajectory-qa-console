@@ -88,7 +88,10 @@ export function parseLoose(text: string): Result<unknown> {
   try {
     return ok(JSON.parse(trimmed))
   } catch {
-    const lines = trimmed.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+    const lines = trimmed
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
     if (lines.length <= 1) return fail('invalid-json', '不是合法的 JSON')
     const parsed: unknown[] = []
     for (let i = 0; i < lines.length; i += 1) {

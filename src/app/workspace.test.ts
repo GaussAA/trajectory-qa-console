@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { analyze, type SessionAnalysis } from '../core/analysis'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
-import { createInitialState, pickStepFor, selectCards, workspaceReducer } from './workspace'
+import { createInitialState, pickStepFor, scoreCards, workspaceReducer } from './workspace'
 
 const TRACE = JSON.stringify([
   { role: 'user', content: '整理一下' },
@@ -93,16 +93,19 @@ describe('workspace reducer', () => {
     })
 
     expect(state.annotations).toHaveLength(1)
-    const card = selectCards(state).get(analysis.id)
+    const card = scoreCards(state.sessions, state.pack, state.annotations).get(analysis.id)
     expect(card?.findings.some((finding) => finding.manual)).toBe(true)
     expect(card?.dimensions.find((dimension) => dimension.id === 'semantic')?.findings).toBe(1)
   })
 
   it('clears sessions, selection and annotations together', () => {
     const analysis = fixture()
-    let state = workspaceReducer(createInitialState(DEFAULT_PACK, [
-      { id: 'a', trajectoryId: analysis.trajectory.id, dimension: 'semantic', severity: 'warn', note: 'x' },
-    ]), { type: 'ingest/success', sessions: [analysis], issues: [] })
+    let state = workspaceReducer(
+      createInitialState(DEFAULT_PACK, [
+        { id: 'a', trajectoryId: analysis.trajectory.id, dimension: 'semantic', severity: 'warn', note: 'x' },
+      ]),
+      { type: 'ingest/success', sessions: [analysis], issues: [] },
+    )
 
     state = workspaceReducer(state, { type: 'workspace/clear' })
     expect(state.sessions).toHaveLength(0)
@@ -115,7 +118,7 @@ describe('workspace reducer', () => {
 describe('pickStepFor', () => {
   it('prefers the first offending step, then the first tool call, then the first message', () => {
     const analysis = fixture()
-    const card = selectCards(createInitialState(DEFAULT_PACK, [], [analysis])).get(analysis.id)
+    const card = scoreCards([analysis], DEFAULT_PACK, []).get(analysis.id)
     if (!card) throw new Error('missing card')
     expect(pickStepFor(analysis, card)).toBe(1)
 
@@ -130,7 +133,7 @@ describe('pickStepFor', () => {
     })
     if (!clean.ok) throw new Error(clean.error.message)
     const cleanAnalysis = clean.value[0] as SessionAnalysis
-    const cleanCard = selectCards(createInitialState(DEFAULT_PACK, [], [cleanAnalysis])).get(cleanAnalysis.id)
+    const cleanCard = scoreCards([cleanAnalysis], DEFAULT_PACK, []).get(cleanAnalysis.id)
     if (!cleanCard) throw new Error('missing card')
     expect(pickStepFor(cleanAnalysis, cleanCard)).toBe(1)
   })

@@ -1,8 +1,10 @@
+import { useEffect, useRef } from 'react'
 import type { SessionAnalysis } from '../core/analysis'
 import { formatTokens } from '../core/estimate'
 import type { TelemetryEvent } from '../app/telemetry'
 import { cx } from '../lib/format'
 import { Icon } from './Icons'
+import { useFocusTrap } from './useFocusTrap'
 
 interface Props {
   open: boolean
@@ -32,6 +34,18 @@ function durationText(value: number): string {
 }
 
 export function DiagnosticsDrawer({ open, events, sessions, onClose, onExport, onClear }: Props) {
+  const panelRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(panelRef, open)
+
+  useEffect(() => {
+    if (!open) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open, onClose])
+
   if (!open) return null
 
   const errors = events.filter((event) => event.level === 'error').length
@@ -42,13 +56,20 @@ export function DiagnosticsDrawer({ open, events, sessions, onClose, onExport, o
 
   return (
     <div className="drawer-backdrop" onMouseDown={onClose}>
-      <div className="drawer glass" onMouseDown={(event) => event.stopPropagation()}>
+      <div
+        className="drawer glass"
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="诊断日志"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
         <header className="drawer-head">
           <div>
             <h3>诊断</h3>
             <p>阶段耗时、规则异常与失败原因都记在这条环形日志里；导出后可直接附在问题报告里。</p>
           </div>
-          <button type="button" className="icon-btn" onClick={onClose} title="关闭">
+          <button type="button" className="icon-btn" onClick={onClose} title="关闭（Esc）" aria-label="关闭">
             <Icon name="close" size={16} />
           </button>
         </header>
@@ -78,10 +99,15 @@ export function DiagnosticsDrawer({ open, events, sessions, onClose, onExport, o
             </thead>
             <tbody>
               {[...events].reverse().map((event) => (
-                <tr key={event.seq} className={cx(event.level === 'error' && 'row-error', event.level === 'warn' && 'row-warn')}>
+                <tr
+                  key={event.seq}
+                  className={cx(event.level === 'error' && 'row-error', event.level === 'warn' && 'row-warn')}
+                >
                   <td className="mono">{clockOf(event.at)}</td>
                   <td className="mono">{event.name}</td>
-                  <td className="mono">{event.durationMs !== undefined ? durationText(event.durationMs) : ''}</td>
+                  <td className="mono">
+                    {event.durationMs !== undefined ? durationText(event.durationMs) : ''}
+                  </td>
                   <td className="diag-data">{describe(event)}</td>
                 </tr>
               ))}
@@ -103,8 +129,10 @@ export function DiagnosticsDrawer({ open, events, sessions, onClose, onExport, o
                   <li key={session.id}>
                     <b>{session.trajectory.label}</b>
                     <span>
-                      {session.trajectory.steps.length} 步 · {formatTokens(session.trajectory.meta.totalTokens)} tk · 解析{' '}
-                      {durationText(session.diagnostics.parseMs)} · 规则 {durationText(session.diagnostics.rulesMs)}
+                      {session.trajectory.steps.length} 步 ·{' '}
+                      {formatTokens(session.trajectory.meta.totalTokens)} tk · 解析{' '}
+                      {durationText(session.diagnostics.parseMs)} · 规则{' '}
+                      {durationText(session.diagnostics.rulesMs)}
                       {session.ruleIssues.length > 0 ? ` · 规则异常 ${session.ruleIssues.length}` : ''}
                     </span>
                   </li>

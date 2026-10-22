@@ -21,7 +21,11 @@ export interface AppProps {
   persistence?: PersistencePort
 }
 
-export default function App({ analyzer, telemetry: injectedTelemetry, persistence: injectedPersistence }: AppProps = {}) {
+export default function App({
+  analyzer,
+  telemetry: injectedTelemetry,
+  persistence: injectedPersistence,
+}: AppProps = {}) {
   const telemetry = useMemo(() => injectedTelemetry ?? createTelemetry(), [injectedTelemetry])
   const persistence = useMemo(
     () => injectedPersistence ?? createPersistence(createBrowserStorage(), telemetry),
@@ -164,7 +168,12 @@ export default function App({ analyzer, telemetry: injectedTelemetry, persistenc
           <button type="button" className="btn ghost sm" onClick={actions.exportJson} disabled={!hasData}>
             JSON
           </button>
-          <button type="button" className="btn primary sm" onClick={actions.exportMarkdown} disabled={!hasData}>
+          <button
+            type="button"
+            className="btn primary sm"
+            onClick={actions.exportMarkdown}
+            disabled={!hasData}
+          >
             <Icon name="download" size={13} />
             导出报告
           </button>
@@ -191,7 +200,7 @@ export default function App({ analyzer, telemetry: injectedTelemetry, persistenc
           issues={state.issues}
         />
       ) : (
-        <div className="main-grid">
+        <main className="main-grid" aria-label="质检工作区">
           <div className="col col-left">
             <ErrorBoundary name="会话面板" compact onError={reportBoundaryError('sessions')}>
               <SessionList
@@ -207,7 +216,11 @@ export default function App({ analyzer, telemetry: injectedTelemetry, persistenc
 
           <div className="col col-center">
             <ErrorBoundary name="评分面板" compact onError={reportBoundaryError('score')}>
-              <ScorePanel card={card} trajectory={session.trajectory} ruleIssueCount={card.ruleIssues.length} />
+              <ScorePanel
+                card={card}
+                trajectory={session.trajectory}
+                ruleIssueCount={card.ruleIssues.length}
+              />
             </ErrorBoundary>
             <ErrorBoundary name="时间线" compact onError={reportBoundaryError('timeline')}>
               <Timeline
@@ -235,7 +248,7 @@ export default function App({ analyzer, telemetry: injectedTelemetry, persistenc
               <FindingsPanel card={card} dimensions={state.pack.dimensions} onLocate={actions.chooseStep} />
             </ErrorBoundary>
           </div>
-        </div>
+        </main>
       )}
 
       <RuleDrawer
@@ -260,7 +273,7 @@ export default function App({ analyzer, telemetry: injectedTelemetry, persistenc
       />
 
       {state.phase === 'loading' && (
-        <div className="loading-overlay">
+        <div className="loading-overlay" role="status" aria-live="polite">
           <div className="loading-card glass">
             <span className="spinner" />
             <div>
@@ -274,8 +287,16 @@ export default function App({ analyzer, telemetry: injectedTelemetry, persistenc
         </div>
       )}
 
-      {controller.toast && <div className="toast">{controller.toast}</div>}
-      {dragging && <div className="drag-overlay">松手即导入 · 全程本地解析</div>}
+      {controller.toast && (
+        <div className="toast" role="status" aria-live="polite">
+          {controller.toast}
+        </div>
+      )}
+      {dragging && (
+        <div className="drag-overlay" role="presentation">
+          松手即导入 · 全程本地解析
+        </div>
+      )}
     </div>
   )
 }

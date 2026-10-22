@@ -6,6 +6,7 @@ import { fieldsForScope, formatPackErrors, validatePack } from '../core/rules/co
 import { SEVERITY_LABEL } from '../core/model'
 import { downloadFile, nowStamp } from '../lib/format'
 import { Icon } from './Icons'
+import { useFocusTrap } from './useFocusTrap'
 
 interface Props {
   open: boolean
@@ -21,6 +22,9 @@ export function RuleDrawer({ open, pack, card, ruleIssues, onClose, onApply }: P
   const [errors, setErrors] = useState<string[]>([])
   const [status, setStatus] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+
+  useFocusTrap(panelRef, open)
 
   useEffect(() => {
     if (!open) return
@@ -87,7 +91,14 @@ export function RuleDrawer({ open, pack, card, ruleIssues, onClose, onApply }: P
 
   return (
     <div className="drawer-backdrop" onMouseDown={onClose}>
-      <div className="drawer glass" onMouseDown={(event) => event.stopPropagation()}>
+      <div
+        className="drawer glass"
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="规则包编辑"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
         <header className="drawer-head">
           <div>
             <h3>规则包</h3>
@@ -96,7 +107,7 @@ export function RuleDrawer({ open, pack, card, ruleIssues, onClose, onApply }: P
               表达式在沙箱内求值，不会执行任意代码。
             </p>
           </div>
-          <button type="button" className="icon-btn" onClick={onClose} title="关闭（Esc）">
+          <button type="button" className="icon-btn" onClick={onClose} title="关闭（Esc）" aria-label="关闭">
             <Icon name="close" size={16} />
           </button>
         </header>
@@ -190,7 +201,10 @@ export function RuleDrawer({ open, pack, card, ruleIssues, onClose, onApply }: P
                 </ul>
               </div>
             </div>
-            <p className="hint">消息模板用 {'{字段名}'} 插入上下文值，例如「第 {'{step}'} 步有 {'{unpairedCalls}'} 个未配对调用」。</p>
+            <p className="hint">
+              消息模板用 {'{字段名}'} 插入上下文值，例如「第 {'{step}'} 步有 {'{unpairedCalls}'}{' '}
+              个未配对调用」。
+            </p>
           </details>
         </div>
 

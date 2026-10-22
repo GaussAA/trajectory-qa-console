@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createTelemetry } from './telemetry'
+import { createTelemetry, installGlobalErrorHandlers } from './telemetry'
 
 describe('telemetry', () => {
   it('keeps a bounded ring buffer with monotonic sequence numbers', () => {
@@ -50,5 +50,31 @@ describe('telemetry', () => {
     telemetry.emit('a')
     telemetry.clear()
     expect(telemetry.snapshot()).toHaveLength(0)
+  })
+
+  it('captures window errors and unhandled rejections until uninstalled', () => {
+    const telemetry = createTelemetry()
+    const target = new EventTarget()
+    const uninstall = installGlobalErrorHandlers(
+      telemetry,
+      target as unknown as Pick<Window, 'addEventListener' | 'removeEventListener'>,
+    )
+
+    const errorEvent = Object.assign(new Event('error'), {
+      message: 'boom',
+      filename: 'x.ts',
+      lineno: 3,
+    })
+    target.dispatchEvent(errorEvent)
+    const rejection = Object.assign(new Event('unhandledrejection'), { reason: new Error('nope') })
+    target.dispatchEvent(rejection)
+
+    const names = telemetry.snapshot().map((event) => event.name)
+    expect(names).toContain('window:error')
+    expect(names).toContain('window:unhandledrejection')
+
+    uninstall()
+    target.dispatchEvent(Object.assign(new Event('error'), { message: 'after uninstall' }))
+    expect(telemetry.snapshot()).toHaveLength(2)
   })
 })

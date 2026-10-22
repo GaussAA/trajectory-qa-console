@@ -19,12 +19,7 @@ export interface TextInput {
 }
 
 export type IngestIssueCode =
-  | 'too-large'
-  | 'too-many'
-  | 'total-limit'
-  | 'read-failed'
-  | 'empty'
-  | 'analysis-failed'
+  'too-large' | 'too-many' | 'total-limit' | 'read-failed' | 'empty' | 'analysis-failed'
 
 export interface IngestIssue {
   file: string

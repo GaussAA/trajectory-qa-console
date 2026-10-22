@@ -45,16 +45,21 @@ export function FindingsPanel({ card, dimensions, onLocate }: Props) {
               key={item}
               className={cx('filter-chip', severity === item && 'active')}
               onClick={() => setSeverity(item)}
-              style={item === 'all' ? undefined : { color: severity === item ? SEVERITY_COLOR[item] : undefined }}
+              aria-pressed={severity === item}
+              style={
+                item === 'all' ? undefined : { color: severity === item ? SEVERITY_COLOR[item] : undefined }
+              }
             >
               {item === 'all' ? '全部' : SEVERITY_LABEL[item]}
-              {item !== 'all' && (
-                <b>{card.findings.filter((finding) => finding.severity === item).length}</b>
-              )}
+              {item !== 'all' && <b>{card.findings.filter((finding) => finding.severity === item).length}</b>}
             </button>
           ))}
         </div>
-        <select value={dimension} onChange={(event) => setDimension(event.target.value)}>
+        <select
+          value={dimension}
+          onChange={(event) => setDimension(event.target.value)}
+          aria-label="按维度筛选问题"
+        >
           <option value="all">全部维度</option>
           {dimensions.map((item) => (
             <option key={item.id} value={item.id}>

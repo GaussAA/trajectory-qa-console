@@ -35,7 +35,9 @@ function randomValue(random: () => number, depth = 0): unknown {
         tool_calls: [{ id: 'c', function: { name: 'f', arguments: randomValue(random, depth + 1) } }],
       }
     default:
-      return { messages: Array.from({ length: Math.floor(random() * 3) }, () => randomValue(random, depth + 2)) }
+      return {
+        messages: Array.from({ length: Math.floor(random() * 3) }, () => randomValue(random, depth + 2)),
+      }
   }
 }
 

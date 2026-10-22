@@ -137,8 +137,3 @@ export function installGlobalErrorHandlers(
     target.removeEventListener('unhandledrejection', onRejection as EventListener)
   }
 }
-
-/** Plain-text export used by the diagnostics drawer. */
-export function serializeEvents(events: TelemetryEvent[]): string {
-  return JSON.stringify({ exportedAt: new Date().toISOString(), events }, null, 2)
-}

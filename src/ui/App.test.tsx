@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
 import { createSyncAnalyzer } from '../app/analyzer'
@@ -63,5 +63,26 @@ describe('App smoke', () => {
     const events = telemetry.snapshot().map((event) => event.name)
     expect(events).toContain('ingest:done')
     expect(events).toContain('ingest:file')
+  })
+
+  it('opens the rule pack as a dialog and closes it with Escape', async () => {
+    const { user } = setup()
+    await loadSamples(user)
+
+    await user.click(screen.getByRole('button', { name: '规则包' }))
+    expect(await screen.findByRole('dialog', { name: '规则包编辑' })).toBeTruthy()
+
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  })
+
+  it('exposes the active severity filter to assistive technology', async () => {
+    const { user } = setup()
+    await loadSamples(user)
+
+    const errorFilter = screen.getByRole('button', { name: /严重/ })
+    expect(errorFilter.getAttribute('aria-pressed')).toBe('false')
+    await user.click(errorFilter)
+    expect(errorFilter.getAttribute('aria-pressed')).toBe('true')
   })
 })

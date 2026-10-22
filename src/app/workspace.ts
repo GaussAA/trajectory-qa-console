@@ -7,11 +7,7 @@
  *      leave a stale score behind.
  */
 
-import {
-  scoreSession,
-  type ScoreCard,
-  type SessionAnalysis,
-} from '../core/analysis'
+import { scoreSession, type ScoreCard, type SessionAnalysis } from '../core/analysis'
 import type { Annotation, AppError, RulePack } from '../core/model'
 import type { IngestIssue } from './ingest'
 
@@ -138,9 +134,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       return { ...state, pack: action.pack }
 
     case 'annotation/add': {
-      const session = state.sessions.find(
-        (item) => item.trajectory.id === action.annotation.trajectoryId,
-      )
+      const session = state.sessions.find((item) => item.trajectory.id === action.annotation.trajectoryId)
       if (!session) return state
       return { ...state, annotations: [...state.annotations, action.annotation] }
     }
@@ -155,26 +149,30 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
 
 // ---------- derived state ----------
 
-export function selectSession(state: WorkspaceState): SessionAnalysis | null {
-  return findSession(state, state.selectedId) ?? null
-}
-
-export function selectCards(state: WorkspaceState): Map<string, ScoreCard> {
+/** Focused selectors: the UI memoises on the exact slices it reads, so a step
+ *  click never re-scores every session. */
+export function scoreCards(
+  sessions: SessionAnalysis[],
+  pack: RulePack,
+  annotations: Annotation[],
+): Map<string, ScoreCard> {
   const cards = new Map<string, ScoreCard>()
-  for (const session of state.sessions) {
-    cards.set(session.id, scoreSession(session, state.pack.dimensions, state.annotations))
+  for (const session of sessions) {
+    cards.set(session.id, scoreSession(session, pack.dimensions, annotations))
   }
   return cards
 }
 
-export function selectSelectedCard(state: WorkspaceState): ScoreCard | null {
-  const session = selectSession(state)
-  if (!session) return null
-  return scoreSession(session, state.pack.dimensions, state.annotations)
+export function findSessionById(sessions: SessionAnalysis[], id: string | null): SessionAnalysis | null {
+  if (!id) return null
+  return sessions.find((session) => session.id === id) ?? null
 }
 
-export function selectSelectedStep(state: WorkspaceState) {
-  const session = selectSession(state)
-  if (!session || state.selectedStep === null) return null
-  return session.trajectory.steps[state.selectedStep] ?? null
+export function scoreFor(session: SessionAnalysis, pack: RulePack, annotations: Annotation[]): ScoreCard {
+  return scoreSession(session, pack.dimensions, annotations)
+}
+
+export function stepAt(session: SessionAnalysis | null, index: number | null) {
+  if (!session || index === null) return null
+  return session.trajectory.steps[index] ?? null
 }

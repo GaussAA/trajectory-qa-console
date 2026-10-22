@@ -46,9 +46,7 @@ describe('expression evaluation', () => {
 
   it('rejects unknown identifiers and fields instead of silently passing', () => {
     expect(() => evaluatePredicate('unknownMetric > 0', {})).toThrowError(ExprError)
-    expect(() => evaluatePredicate('cfg.missing == 1', { cfg: { present: 1 } })).toThrowError(
-      /未知字段/,
-    )
+    expect(() => evaluatePredicate('cfg.missing == 1', { cfg: { present: 1 } })).toThrowError(/未知字段/)
   })
 
   it('blocks prototype-walking property access', () => {

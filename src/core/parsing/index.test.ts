@@ -15,9 +15,7 @@ describe('parseTrajectory', () => {
       {
         role: 'assistant',
         content: '',
-        tool_calls: [
-          { id: 'c1', type: 'function', function: { name: 'search', arguments: '{"q":"政策"}' } },
-        ],
+        tool_calls: [{ id: 'c1', type: 'function', function: { name: 'search', arguments: '{"q":"政策"}' } }],
       },
       { role: 'tool', tool_call_id: 'c1', name: 'search', content: '政策原文' },
       { role: 'assistant', content: '已完成' },
@@ -134,9 +132,7 @@ describe('parseTrajectory', () => {
   })
 
   it('enforces the step ceiling before building steps', () => {
-    const input = JSON.stringify(
-      Array.from({ length: 5 }, (_, i) => ({ role: 'user', content: `m${i}` })),
-    )
+    const input = JSON.stringify(Array.from({ length: 5 }, (_, i) => ({ role: 'user', content: `m${i}` })))
     const result = parseTrajectory(input, 'x', { maxSteps: 3 })
     expect(result.ok).toBe(false)
     if (!result.ok) expect(result.error.code).toBe('too-many-steps')

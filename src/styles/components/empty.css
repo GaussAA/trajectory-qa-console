@@ -1,0 +1,130 @@
+/* component styles · empty */
+
+/* ---------- empty state ---------- */
+
+.empty-wrap {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 16px 18px 24px;
+  min-height: 0;
+}
+
+.empty-card {
+  position: relative;
+  width: min(820px, 100%);
+  border-radius: 26px;
+  padding: 40px 44px 36px;
+  text-align: center;
+  overflow: hidden;
+}
+
+.empty-card::before {
+  content: '';
+  position: absolute;
+  inset: -40% -20% auto;
+  height: 380px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(94, 234, 212, 0.16), transparent 62%);
+  pointer-events: none;
+}
+
+.empty-icon {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 18px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  color: var(--teal);
+  background: linear-gradient(140deg, rgba(94, 234, 212, 0.16), rgba(167, 139, 250, 0.14));
+  border: 1px solid rgba(94, 234, 212, 0.24);
+  box-shadow: 0 0 44px rgba(94, 234, 212, 0.2);
+}
+
+.empty-card h2 {
+  position: relative;
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.empty-card > p {
+  position: relative;
+  margin: 0 auto 20px;
+  max-width: 520px;
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--text-dim);
+}
+
+.empty-formats {
+  position: relative;
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+
+.format-chip {
+  font-size: 10px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: #a9b6cc;
+  background: rgba(148, 163, 184, 0.07);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.empty-actions {
+  position: relative;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.empty-card > p.empty-drop-hint {
+  position: relative;
+  margin: 0 0 20px;
+  font-size: 10.5px;
+  color: var(--text-mute);
+  line-height: 1.6;
+}
+
+.empty-snippet {
+  position: relative;
+  text-align: left;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  background: rgba(3, 6, 14, 0.5);
+  padding: 14px 16px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  line-height: 1.8;
+  color: #8fa1bb;
+  overflow-x: auto;
+}
+
+.empty-snippet b {
+  color: #5eead4;
+  font-weight: 500;
+}
+
+.empty-snippet i {
+  color: #6f7a92;
+  font-style: normal;
+}
+
+.empty-issues {
+  position: relative;
+  margin-top: 14px;
+  font-size: 10.5px;
+  color: #fda4af;
+  text-align: left;
+}
+
+.empty-issues div {
+  padding: 3px 0;
+}

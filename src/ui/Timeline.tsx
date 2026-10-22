@@ -63,6 +63,7 @@ export function Timeline({ trajectory, card, selectedStep, onSelectStep }: Props
               className={cx('map-tick', step.index === selectedStep && 'active')}
               style={{ height: `${height}px`, background: tone }}
               title={`第 ${step.index + 1} 步 · ${ROLE_LABEL[step.role]} · ${formatTokens(step.tokens.total)} tk`}
+              aria-label={`跳转到第 ${step.index + 1} 步`}
               onClick={() => onSelectStep(step.index)}
             />
           )

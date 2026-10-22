@@ -42,5 +42,8 @@ src/lib/      格式化与报告文本
 
 ## 质量门槛
 
-`pnpm verify` = typecheck + 覆盖率测试 + 构建。覆盖率门槛：行/函数/语句 ≥85%，分支 ≥75%。
+`pnpm verify` = typecheck + lint + 覆盖率测试 + 构建。覆盖率门槛：行/函数/语句 ≥85%，分支 ≥75%。
 四条示例轨迹的分数与问题清单由 `src/core/__golden__/samples.json` 锁定。
+样式分四层（tokens / base / layout / components），只允许上层引用下层变量，不靠权重压制。
+交互元素均可键盘到达；抽屉有焦点陷阱与 Esc 关闭；动效尊重 `prefers-reduced-motion`。
+性能基线：1k 步 < 500ms、10k 步 < 3s（实测约 20ms / 98ms）。

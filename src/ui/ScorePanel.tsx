@@ -32,7 +32,14 @@ export function ScorePanel({ card, trajectory, ruleIssueCount }: Props) {
                 <stop offset="100%" stopColor="#a78bfa" />
               </linearGradient>
             </defs>
-            <circle cx="56" cy="56" r={RING_RADIUS} fill="none" stroke="rgba(148,163,184,0.14)" strokeWidth="7" />
+            <circle
+              cx="56"
+              cy="56"
+              r={RING_RADIUS}
+              fill="none"
+              stroke="rgba(148,163,184,0.14)"
+              strokeWidth="7"
+            />
             <circle
               cx="56"
               cy="56"
@@ -56,7 +63,10 @@ export function ScorePanel({ card, trajectory, ruleIssueCount }: Props) {
         <div className="score-body">
           <div className="score-title-row">
             <h2>{trajectory.label}</h2>
-            <span className="grade-chip" style={{ color: gradeColor, borderColor: `${gradeColor}55`, background: `${gradeColor}14` }}>
+            <span
+              className="grade-chip"
+              style={{ color: gradeColor, borderColor: `${gradeColor}55`, background: `${gradeColor}14` }}
+            >
               {card.grade} 级
             </span>
           </div>
