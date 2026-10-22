@@ -1,10 +1,9 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { formatClock, formatDuration, formatTokens } from '../core/estimate'
-import { computeMetrics } from '../core/metrics'
-import type { Annotation, Dimension } from '../core/rules'
-import { SEVERITY_LABEL } from '../core/rules'
-import type { ScoreCard } from '../core/score'
-import type { Severity, Step, Trajectory } from '../core/types'
+import { computeMetrics } from '../core/analysis'
+import type { Annotation, Dimension, Severity, Step, Trajectory } from '../core/model'
+import { SEVERITY_LABEL } from '../core/model'
+import type { ScoreCard } from '../core/analysis'
 import { ROLE_COLOR, ROLE_LABEL, SEVERITY_COLOR, cx, prettyJson, truncate } from '../lib/format'
 
 interface Props {

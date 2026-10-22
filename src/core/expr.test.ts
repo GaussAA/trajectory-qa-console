@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ExprError, evaluateExpression, evaluatePredicate } from './expr'
+import { ExprError, compileExpression, evaluateExpression, evaluatePredicate } from './expr'
 
 describe('expression evaluation', () => {
   it('applies arithmetic precedence', () => {
@@ -59,5 +59,26 @@ describe('expression evaluation', () => {
   it('reports syntax errors with a position', () => {
     expect(() => evaluateExpression('1 +', {})).toThrowError(ExprError)
     expect(() => evaluateExpression('(1 + 2', {})).toThrowError(/缺少/)
+  })
+
+  it('compiles once and reports the fields an expression reads', () => {
+    const compiled = compileExpression('toolCalls > 2 and errorRate >= 0.5')
+    expect([...compiled.identifiers].sort()).toEqual(['errorRate', 'toolCalls'])
+    expect(compiled.run({ toolCalls: 3, errorRate: 0.6 })).toBe(true)
+    expect(compiled.run({ toolCalls: 1, errorRate: 0.6 })).toBe(false)
+  })
+
+  it('rejects unknown functions at compile time, not at evaluation time', () => {
+    expect(() => compileExpression('lenght(role) > 0')).toThrowError(/多余的内容|未知/)
+  })
+
+  it('enforces expression size limits', () => {
+    expect(() => compileExpression('1'.repeat(1200))).toThrowError(/过长/)
+  })
+
+  it('allows unknown identifiers to compile so the contract can suggest a fix', () => {
+    const compiled = compileExpression('unpairedCallz > 0')
+    expect(compiled.identifiers).toEqual(['unpairedCallz'])
+    expect(() => compiled.run({ unpairedCalls: 1 })).toThrowError(/未知标识符/)
   })
 })

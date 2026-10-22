@@ -1,11 +1,10 @@
+import type { ScoreCard, SessionAnalysis } from '../core/analysis'
 import { formatTokens } from '../core/estimate'
-import type { ScoreCard } from '../core/score'
-import type { Trajectory } from '../core/types'
 import { cx, GRADE_COLOR, truncate } from '../lib/format'
 import { Icon } from './Icons'
 
 interface Props {
-  trajectories: Trajectory[]
+  sessions: SessionAnalysis[]
   cards: Map<string, ScoreCard>
   selectedId: string | null
   onSelect: (id: string) => void
@@ -13,25 +12,25 @@ interface Props {
   onClear: () => void
 }
 
-export function SessionList({ trajectories, cards, selectedId, onSelect, onAdd, onClear }: Props) {
+export function SessionList({ sessions, cards, selectedId, onSelect, onAdd, onClear }: Props) {
   return (
     <section className="panel session-panel glass">
       <header className="panel-head">
         <span className="panel-title">会话</span>
-        <span className="panel-sub">{trajectories.length}</span>
+        <span className="panel-sub">{sessions.length}</span>
       </header>
 
       <div className="session-list">
-        {trajectories.map((trajectory) => {
-          const card = cards.get(trajectory.id)
+        {sessions.map((session) => {
+          const card = cards.get(session.id)
           const color = card ? (GRADE_COLOR[card.grade] ?? '#e9eef8') : '#e9eef8'
           return (
             <button
               type="button"
-              key={trajectory.id}
-              className={cx('session-item', trajectory.id === selectedId && 'active')}
-              onClick={() => onSelect(trajectory.id)}
-              title={trajectory.label}
+              key={session.id}
+              className={cx('session-item', session.id === selectedId && 'active')}
+              onClick={() => onSelect(session.id)}
+              title={session.trajectory.label}
             >
               <span
                 className="session-grade"
@@ -40,9 +39,10 @@ export function SessionList({ trajectories, cards, selectedId, onSelect, onAdd, 
                 {card?.grade ?? '—'}
               </span>
               <span className="session-copy">
-                <span className="session-name">{truncate(trajectory.label, 26)}</span>
+                <span className="session-name">{truncate(session.trajectory.label, 26)}</span>
                 <span className="session-meta">
-                  {trajectory.steps.length} 步 · {formatTokens(trajectory.meta.totalTokens)} · {card?.overall ?? '—'} 分
+                  {session.trajectory.steps.length} 步 · {formatTokens(session.trajectory.meta.totalTokens)} ·{' '}
+                  {card?.overall ?? '—'} 分
                 </span>
               </span>
               {card !== undefined && card.counts.error > 0 && (

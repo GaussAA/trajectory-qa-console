@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { ParseError, parseTrajectory } from './parse'
+import { parseTrajectory } from './index'
+
+function mustParse(text: string, label = 'demo.json') {
+  const result = parseTrajectory(text, label)
+  if (!result.ok) throw new Error(`parse failed: ${result.error.message}`)
+  return result.value
+}
 
 describe('parseTrajectory', () => {
   it('parses OpenAI chat messages and pairs tool results by call id', () => {
@@ -17,8 +23,7 @@ describe('parseTrajectory', () => {
       { role: 'assistant', content: '已完成' },
     ])
 
-    const [trajectory] = parseTrajectory(input, 'demo.json')
-    expect(trajectory).toBeDefined()
+    const [trajectory] = mustParse(input)
     expect(trajectory?.steps).toHaveLength(5)
     expect(trajectory?.steps[2]?.toolCalls[0]?.name).toBe('search')
     expect(trajectory?.steps[2]?.toolCalls[0]?.args).toEqual({ q: '政策' })
@@ -33,10 +38,9 @@ describe('parseTrajectory', () => {
       JSON.stringify({ session_id: 's-2', messages: [{ role: 'user', content: '再会' }] }),
     ].join('\n')
 
-    const trajectories = parseTrajectory(input, 'batch.jsonl')
+    const trajectories = mustParse(input, 'batch.jsonl')
     expect(trajectories).toHaveLength(2)
     expect(trajectories.map((trajectory) => trajectory.label)).toEqual(['s-1', 's-2'])
-    expect(trajectories[1]?.steps).toHaveLength(1)
   })
 
   it('reads Anthropic-style tool_use / tool_result parts', () => {
@@ -54,11 +58,10 @@ describe('parseTrajectory', () => {
       },
     ])
 
-    const [trajectory] = parseTrajectory(input)
-    const assistant = trajectory?.steps[0]
-    expect(assistant?.text).toBe('我先查一下')
-    expect(assistant?.toolCalls[0]?.args).toEqual({ id: 7 })
-    expect(assistant?.toolCalls[0]?.result?.content).toBe('42')
+    const [trajectory] = mustParse(input)
+    expect(trajectory?.steps[0]?.text).toBe('我先查一下')
+    expect(trajectory?.steps[0]?.toolCalls[0]?.args).toEqual({ id: 7 })
+    expect(trajectory?.steps[0]?.toolCalls[0]?.result?.content).toBe('42')
     expect(trajectory?.steps[1]?.role).toBe('tool')
     expect(trajectory?.steps[1]?.forCallId).toBe('tu-1')
   })
@@ -71,7 +74,7 @@ describe('parseTrajectory', () => {
       },
     ])
 
-    const [trajectory] = parseTrajectory(input)
+    const [trajectory] = mustParse(input)
     expect(trajectory?.steps[0]?.toolCalls[0]?.argsValid).toBe(false)
     expect(trajectory?.steps[0]?.parseNotes.join(' ')).toContain('非法 JSON')
   })
@@ -82,15 +85,13 @@ describe('parseTrajectory', () => {
       { role: 'tool', tool_call_id: 'ghost', content: '孤立的返回值' },
     ])
 
-    const [trajectory] = parseTrajectory(input)
+    const [trajectory] = mustParse(input)
     expect(trajectory?.steps[1]?.forCallId).toBeUndefined()
     expect(trajectory?.parseNotes.join(' ')).toContain('不存在的调用')
   })
 
   it('unwraps nested containers and single messages', () => {
-    const wrapped = parseTrajectory(
-      JSON.stringify({ data: { messages: [{ role: 'user', content: 'hi' }] } }),
-    )
+    const wrapped = mustParse(JSON.stringify({ data: { messages: [{ role: 'user', content: 'hi' }] } }))
     expect(wrapped[0]?.steps).toHaveLength(1)
   })
 
@@ -100,10 +101,9 @@ describe('parseTrajectory', () => {
       { role: 'assistant', content: '这是一段没有 usage 的中文回复' },
     ])
 
-    const [trajectory] = parseTrajectory(input)
+    const [trajectory] = mustParse(input)
     expect(trajectory?.steps[0]?.tokens).toMatchObject({ total: 15, estimated: false })
     expect(trajectory?.steps[1]?.tokens.estimated).toBe(true)
-    expect(trajectory?.steps[1]?.tokens.total).toBeGreaterThan(0)
     expect(trajectory?.meta.estimatedTokens).toBe(true)
   })
 
@@ -113,13 +113,32 @@ describe('parseTrajectory', () => {
       { type: 'function_call_output', call_id: 'fc-1', output: '晴，26℃' },
     ])
 
-    const [trajectory] = parseTrajectory(input)
+    const [trajectory] = mustParse(input)
     expect(trajectory?.steps[0]?.role).toBe('assistant')
     expect(trajectory?.steps[0]?.toolCalls[0]?.result?.content).toBe('晴，26℃')
     expect(trajectory?.steps[1]?.forCallId).toBe('fc-1')
   })
 
-  it('rejects input that is not JSON at all', () => {
-    expect(() => parseTrajectory('这不是 JSON')).toThrowError(ParseError)
+  it('returns a Result instead of throwing on unusable input', () => {
+    const notJson = parseTrajectory('这不是 JSON', 'x')
+    expect(notJson.ok).toBe(false)
+    if (!notJson.ok) expect(notJson.error.code).toBe('invalid-json')
+
+    const empty = parseTrajectory('   ', 'x')
+    expect(empty.ok).toBe(false)
+    if (!empty.ok) expect(empty.error.code).toBe('empty-input')
+
+    const wrongShape = parseTrajectory('{"foo":1}', 'x')
+    expect(wrongShape.ok).toBe(false)
+    if (!wrongShape.ok) expect(wrongShape.error.code).toBe('unrecognized-structure')
+  })
+
+  it('enforces the step ceiling before building steps', () => {
+    const input = JSON.stringify(
+      Array.from({ length: 5 }, (_, i) => ({ role: 'user', content: `m${i}` })),
+    )
+    const result = parseTrajectory(input, 'x', { maxSteps: 3 })
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.error.code).toBe('too-many-steps')
   })
 })

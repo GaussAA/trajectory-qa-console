@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { parseTrajectory } from '../core/parse'
-import { DEFAULT_PACK, runRules } from '../core/rules'
-import { scoreTrajectory } from '../core/score'
+import { parseTrajectory } from '../core/parsing'
+import { DEFAULT_PACK } from '../core/rules/builtin-pack'
+import { runRules } from '../core/rules/engine'
+import { scoreTrajectory } from '../core/analysis/score'
 import { buildJsonReport, buildMarkdownReport } from './report'
 
 const TRACE = JSON.stringify([
@@ -14,16 +15,17 @@ const TRACE = JSON.stringify([
 ])
 
 describe('report builders', () => {
-  const [trajectory] = parseTrajectory(TRACE, 'trace.json')
+  const parsed = parseTrajectory(TRACE, 'trace.json')
+  if (!parsed.ok) throw new Error(parsed.error.message)
+  const trajectory = parsed.value[0]
   if (!trajectory) throw new Error('fixture did not parse')
   const { findings, ruleIssues } = runRules(trajectory, DEFAULT_PACK)
   const card = scoreTrajectory(findings, DEFAULT_PACK.dimensions, ruleIssues)
-  const cards = new Map([[trajectory.id, card]])
+  const entries = [{ trajectory, card }]
 
   it('writes a markdown report with overview, scores and findings', () => {
     const markdown = buildMarkdownReport({
-      trajectories: [trajectory],
-      cards,
+      entries,
       pack: DEFAULT_PACK,
       generatedAt: new Date('2026-10-22T12:00:00Z'),
     })
@@ -38,8 +40,7 @@ describe('report builders', () => {
   it('writes a machine-readable json report', () => {
     const json = JSON.parse(
       buildJsonReport({
-        trajectories: [trajectory],
-        cards,
+        entries,
         pack: DEFAULT_PACK,
         generatedAt: new Date('2026-10-22T12:00:00Z'),
       }),

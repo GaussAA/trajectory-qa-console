@@ -1,10 +1,11 @@
 /** Derived metrics: the numbers rules are allowed to talk about.
  *
- *  Everything here is computed once per trajectory so a rule predicate is a
- *  cheap expression evaluation, never a scan of the whole trace.
+ *  Computed once per trajectory so a predicate is a cheap tree walk, never a
+ *  scan of the whole trace. Every metric name here is mirrored in the rule
+ *  contract, and a test keeps the two lists in sync.
  */
 
-import type { Trajectory } from './types'
+import type { Trajectory } from '../model'
 
 export interface TrajectoryMetrics {
   stepCount: number
@@ -59,7 +60,7 @@ function callSignature(name: string, rawArgs: string): string {
   try {
     normalized = JSON.stringify(JSON.parse(normalized))
   } catch {
-    // keep raw string; an invalid payload is still comparable to itself
+    // keep the raw string; an invalid payload is still comparable to itself
   }
   return `${name}|${normalized}`
 }
@@ -117,8 +118,7 @@ export function computeMetrics(trajectory: Trajectory): TrajectoryMetrics {
   }
 
   const assistantTurns = steps.filter((step) => step.role === 'assistant').length
-  const totalToolCalls = toolCalls
-  const errorRate = totalToolCalls > 0 ? toolErrors / totalToolCalls : 0
+  const errorRate = toolCalls > 0 ? toolErrors / toolCalls : 0
   const lastStep = steps[steps.length - 1]
   const hasFinalAnswer =
     lastStep !== undefined && lastStep.role === 'assistant' && lastStep.text.trim().length > 0
@@ -129,7 +129,7 @@ export function computeMetrics(trajectory: Trajectory): TrajectoryMetrics {
     userTurns: steps.filter((step) => step.role === 'user').length,
     assistantTurns,
     toolSteps: steps.filter((step) => step.role === 'tool').length,
-    toolCalls: totalToolCalls,
+    toolCalls,
     toolErrors,
     unpairedCalls,
     orphanResults,
@@ -157,6 +157,6 @@ export function computeMetrics(trajectory: Trajectory): TrajectoryMetrics {
     consecutiveUser,
     privacyHits,
     claimWithoutEvidence,
-    assistantWithoutTools: assistantTurns > 0 && totalToolCalls === 0,
+    assistantWithoutTools: assistantTurns > 0 && toolCalls === 0,
   }
 }

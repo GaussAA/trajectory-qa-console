@@ -1,28 +1,13 @@
-/** Trajectory parsing: from "some JSON file" to a normalized Step list.
+/** Message normalisation: from provider-shaped JSON to one `Step`.
  *
- *  Supported shapes (all auto-detected, no user choice required):
- *    - OpenAI chat messages: array, `{messages:[...]}`, `{data:{messages:[...]}}`
- *    - JSONL: one message per line, or one session per line
- *    - Multiple sessions: array of objects each holding a messages/steps array
- *    - OpenAI Responses-style items: `function_call` / `function_call_output`
- *    - Anthropic-style content parts: `tool_use` / `tool_result`
- *
- *  The parser is intentionally forgiving: a malformed tool argument becomes a
- *  `argsValid: false` finding rather than a hard failure, because the tool's
- *  job is to *inspect* broken traces, not to refuse them.
+ *  Every provider quirk lives here and nowhere else. The rule engine and the UI
+ *  only ever see `Step`, so adding a format is an internal change to this module.
  */
 
-import { estimateTokens } from './estimate'
-import type { Role, Step, StepTokens, ToolCall, ToolResult, Trajectory } from './types'
+import { estimateTokens } from '../estimate'
+import type { Role, Step, StepTokens, ToolCall, ToolResult } from '../model'
 
-export class ParseError extends Error {
-  constructor(message: string) {
-    super(message)
-    this.name = 'ParseError'
-  }
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
@@ -49,34 +34,21 @@ const REASONING_PART_TYPES = new Set(['thinking', 'reasoning', 'reasoning_conten
 const TOOL_USE_TYPES = new Set(['tool_use', 'tool_call', 'function_call'])
 const TOOL_RESULT_TYPES = new Set(['tool_result', 'function_call_output', 'tool_response'])
 
-const CONTAINER_KEYS = [
-  'messages',
-  'steps',
-  'trajectory',
-  'conversation',
-  'history',
-  'transcript',
-  'turns',
-  'items',
-  'events',
-  'log',
-]
+export { TOOL_RESULT_TYPES, TOOL_USE_TYPES }
 
-const NESTED_KEYS = ['data', 'result', 'payload', 'session', 'record', 'thread', 'run']
-
-function normalizeRole(raw: unknown): Role {
+export function normalizeRole(raw: unknown): Role {
   if (typeof raw !== 'string') return 'unknown'
   return ROLE_MAP[raw.trim().toLowerCase()] ?? 'unknown'
 }
 
-function pick(record: Record<string, unknown>, keys: string[]): unknown {
+export function pick(record: Record<string, unknown>, keys: string[]): unknown {
   for (const key of keys) {
     if (record[key] !== undefined && record[key] !== null) return record[key]
   }
   return undefined
 }
 
-function readTimestamp(record: Record<string, unknown>): number | undefined {
+export function readTimestamp(record: Record<string, unknown>): number | undefined {
   const raw = pick(record, ['timestamp', 'ts', 'time', 'created', 'created_at', 'createdAt'])
   if (typeof raw === 'number' && Number.isFinite(raw)) {
     return raw < 1e11 ? Math.round(raw * 1000) : Math.round(raw)
@@ -163,13 +135,15 @@ function toCallDraft(value: unknown, notes: string[]): CallDraft | undefined {
   }
 }
 
-function readText(value: unknown): string {
+export function readText(value: unknown): string {
   if (value === undefined || value === null) return ''
   if (typeof value === 'string') return value
   if (typeof value === 'number' || typeof value === 'boolean') return String(value)
   if (Array.isArray(value)) {
     return value
-      .map((part) => (typeof part === 'string' ? part : isRecord(part) && typeof part.text === 'string' ? part.text : ''))
+      .map((part) =>
+        typeof part === 'string' ? part : isRecord(part) && typeof part.text === 'string' ? part.text : '',
+      )
       .filter(Boolean)
       .join('\n')
   }
@@ -202,7 +176,7 @@ function readParts(parts: unknown[], draft: ContentDraft): void {
       continue
     }
 
-    if (TEXT_PART_TYPES.has(type) || (type === '' && typeof raw.text === 'string')) {
+    if (TEXT_PART_TYPES.has(type)) {
       draft.text += readText(raw.text)
       continue
     }
@@ -245,7 +219,9 @@ function readContentDraft(message: Record<string, unknown>): ContentDraft {
   else if (content !== undefined && content !== null) draft.text = readText(content)
 
   const reasoning = pick(message, ['reasoning_content', 'reasoning', 'thinking'])
-  if (typeof reasoning === 'string') draft.reasoning = draft.reasoning ? `${draft.reasoning}\n${reasoning}` : reasoning
+  if (typeof reasoning === 'string') {
+    draft.reasoning = draft.reasoning ? `${draft.reasoning}\n${reasoning}` : reasoning
+  }
 
   const rawCalls = pick(message, ['tool_calls', 'toolCalls'])
   if (Array.isArray(rawCalls)) {
@@ -263,7 +239,7 @@ function readContentDraft(message: Record<string, unknown>): ContentDraft {
   return draft
 }
 
-function looksLikeMessage(value: unknown): boolean {
+export function looksLikeMessage(value: unknown): boolean {
   if (!isRecord(value)) return false
   if (typeof value.role === 'string') return true
   if (typeof value.type === 'string' && (TOOL_USE_TYPES.has(value.type) || TOOL_RESULT_TYPES.has(value.type))) {
@@ -272,89 +248,19 @@ function looksLikeMessage(value: unknown): boolean {
   return 'content' in value || 'tool_calls' in value
 }
 
-function findMessageArray(value: unknown): unknown[] | undefined {
-  if (!isRecord(value)) return undefined
-  for (const key of CONTAINER_KEYS) {
-    const candidate = value[key]
-    if (Array.isArray(candidate)) return candidate
-  }
-  for (const key of NESTED_KEYS) {
-    const nested = value[key]
-    if (isRecord(nested)) {
-      const found = findMessageArray(nested)
-      if (found) return found
-    }
-  }
-  return undefined
-}
-
-interface SessionDraft {
-  messages: unknown[]
-  meta: Record<string, unknown>
-}
-
-function detectSessions(value: unknown): SessionDraft[] {
-  if (Array.isArray(value)) {
-    if (value.length === 0) throw new ParseError('轨迹为空')
-    if (value.every(looksLikeMessage)) return [{ messages: value, meta: {} }]
-    if (value.every((item) => Array.isArray(item))) {
-      return value.map((item) => ({ messages: item as unknown[], meta: {} }))
-    }
-    const sessions = value.filter((item) => isRecord(item) && findMessageArray(item))
-    if (sessions.length > 0) {
-      return value.map((item) => {
-        const messages = findMessageArray(item)
-        return {
-          messages: messages ?? [item],
-          meta: isRecord(item) ? item : {},
-        }
-      })
-    }
-    return [{ messages: value, meta: {} }]
-  }
-
-  if (isRecord(value)) {
-    const messages = findMessageArray(value)
-    if (messages) return [{ messages, meta: value }]
-    if (looksLikeMessage(value)) return [{ messages: [value], meta: {} }]
-  }
-
-  throw new ParseError('结构无法识别：未找到 messages / steps 数组')
-}
-
-function parseLoose(text: string): unknown {
-  const trimmed = text.trim()
-  if (!trimmed) throw new ParseError('输入为空')
-  try {
-    return JSON.parse(trimmed)
-  } catch {
-    const lines = trimmed.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
-    if (lines.length <= 1) throw new ParseError('不是合法的 JSON')
-    const parsed: unknown[] = []
-    for (let i = 0; i < lines.length; i += 1) {
-      const line = lines[i] as string
-      try {
-        parsed.push(JSON.parse(line))
-      } catch {
-        throw new ParseError(`JSONL 第 ${i + 1} 行不是合法 JSON`)
-      }
-    }
-    return parsed
-  }
-}
-
-function stepFromMessage(raw: unknown, index: number): Step {
+export function toStep(raw: unknown, index: number): Step {
   const notes: string[] = []
 
   if (!isRecord(raw)) {
+    const text = readText(raw)
     return {
       index,
       role: 'unknown',
-      text: readText(raw),
+      text,
       reasoning: '',
       toolCalls: [],
-      tokens: { input: 0, output: 0, total: estimateTokens(readText(raw)), estimated: true },
-      charCount: readText(raw).length,
+      tokens: { input: 0, output: 0, total: estimateTokens(text), estimated: true },
+      charCount: text.length,
       raw,
       parseNotes: ['消息不是对象，已按纯文本处理'],
     }
@@ -426,13 +332,19 @@ function stepFromMessage(raw: unknown, index: number): Step {
     result,
     timestamp: readTimestamp(raw),
     tokens,
-    charCount: draft.text.length + draft.reasoning.length + toolCalls.reduce((s, c) => s + c.rawArgs.length, 0) + (result?.content.length ?? 0),
+    charCount:
+      draft.text.length +
+      draft.reasoning.length +
+      toolCalls.reduce((s, c) => s + c.rawArgs.length, 0) +
+      (result?.content.length ?? 0),
     raw,
     parseNotes: [...draft.notes.filter((note) => !note.startsWith('RESULT_CALL_ID:')), ...notes],
   }
 }
 
-function pairToolResults(steps: Step[], notes: string[]): void {
+/** Pairs tool results to calls. Only falls back to name matching when the trace
+ *  gave no id at all — a dangling id is reported, never silently re-pointed. */
+export function pairToolResults(steps: Step[], notes: string[]): void {
   const byId = new Map<string, ToolCall>()
   for (const step of steps) {
     for (const call of step.toolCalls) {
@@ -455,8 +367,6 @@ function pairToolResults(steps: Step[], notes: string[]): void {
       step.forCallId = callId
       continue
     }
-    // Fall back to name matching only when the id is missing; never guess when
-    // the trace gave us an id that points nowhere.
     if (!callId && step.result.name) {
       const match = unpairedCalls().find((call) => call.name === step.result?.name)
       if (match) {
@@ -468,49 +378,4 @@ function pairToolResults(steps: Step[], notes: string[]): void {
     }
     if (callId) notes.push(`第 ${step.index + 1} 步的工具结果指向不存在的调用 ${callId}`)
   }
-}
-
-export function parseTrajectory(input: string, sourceLabel = '未命名轨迹'): Trajectory[] {
-  const value = parseLoose(input)
-  const drafts = detectSessions(value)
-
-  return drafts.map((draft, sessionIndex) => {
-    const notes: string[] = []
-    const steps = draft.messages.map(stepFromMessage)
-    steps.forEach((step, index) => {
-      step.index = index
-    })
-    pairToolResults(steps, notes)
-
-    const timestamps = steps.map((step) => step.timestamp).filter((ts): ts is number => ts !== undefined)
-    const metaSource = draft.meta
-    const modelRaw = pick(metaSource, ['model', 'model_name', 'modelName', 'model_id'])
-    const labelRaw = pick(metaSource, ['title', 'name', 'session_id', 'sessionId', 'id', 'file_name'])
-    const totalTokens = steps.reduce((sum, step) => sum + step.tokens.total, 0)
-
-    const idBase =
-      (typeof labelRaw === 'string' ? labelRaw : `${sourceLabel}#${sessionIndex + 1}`)
-        .replace(/\s+/g, '-')
-        .slice(0, 60) || `session-${sessionIndex + 1}`
-
-    return {
-      id: `${idBase}-${sessionIndex}`,
-      label:
-        typeof labelRaw === 'string'
-          ? labelRaw
-          : drafts.length > 1
-            ? `${sourceLabel} · 会话 ${sessionIndex + 1}`
-            : sourceLabel,
-      source: sourceLabel,
-      steps,
-      meta: {
-        model: typeof modelRaw === 'string' ? modelRaw : undefined,
-        startedAt: timestamps.length > 0 ? Math.min(...timestamps) : undefined,
-        endedAt: timestamps.length > 0 ? Math.max(...timestamps) : undefined,
-        totalTokens,
-        estimatedTokens: steps.some((step) => step.tokens.estimated),
-      },
-      parseNotes: notes,
-    }
-  })
 }

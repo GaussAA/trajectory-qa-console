@@ -1,14 +1,22 @@
-/** Scoring: turn findings into a per-dimension score and one overall grade.
+/** Scoring: findings → per-dimension score → one headline number.
  *
- *  Design choices worth knowing:
- *  - A repeated rule is capped at 3 counted occurrences. Otherwise one systemic
- *    issue (say, 40 unpaired calls) floors the score and hides everything else.
- *  - Every dimension floors at 0 and the overall score is a weighted mean, so
- *    adding a dimension never silently changes the scale.
+ *  Two policies worth knowing:
+ *  - A repeated rule is capped at 3 counted occurrences, so one systemic flaw
+ *    does not floor a dimension and hide everything else.
+ *  - Confirmed errors gate the headline score. We count *distinct error rules*:
+ *    one flaw found forty times is still one flaw, and occurrences already cost
+ *    points inside the dimension.
  */
 
-import type { Dimension, Finding, RuleIssue } from './rules'
-import { SEVERITY_ORDER } from './rules'
+import {
+  SEVERITY_ORDER,
+  type Annotation,
+  type Dimension,
+  type Finding,
+  type RuleIssue,
+  type Severity,
+  type SeverityCounts,
+} from '../model'
 
 export interface DimensionScore {
   id: string
@@ -20,12 +28,6 @@ export interface DimensionScore {
   findings: number
   errors: number
   warns: number
-}
-
-export interface SeverityCounts {
-  error: number
-  warn: number
-  info: number
 }
 
 export interface ScoreCard {
@@ -42,17 +44,6 @@ export interface ScoreCard {
   counts: SeverityCounts
 }
 
-/** A confirmed error is a release blocker, so it gates the headline score.
- *  We count *distinct error rules*, not occurrences: one systemic flaw found
- *  forty times is still one flaw, and occurrence counts already cost points
- *  inside its dimension. */
-function capForErrors(distinctErrorRules: number): number {
-  if (distinctErrorRules >= 5) return 39
-  if (distinctErrorRules >= 3) return 54
-  if (distinctErrorRules >= 1) return 74
-  return 100
-}
-
 const COUNTED_PER_RULE = 3
 
 export function gradeOf(score: number): { grade: string; label: string } {
@@ -61,6 +52,13 @@ export function gradeOf(score: number): { grade: string; label: string } {
   if (score >= 60) return { grade: 'C', label: '合格' }
   if (score >= 40) return { grade: 'D', label: '待修' }
   return { grade: 'E', label: '不可用' }
+}
+
+export function capForErrors(distinctErrorRules: number): number {
+  if (distinctErrorRules >= 5) return 39
+  if (distinctErrorRules >= 3) return 54
+  if (distinctErrorRules >= 1) return 74
+  return 100
 }
 
 export function sortFindings(findings: Finding[]): Finding[] {
@@ -74,6 +72,24 @@ export function sortFindings(findings: Finding[]): Finding[] {
   })
 }
 
+const MANUAL_IMPACT: Record<Severity, number> = { error: 8, warn: 5, info: 2 }
+
+export function annotationFindings(trajectoryId: string, annotations: Annotation[]): Finding[] {
+  return annotations
+    .filter((annotation) => annotation.trajectoryId === trajectoryId && annotation.note.trim() !== '')
+    .map((annotation) => ({
+      id: `manual:${annotation.id}`,
+      ruleId: 'manual',
+      ruleTitle: '人工标注',
+      dimension: annotation.dimension,
+      severity: annotation.severity,
+      message: annotation.note.trim(),
+      stepIndex: annotation.stepIndex,
+      impact: MANUAL_IMPACT[annotation.severity],
+      manual: true,
+    }))
+}
+
 export function scoreTrajectory(
   findings: Finding[],
   dimensions: Dimension[],
@@ -83,7 +99,6 @@ export function scoreTrajectory(
 
   const dimensionScores: DimensionScore[] = dimensions.map((dimension) => {
     const scoped = findings.filter((finding) => finding.dimension === dimension.id)
-
     const counted = new Map<string, number>()
     let lost = 0
     for (const finding of scoped) {
@@ -107,7 +122,7 @@ export function scoreTrajectory(
     }
   })
 
-  const overall =
+  const mean =
     totalWeight > 0
       ? Math.round(
           dimensionScores.reduce((sum, dimension) => sum + dimension.score * dimension.weight, 0) /
@@ -121,13 +136,13 @@ export function scoreTrajectory(
   const distinctErrorRules = new Set(
     findings.filter((finding) => finding.severity === 'error').map((finding) => finding.ruleId),
   ).size
-  const capped = Math.min(overall, capForErrors(distinctErrorRules))
-  const graded = gradeOf(capped)
+  const overall = Math.min(mean, capForErrors(distinctErrorRules))
+  const graded = gradeOf(overall)
 
   return {
-    overall: capped,
-    rawOverall: overall,
-    capped: capped < overall,
+    overall,
+    rawOverall: mean,
+    capped: overall < mean,
     grade: graded.grade,
     gradeLabel: graded.label,
     dimensions: dimensionScores,
@@ -135,24 +150,4 @@ export function scoreTrajectory(
     ruleIssues,
     counts,
   }
-}
-
-/** Aggregate several session cards into one headline number, weighted by steps. */
-export function aggregateScore(
-  entries: { card: ScoreCard; weight: number }[],
-): { overall: number; grade: string; gradeLabel: string; counts: SeverityCounts } {
-  const totalWeight = entries.reduce((sum, entry) => sum + Math.max(1, entry.weight), 0)
-  const overall =
-    entries.length === 0
-      ? 100
-      : Math.round(
-          entries.reduce((sum, entry) => sum + entry.card.overall * Math.max(1, entry.weight), 0) /
-            totalWeight,
-        )
-  const { grade, label } = gradeOf(overall)
-  const counts: SeverityCounts = { error: 0, warn: 0, info: 0 }
-  for (const entry of entries) {
-    for (const finding of entry.card.findings) counts[finding.severity] += 1
-  }
-  return { overall, grade, gradeLabel: label, counts }
 }

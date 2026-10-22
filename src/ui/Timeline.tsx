@@ -1,6 +1,6 @@
 import { formatDuration, formatTokens } from '../core/estimate'
-import type { ScoreCard } from '../core/score'
-import type { Trajectory, ToolCall } from '../core/types'
+import type { ScoreCard } from '../core/analysis'
+import type { ToolCall, Trajectory } from '../core/model'
 import { ROLE_COLOR, ROLE_LABEL, cx, truncate } from '../lib/format'
 
 interface Props {

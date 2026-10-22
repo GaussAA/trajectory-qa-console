@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react'
-import type { Dimension } from '../core/rules'
-import { SEVERITY_LABEL } from '../core/rules'
-import type { ScoreCard } from '../core/score'
-import type { Severity } from '../core/types'
+import type { Dimension, Severity } from '../core/model'
+import { SEVERITY_LABEL } from '../core/model'
+import type { ScoreCard } from '../core/analysis'
 import { SEVERITY_COLOR, cx, truncate } from '../lib/format'
 
 interface Props {

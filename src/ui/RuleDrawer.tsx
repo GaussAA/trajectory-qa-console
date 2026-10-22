@@ -1,25 +1,22 @@
 import { useEffect, useRef, useState } from 'react'
-import type { RuleIssue, RulePack } from '../core/rules'
-import { validatePack } from '../core/rules'
+import type { ScoreCard } from '../core/analysis'
+import { EXPR_FUNCTIONS } from '../core/expr'
+import type { RuleIssue, RulePack } from '../core/model'
+import { fieldsForScope, formatPackErrors, validatePack } from '../core/rules/contract'
+import { SEVERITY_LABEL } from '../core/model'
 import { downloadFile, nowStamp } from '../lib/format'
 import { Icon } from './Icons'
 
 interface Props {
   open: boolean
   pack: RulePack
+  card: ScoreCard | null
   ruleIssues: RuleIssue[]
   onClose: () => void
   onApply: (pack: RulePack) => void
 }
 
-const FIELD_HELP = [
-  ['scope = step', 'index（从 0）、step（从 1）、role、prevRole、textLen、toolCallCount、unpairedCalls、invalidArgs、toolErrorCount、resultChars、durationMs、durationSeconds、tokens、claimWithoutEvidence、hasImage'],
-  ['scope = trajectory', 'stepCount、userTurns、assistantTurns、toolCalls、toolErrors、unpairedCalls、orphanResults、invalidArgs、errorRate、errorRatePercent、totalTokens、duplicateCalls、maxRepeatRun、hasSystem、hasFinalAnswer、privacyHits、claimWithoutEvidence'],
-  ['可用函数', 'len · includes · any · all · count · sum · round · floor · ceil · abs · min · max · lower · upper · startsWith · endsWith'],
-  ['消息模板', '用 {字段名} 插入上下文值，例如「第 {step} 步有 {unpairedCalls} 个未配对调用」'],
-]
-
-export function RuleDrawer({ open, pack, ruleIssues, onClose, onApply }: Props) {
+export function RuleDrawer({ open, pack, card, ruleIssues, onClose, onApply }: Props) {
   const [draft, setDraft] = useState('')
   const [errors, setErrors] = useState<string[]>([])
   const [status, setStatus] = useState('')
@@ -54,7 +51,7 @@ export function RuleDrawer({ open, pack, ruleIssues, onClose, onApply }: Props) 
     }
     const result = validatePack(parsed)
     if (!result.ok) {
-      setErrors(result.errors)
+      setErrors(formatPackErrors(result.errors).slice(0, 12))
       return
     }
     setErrors([])
@@ -79,13 +76,25 @@ export function RuleDrawer({ open, pack, ruleIssues, onClose, onApply }: Props) 
   const uniqueIssues = new Map<string, string>()
   for (const issue of ruleIssues) uniqueIssues.set(`${issue.ruleId}:${issue.message}`, issue.message)
 
+  const hits = new Map<string, number>()
+  for (const finding of card?.findings ?? []) {
+    if (finding.ruleId === 'manual') continue
+    hits.set(finding.ruleId, (hits.get(finding.ruleId) ?? 0) + 1)
+  }
+
+  const stepFields = fieldsForScope('step')
+  const trajectoryFields = fieldsForScope('trajectory')
+
   return (
     <div className="drawer-backdrop" onMouseDown={onClose}>
       <div className="drawer glass" onMouseDown={(event) => event.stopPropagation()}>
         <header className="drawer-head">
           <div>
             <h3>规则包</h3>
-            <p>维度与规则都是数据：改这里即可扩展质检口径，表达式在沙箱内求值，不会执行任意代码。</p>
+            <p>
+              维度与规则都是数据。保存前会做结构校验与表达式编译，字段拼错会给出建议；
+              表达式在沙箱内求值，不会执行任意代码。
+            </p>
           </div>
           <button type="button" className="icon-btn" onClick={onClose} title="关闭（Esc）">
             <Icon name="close" size={16} />
@@ -123,15 +132,65 @@ export function RuleDrawer({ open, pack, ruleIssues, onClose, onApply }: Props) 
           )}
 
           <details className="drawer-help">
+            <summary>规则命中情况（当前会话）</summary>
+            <div className="hit-list">
+              {pack.rules.map((rule) => {
+                const count = hits.get(rule.id) ?? 0
+                return (
+                  <div key={rule.id} className={count > 0 ? 'hit-row hit' : 'hit-row'}>
+                    <span className="mono">{rule.id}</span>
+                    <span className="hit-meta">
+                      {SEVERITY_LABEL[rule.severity]} · 权重 {rule.scoreImpact}
+                    </span>
+                    <span className="hit-count">{count}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </details>
+
+          <details className="drawer-help">
             <summary>字段与语法参考</summary>
-            <ul>
-              {FIELD_HELP.map(([title, body]) => (
-                <li key={title}>
-                  <b>{title}</b>
-                  <span>{body}</span>
-                </li>
-              ))}
-            </ul>
+            <div className="field-groups">
+              <div>
+                <h5>step 作用域（{stepFields.length} 个字段）</h5>
+                <ul>
+                  {stepFields.map((field) => (
+                    <li key={field.name}>
+                      <b>{field.name}</b>
+                      <span>
+                        {field.type} · {field.description}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <h5>trajectory 作用域（{trajectoryFields.length} 个字段）</h5>
+                <ul>
+                  {trajectoryFields.map((field) => (
+                    <li key={field.name}>
+                      <b>{field.name}</b>
+                      <span>
+                        {field.type} · {field.description}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <h5>可用函数</h5>
+                <ul>
+                  {EXPR_FUNCTIONS.map((fn) => (
+                    <li key={fn.name}>
+                      <b>{fn.signature}</b>
+                      <span>{fn.description}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+            <p className="hint">消息模板用 {'{字段名}'} 插入上下文值，例如「第 {'{step}'} 步有 {'{unpairedCalls}'} 个未配对调用」。</p>
           </details>
         </div>
 

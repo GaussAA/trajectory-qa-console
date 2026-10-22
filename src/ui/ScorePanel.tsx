@@ -1,6 +1,6 @@
 import { formatDuration, formatTokens } from '../core/estimate'
-import type { ScoreCard } from '../core/score'
-import type { Trajectory } from '../core/types'
+import type { ScoreCard } from '../core/analysis'
+import type { Trajectory } from '../core/model'
 import { cx, GRADE_COLOR } from '../lib/format'
 
 interface Props {

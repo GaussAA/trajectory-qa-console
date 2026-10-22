@@ -14,7 +14,20 @@ export default defineConfig({
     reportCompressedSize: false,
   },
   test: {
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.{ts,tsx}'],
     environment: 'node',
+    restoreMocks: true,
+    coverage: {
+      provider: 'v8',
+      include: ['src/core/**/*.ts', 'src/app/**/*.ts'],
+      exclude: ['**/*.test.ts', 'src/core/sample.ts', 'src/core/__golden__/**'],
+      reporter: ['text', 'json-summary'],
+      thresholds: {
+        lines: 85,
+        functions: 85,
+        statements: 85,
+        branches: 75,
+      },
+    },
   },
 })

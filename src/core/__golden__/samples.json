@@ -1,0 +1,1062 @@
+[
+  {
+    "file": "demo-01-合规问答.json",
+    "label": "demo-01-合规问答.json",
+    "steps": [
+      {
+        "role": "system",
+        "textLen": 30,
+        "tokens": 27,
+        "forCallId": null,
+        "calls": []
+      },
+      {
+        "role": "user",
+        "textLen": 16,
+        "tokens": 14,
+        "forCallId": null,
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 0,
+        "tokens": 450,
+        "forCallId": null,
+        "calls": [
+          {
+            "name": "search_policy",
+            "argsValid": true,
+            "hasResult": true,
+            "isError": false
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "textLen": 101,
+        "tokens": 158,
+        "forCallId": "call_01",
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 0,
+        "tokens": 824,
+        "forCallId": null,
+        "calls": [
+          {
+            "name": "calc_reimburse",
+            "argsValid": true,
+            "hasResult": true,
+            "isError": false
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "textLen": 63,
+        "tokens": 32,
+        "forCallId": "call_02",
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 101,
+        "tokens": 1006,
+        "forCallId": null,
+        "calls": []
+      }
+    ],
+    "metrics": {
+      "stepCount": 7,
+      "userTurns": 1,
+      "assistantTurns": 3,
+      "toolSteps": 2,
+      "toolCalls": 2,
+      "toolErrors": 0,
+      "unpairedCalls": 0,
+      "orphanResults": 0,
+      "invalidArgs": 0,
+      "emptyAssistant": 0,
+      "emptyResults": 0,
+      "imageSteps": 0,
+      "totalTokens": 2511,
+      "maxStepTokens": 1006,
+      "maxTextChars": 101,
+      "duplicateCalls": 0,
+      "maxRepeatRun": 1,
+      "errorRate": 0,
+      "errorRatePercent": 0,
+      "durationMs": 5000,
+      "hasSystem": true,
+      "hasFinalAnswer": true,
+      "consecutiveUser": 0,
+      "privacyHits": 0,
+      "claimWithoutEvidence": 0,
+      "assistantWithoutTools": false
+    },
+    "findings": [],
+    "dimensions": [
+      {
+        "id": "structure",
+        "score": 100,
+        "lost": 0,
+        "findings": 0
+      },
+      {
+        "id": "execution",
+        "score": 100,
+        "lost": 0,
+        "findings": 0
+      },
+      {
+        "id": "efficiency",
+        "score": 100,
+        "lost": 0,
+        "findings": 0
+      },
+      {
+        "id": "semantic",
+        "score": 100,
+        "lost": 0,
+        "findings": 0
+      }
+    ],
+    "overall": 100,
+    "rawOverall": 100,
+    "grade": "A",
+    "counts": {
+      "error": 0,
+      "warn": 0,
+      "info": 0
+    },
+    "ruleIssues": []
+  },
+  {
+    "file": "demo-02-工具失败.json",
+    "label": "demo-02-工具失败.json",
+    "steps": [
+      {
+        "role": "user",
+        "textLen": 31,
+        "tokens": 19,
+        "forCallId": null,
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 0,
+        "tokens": 6,
+        "forCallId": null,
+        "calls": [
+          {
+            "name": "read_file",
+            "argsValid": true,
+            "hasResult": true,
+            "isError": true
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "textLen": 35,
+        "tokens": 18,
+        "forCallId": "c1",
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 0,
+        "tokens": 6,
+        "forCallId": null,
+        "calls": [
+          {
+            "name": "read_file",
+            "argsValid": true,
+            "hasResult": true,
+            "isError": true
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "textLen": 35,
+        "tokens": 18,
+        "forCallId": "c2",
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 0,
+        "tokens": 6,
+        "forCallId": null,
+        "calls": [
+          {
+            "name": "read_file",
+            "argsValid": true,
+            "hasResult": true,
+            "isError": true
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "textLen": 35,
+        "tokens": 18,
+        "forCallId": "c3",
+        "calls": []
+      }
+    ],
+    "metrics": {
+      "stepCount": 7,
+      "userTurns": 1,
+      "assistantTurns": 3,
+      "toolSteps": 3,
+      "toolCalls": 3,
+      "toolErrors": 3,
+      "unpairedCalls": 0,
+      "orphanResults": 0,
+      "invalidArgs": 0,
+      "emptyAssistant": 0,
+      "emptyResults": 0,
+      "imageSteps": 0,
+      "totalTokens": 91,
+      "maxStepTokens": 19,
+      "maxTextChars": 35,
+      "duplicateCalls": 2,
+      "maxRepeatRun": 3,
+      "errorRate": 1,
+      "errorRatePercent": 100,
+      "durationMs": 6000,
+      "hasSystem": false,
+      "hasFinalAnswer": false,
+      "consecutiveUser": 0,
+      "privacyHits": 0,
+      "claimWithoutEvidence": 0,
+      "assistantWithoutTools": false
+    },
+    "findings": [
+      {
+        "ruleId": "exec-error-rate",
+        "dimension": "execution",
+        "severity": "error",
+        "stepIndex": null,
+        "message": "工具失败率 100%（3/3），执行链不可靠"
+      },
+      {
+        "ruleId": "eff-duplicate-calls",
+        "dimension": "efficiency",
+        "severity": "warn",
+        "stepIndex": null,
+        "message": "有 2 次参数完全相同的重复工具调用，存在冗余"
+      },
+      {
+        "ruleId": "exec-retry-storm",
+        "dimension": "execution",
+        "severity": "warn",
+        "stepIndex": null,
+        "message": "存在连续 3 次完全相同的工具调用，疑似重试风暴"
+      },
+      {
+        "ruleId": "exec-unfinished",
+        "dimension": "execution",
+        "severity": "warn",
+        "stepIndex": null,
+        "message": "轨迹结束时没有助手的最终答复，任务可能未完成"
+      },
+      {
+        "ruleId": "exec-tool-error",
+        "dimension": "execution",
+        "severity": "warn",
+        "stepIndex": 1,
+        "message": "第 2 步有 1 个工具调用返回错误"
+      },
+      {
+        "ruleId": "exec-tool-error",
+        "dimension": "execution",
+        "severity": "warn",
+        "stepIndex": 3,
+        "message": "第 4 步有 1 个工具调用返回错误"
+      },
+      {
+        "ruleId": "exec-tool-error",
+        "dimension": "execution",
+        "severity": "warn",
+        "stepIndex": 5,
+        "message": "第 6 步有 1 个工具调用返回错误"
+      },
+      {
+        "ruleId": "structure-no-system",
+        "dimension": "structure",
+        "severity": "info",
+        "stepIndex": null,
+        "message": "整条轨迹没有 system / developer 提示词，行为约束不可追溯"
+      }
+    ],
+    "dimensions": [
+      {
+        "id": "structure",
+        "score": 99,
+        "lost": 1,
+        "findings": 1
+      },
+      {
+        "id": "execution",
+        "score": 55,
+        "lost": 45,
+        "findings": 6
+      },
+      {
+        "id": "efficiency",
+        "score": 96,
+        "lost": 4,
+        "findings": 1
+      },
+      {
+        "id": "semantic",
+        "score": 100,
+        "lost": 0,
+        "findings": 0
+      }
+    ],
+    "overall": 74,
+    "rawOverall": 85,
+    "grade": "C",
+    "counts": {
+      "error": 1,
+      "warn": 6,
+      "info": 1
+    },
+    "ruleIssues": []
+  },
+  {
+    "file": "demo-03-死循环.json",
+    "label": "demo-03-死循环.json",
+    "steps": [
+      {
+        "role": "system",
+        "textLen": 33,
+        "tokens": 21,
+        "forCallId": null,
+        "calls": []
+      },
+      {
+        "role": "user",
+        "textLen": 27,
+        "tokens": 18,
+        "forCallId": null,
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 0,
+        "tokens": 9,
+        "forCallId": null,
+        "calls": [
+          {
+            "name": "search_notes",
+            "argsValid": true,
+            "hasResult": true,
+            "isError": false
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "textLen": 27,
+        "tokens": 30,
+        "forCallId": "loop_0",
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 0,
+        "tokens": 9,
+        "forCallId": null,
+        "calls": [
+          {
+            "name": "search_notes",
+            "argsValid": true,
+            "hasResult": true,
+            "isError": false
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "textLen": 27,
+        "tokens": 30,
+        "forCallId": "loop_1",
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 0,
+        "tokens": 9,
+        "forCallId": null,
+        "calls": [
+          {
+            "name": "search_notes",
+            "argsValid": true,
+            "hasResult": true,
+            "isError": false
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "textLen": 27,
+        "tokens": 30,
+        "forCallId": "loop_2",
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 0,
+        "tokens": 9,
+        "forCallId": null,
+        "calls": [
+          {
+            "name": "search_notes",
+            "argsValid": true,
+            "hasResult": true,
+            "isError": false
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "textLen": 27,
+        "tokens": 30,
+        "forCallId": "loop_3",
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 0,
+        "tokens": 9,
+        "forCallId": null,
+        "calls": [
+          {
+            "name": "search_notes",
+            "argsValid": true,
+            "hasResult": true,
+            "isError": false
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "textLen": 27,
+        "tokens": 30,
+        "forCallId": "loop_4",
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 0,
+        "tokens": 9,
+        "forCallId": null,
+        "calls": [
+          {
+            "name": "search_notes",
+            "argsValid": true,
+            "hasResult": true,
+            "isError": false
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "textLen": 27,
+        "tokens": 30,
+        "forCallId": "loop_5",
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 0,
+        "tokens": 9,
+        "forCallId": null,
+        "calls": [
+          {
+            "name": "search_notes",
+            "argsValid": true,
+            "hasResult": true,
+            "isError": false
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "textLen": 27,
+        "tokens": 30,
+        "forCallId": "loop_6",
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 0,
+        "tokens": 9,
+        "forCallId": null,
+        "calls": [
+          {
+            "name": "search_notes",
+            "argsValid": true,
+            "hasResult": true,
+            "isError": false
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "textLen": 27,
+        "tokens": 30,
+        "forCallId": "loop_7",
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 0,
+        "tokens": 9,
+        "forCallId": null,
+        "calls": [
+          {
+            "name": "search_notes",
+            "argsValid": true,
+            "hasResult": true,
+            "isError": false
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "textLen": 27,
+        "tokens": 30,
+        "forCallId": "loop_8",
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 0,
+        "tokens": 9,
+        "forCallId": null,
+        "calls": [
+          {
+            "name": "search_notes",
+            "argsValid": true,
+            "hasResult": true,
+            "isError": false
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "textLen": 27,
+        "tokens": 30,
+        "forCallId": "loop_9",
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 0,
+        "tokens": 9,
+        "forCallId": null,
+        "calls": [
+          {
+            "name": "search_notes",
+            "argsValid": true,
+            "hasResult": true,
+            "isError": false
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "textLen": 27,
+        "tokens": 30,
+        "forCallId": "loop_10",
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 0,
+        "tokens": 9,
+        "forCallId": null,
+        "calls": [
+          {
+            "name": "search_notes",
+            "argsValid": true,
+            "hasResult": true,
+            "isError": false
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "textLen": 27,
+        "tokens": 30,
+        "forCallId": "loop_11",
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 0,
+        "tokens": 9,
+        "forCallId": null,
+        "calls": [
+          {
+            "name": "search_notes",
+            "argsValid": true,
+            "hasResult": true,
+            "isError": false
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "textLen": 27,
+        "tokens": 30,
+        "forCallId": "loop_12",
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 0,
+        "tokens": 9,
+        "forCallId": null,
+        "calls": [
+          {
+            "name": "search_notes",
+            "argsValid": true,
+            "hasResult": true,
+            "isError": false
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "textLen": 27,
+        "tokens": 30,
+        "forCallId": "loop_13",
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 0,
+        "tokens": 9,
+        "forCallId": null,
+        "calls": [
+          {
+            "name": "search_notes",
+            "argsValid": true,
+            "hasResult": true,
+            "isError": false
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "textLen": 27,
+        "tokens": 30,
+        "forCallId": "loop_14",
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 0,
+        "tokens": 9,
+        "forCallId": null,
+        "calls": [
+          {
+            "name": "search_notes",
+            "argsValid": true,
+            "hasResult": true,
+            "isError": false
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "textLen": 27,
+        "tokens": 30,
+        "forCallId": "loop_15",
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 0,
+        "tokens": 9,
+        "forCallId": null,
+        "calls": [
+          {
+            "name": "search_notes",
+            "argsValid": true,
+            "hasResult": true,
+            "isError": false
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "textLen": 27,
+        "tokens": 30,
+        "forCallId": "loop_16",
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 0,
+        "tokens": 9,
+        "forCallId": null,
+        "calls": [
+          {
+            "name": "search_notes",
+            "argsValid": true,
+            "hasResult": true,
+            "isError": false
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "textLen": 27,
+        "tokens": 30,
+        "forCallId": "loop_17",
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 0,
+        "tokens": 9,
+        "forCallId": null,
+        "calls": [
+          {
+            "name": "search_notes",
+            "argsValid": true,
+            "hasResult": true,
+            "isError": false
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "textLen": 27,
+        "tokens": 30,
+        "forCallId": "loop_18",
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 0,
+        "tokens": 9,
+        "forCallId": null,
+        "calls": [
+          {
+            "name": "search_notes",
+            "argsValid": true,
+            "hasResult": true,
+            "isError": false
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "textLen": 27,
+        "tokens": 30,
+        "forCallId": "loop_19",
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 24,
+        "tokens": 22,
+        "forCallId": null,
+        "calls": []
+      }
+    ],
+    "metrics": {
+      "stepCount": 43,
+      "userTurns": 1,
+      "assistantTurns": 21,
+      "toolSteps": 20,
+      "toolCalls": 20,
+      "toolErrors": 0,
+      "unpairedCalls": 0,
+      "orphanResults": 0,
+      "invalidArgs": 0,
+      "emptyAssistant": 0,
+      "emptyResults": 0,
+      "imageSteps": 0,
+      "totalTokens": 841,
+      "maxStepTokens": 30,
+      "maxTextChars": 33,
+      "duplicateCalls": 19,
+      "maxRepeatRun": 20,
+      "errorRate": 0,
+      "errorRatePercent": 0,
+      "durationMs": 50000,
+      "hasSystem": true,
+      "hasFinalAnswer": true,
+      "consecutiveUser": 0,
+      "privacyHits": 0,
+      "claimWithoutEvidence": 0,
+      "assistantWithoutTools": false
+    },
+    "findings": [
+      {
+        "ruleId": "exec-dead-loop",
+        "dimension": "execution",
+        "severity": "error",
+        "stepIndex": null,
+        "message": "同一工具调用连续重复 20 次，判定为死循环，轨迹基本不可用"
+      },
+      {
+        "ruleId": "eff-duplicate-calls",
+        "dimension": "efficiency",
+        "severity": "warn",
+        "stepIndex": null,
+        "message": "有 19 次参数完全相同的重复工具调用，存在冗余"
+      },
+      {
+        "ruleId": "eff-long-trace",
+        "dimension": "efficiency",
+        "severity": "warn",
+        "stepIndex": null,
+        "message": "轨迹共 43 步，超出常规长度，建议检查是否绕路"
+      },
+      {
+        "ruleId": "exec-retry-storm",
+        "dimension": "execution",
+        "severity": "warn",
+        "stepIndex": null,
+        "message": "存在连续 20 次完全相同的工具调用，疑似重试风暴"
+      }
+    ],
+    "dimensions": [
+      {
+        "id": "structure",
+        "score": 100,
+        "lost": 0,
+        "findings": 0
+      },
+      {
+        "id": "execution",
+        "score": 68,
+        "lost": 32,
+        "findings": 2
+      },
+      {
+        "id": "efficiency",
+        "score": 91,
+        "lost": 9,
+        "findings": 2
+      },
+      {
+        "id": "semantic",
+        "score": 100,
+        "lost": 0,
+        "findings": 0
+      }
+    ],
+    "overall": 74,
+    "rawOverall": 89,
+    "grade": "C",
+    "counts": {
+      "error": 1,
+      "warn": 3,
+      "info": 0
+    },
+    "ruleIssues": []
+  },
+  {
+    "file": "demo-04-结构损坏.json",
+    "label": "demo-04-结构损坏.json",
+    "steps": [
+      {
+        "role": "user",
+        "textLen": 12,
+        "tokens": 11,
+        "forCallId": null,
+        "calls": []
+      },
+      {
+        "role": "user",
+        "textLen": 3,
+        "tokens": 3,
+        "forCallId": null,
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 0,
+        "tokens": 2,
+        "forCallId": null,
+        "calls": [
+          {
+            "name": "write_file",
+            "argsValid": false,
+            "hasResult": false,
+            "isError": false
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "textLen": 0,
+        "tokens": 0,
+        "forCallId": null,
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 0,
+        "tokens": 0,
+        "forCallId": null,
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 10,
+        "tokens": 8,
+        "forCallId": null,
+        "calls": []
+      },
+      {
+        "role": "assistant",
+        "textLen": 67,
+        "tokens": 35,
+        "forCallId": null,
+        "calls": []
+      }
+    ],
+    "metrics": {
+      "stepCount": 7,
+      "userTurns": 2,
+      "assistantTurns": 4,
+      "toolSteps": 1,
+      "toolCalls": 1,
+      "toolErrors": 0,
+      "unpairedCalls": 1,
+      "orphanResults": 1,
+      "invalidArgs": 1,
+      "emptyAssistant": 1,
+      "emptyResults": 1,
+      "imageSteps": 1,
+      "totalTokens": 59,
+      "maxStepTokens": 35,
+      "maxTextChars": 67,
+      "duplicateCalls": 0,
+      "maxRepeatRun": 1,
+      "errorRate": 0,
+      "errorRatePercent": 0,
+      "durationMs": 6000,
+      "hasSystem": false,
+      "hasFinalAnswer": true,
+      "consecutiveUser": 1,
+      "privacyHits": 2,
+      "claimWithoutEvidence": 0,
+      "assistantWithoutTools": false
+    },
+    "findings": [
+      {
+        "ruleId": "sem-privacy-leak",
+        "dimension": "semantic",
+        "severity": "error",
+        "stepIndex": null,
+        "message": "助手输出中发现 2 处手机号 / 邮箱 / 证件号 / 密钥形态的敏感信息"
+      },
+      {
+        "ruleId": "structure-invalid-args",
+        "dimension": "structure",
+        "severity": "error",
+        "stepIndex": 2,
+        "message": "第 3 步有 1 个工具参数不是合法 JSON"
+      },
+      {
+        "ruleId": "structure-unpaired-call",
+        "dimension": "structure",
+        "severity": "error",
+        "stepIndex": 2,
+        "message": "第 3 步有 1 个 tool_call 没有配对结果，轨迹疑似被截断"
+      },
+      {
+        "ruleId": "structure-orphan-result",
+        "dimension": "structure",
+        "severity": "error",
+        "stepIndex": 3,
+        "message": "第 4 步的工具结果找不到对应调用，链路已断"
+      },
+      {
+        "ruleId": "structure-double-user",
+        "dimension": "structure",
+        "severity": "warn",
+        "stepIndex": 1,
+        "message": "第 2 步与前一条同为 user，中间缺少助手回应"
+      },
+      {
+        "ruleId": "structure-empty-assistant",
+        "dimension": "structure",
+        "severity": "warn",
+        "stepIndex": 4,
+        "message": "第 5 步是空助手回复（既无文本也无工具调用）"
+      },
+      {
+        "ruleId": "structure-no-system",
+        "dimension": "structure",
+        "severity": "info",
+        "stepIndex": null,
+        "message": "整条轨迹没有 system / developer 提示词，行为约束不可追溯"
+      },
+      {
+        "ruleId": "structure-empty-tool-result",
+        "dimension": "structure",
+        "severity": "info",
+        "stepIndex": 3,
+        "message": "第 4 步工具返回空内容，无法判断调用是否生效"
+      },
+      {
+        "ruleId": "structure-multimodal",
+        "dimension": "structure",
+        "severity": "info",
+        "stepIndex": 5,
+        "message": "第 6 步含图片片段，本轮质检未解析其内容"
+      }
+    ],
+    "dimensions": [
+      {
+        "id": "structure",
+        "score": 55,
+        "lost": 45,
+        "findings": 8
+      },
+      {
+        "id": "execution",
+        "score": 100,
+        "lost": 0,
+        "findings": 0
+      },
+      {
+        "id": "efficiency",
+        "score": 100,
+        "lost": 0,
+        "findings": 0
+      },
+      {
+        "id": "semantic",
+        "score": 85,
+        "lost": 15,
+        "findings": 1
+      }
+    ],
+    "overall": 54,
+    "rawOverall": 84,
+    "grade": "D",
+    "counts": {
+      "error": 4,
+      "warn": 2,
+      "info": 3
+    },
+    "ruleIssues": []
+  }
+]

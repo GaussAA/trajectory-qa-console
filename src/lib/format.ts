@@ -1,4 +1,4 @@
-import type { Role, Severity } from '../core/types'
+import type { Role, Severity } from '../core/model'
 
 export const ROLE_LABEL: Record<Role, string> = {
   system: '系统',

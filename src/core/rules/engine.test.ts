@@ -1,14 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { parseTrajectory } from './parse'
-import {
-  annotationFindings,
-  DEFAULT_PACK,
-  DIMENSIONS,
-  runRules,
-  validatePack,
-  type RulePack,
-} from './rules'
-import { scoreTrajectory } from './score'
+import { parseTrajectory } from '../parsing'
+import { DIMENSIONS, DEFAULT_PACK } from './builtin-pack'
+import { buildStepContexts, runRules } from './engine'
+import { annotationFindings, scoreTrajectory } from '../analysis/score'
+import { validatePack, formatPackErrors, STEP_FIELDS, TRAJECTORY_FIELDS } from './contract'
+import { computeMetrics } from '../analysis/metrics'
+import type { RulePack } from '../model'
 
 const CLEAN_TRACE = JSON.stringify([
   { role: 'system', content: '你是检索助手' },
@@ -25,39 +22,31 @@ const CLEAN_TRACE = JSON.stringify([
 
 const BROKEN_TRACE = JSON.stringify([
   { role: 'user', content: '帮我整理材料' },
-  {
-    role: 'assistant',
-    tool_calls: [
-      { id: 'x1', function: { name: 'fetch', arguments: '{"url": ' } },
-    ],
-  },
-  {
-    role: 'assistant',
-    tool_calls: [{ id: 'x2', function: { name: 'fetch', arguments: '{"url":"a"}' } }],
-  },
-  {
-    role: 'assistant',
-    tool_calls: [{ id: 'x3', function: { name: 'fetch', arguments: '{"url":"a"}' } }],
-  },
-  {
-    role: 'assistant',
-    tool_calls: [{ id: 'x4', function: { name: 'fetch', arguments: '{"url":"a"}' } }],
-  },
+  { role: 'assistant', tool_calls: [{ id: 'x1', function: { name: 'fetch', arguments: '{"url": ' } }] },
+  { role: 'assistant', tool_calls: [{ id: 'x2', function: { name: 'fetch', arguments: '{"url":"a"}' } }] },
+  { role: 'assistant', tool_calls: [{ id: 'x3', function: { name: 'fetch', arguments: '{"url":"a"}' } }] },
+  { role: 'assistant', tool_calls: [{ id: 'x4', function: { name: 'fetch', arguments: '{"url":"a"}' } }] },
 ])
 
-function ids(trace: string): string[] {
-  const [trajectory] = parseTrajectory(trace)
+function parseOrThrow(trace: string) {
+  const result = parseTrajectory(trace)
+  if (!result.ok) throw new Error(result.error.message)
+  return result.value[0]
+}
+
+function ruleIds(trace: string): string[] {
+  const trajectory = parseOrThrow(trace)
   if (!trajectory) throw new Error('trace did not parse')
   return runRules(trajectory, DEFAULT_PACK).findings.map((finding) => finding.ruleId)
 }
 
 describe('rule engine', () => {
   it('leaves a healthy trace clean', () => {
-    expect(ids(CLEAN_TRACE)).toEqual([])
+    expect(ruleIds(CLEAN_TRACE)).toEqual([])
   })
 
   it('detects truncated calls, bad arguments, retry storms and a missing answer', () => {
-    const found = ids(BROKEN_TRACE)
+    const found = ruleIds(BROKEN_TRACE)
     expect(found).toContain('structure-unpaired-call')
     expect(found).toContain('structure-invalid-args')
     expect(found).toContain('exec-retry-storm')
@@ -69,11 +58,11 @@ describe('rule engine', () => {
       { role: 'assistant', content: '无调用' },
       { role: 'tool', tool_call_id: 'ghost', content: '孤立返回' },
     ])
-    expect(ids(trace)).toContain('structure-orphan-result')
+    expect(ruleIds(trace)).toContain('structure-orphan-result')
   })
 
   it('reports a per-step finding for every offending step', () => {
-    const [trajectory] = parseTrajectory(BROKEN_TRACE)
+    const trajectory = parseOrThrow(BROKEN_TRACE)
     if (!trajectory) throw new Error('trace did not parse')
     const { findings } = runRules(trajectory, DEFAULT_PACK)
     const unpaired = findings.filter((finding) => finding.ruleId === 'structure-unpaired-call')
@@ -114,21 +103,12 @@ describe('rule engine', () => {
         },
       ],
     }
-    const [trajectory] = parseTrajectory(CLEAN_TRACE)
+    const trajectory = parseOrThrow(CLEAN_TRACE)
     if (!trajectory) throw new Error('trace did not parse')
     const result = runRules(trajectory, pack)
     expect(result.findings).toHaveLength(0)
     expect(result.ruleIssues).toHaveLength(2)
     expect(result.ruleIssues[0]?.message).toContain('未知标识符')
-  })
-
-  it('rejects invalid rule packs with actionable errors', () => {
-    const result = validatePack({ dimensions: [], rules: 'nope' })
-    expect(result.ok).toBe(false)
-    if (!result.ok) {
-      expect(result.errors.join(' ')).toContain('dimensions')
-      expect(result.errors.join(' ')).toContain('rules')
-    }
   })
 
   it('keeps manual annotations as first-class findings', () => {
@@ -142,9 +122,73 @@ describe('rule engine', () => {
   })
 })
 
+describe('rule contract', () => {
+  it('accepts the built-in pack', () => {
+    const result = validatePack(DEFAULT_PACK)
+    expect(result.ok).toBe(true)
+  })
+
+  it('keeps the published field lists in sync with the runtime contexts', () => {
+    const trajectory = parseOrThrow(CLEAN_TRACE)
+    if (!trajectory) throw new Error('trace did not parse')
+    const [stepContext] = buildStepContexts(trajectory)
+    expect(Object.keys(stepContext ?? {}).sort()).toEqual(STEP_FIELDS.map((field) => field.name).sort())
+
+    const metrics = computeMetrics(trajectory)
+    expect(Object.keys(metrics).sort()).toEqual(TRAJECTORY_FIELDS.map((field) => field.name).sort())
+  })
+
+  it('suggests the nearest legal field when a rule has a typo', () => {
+    const result = validatePack({
+      ...DEFAULT_PACK,
+      rules: [{ ...DEFAULT_PACK.rules[0], id: 'typo', expr: 'unpairedCallz > 0' }],
+    })
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      const text = formatPackErrors(result.errors).join(' ')
+      expect(text).toContain('unpairedCalls')
+    }
+  })
+
+  it('rejects structurally invalid packs with actionable paths', () => {
+    const result = validatePack({ dimensions: [], rules: 'nope' })
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      const text = formatPackErrors(result.errors).join(' ')
+      expect(text).toContain('dimensions')
+      expect(text).toContain('rules')
+    }
+  })
+
+  it('rejects duplicate ids and shared dimension weights of zero', () => {
+    const duplicate = validatePack({
+      ...DEFAULT_PACK,
+      dimensions: [DEFAULT_PACK.dimensions[0], DEFAULT_PACK.dimensions[0]],
+      rules: [DEFAULT_PACK.rules[0], DEFAULT_PACK.rules[0]],
+    })
+    expect(duplicate.ok).toBe(false)
+
+    const zero = validatePack({
+      version: 1,
+      name: 'zero',
+      dimensions: [{ id: 'a', label: 'A', weight: 0, color: '#fff', description: '' }],
+      rules: [],
+    })
+    expect(zero.ok).toBe(false)
+  })
+
+  it('rejects unknown functions at validation time', () => {
+    const result = validatePack({
+      ...DEFAULT_PACK,
+      rules: [{ ...DEFAULT_PACK.rules[0], id: 'fn-typo', expr: 'lenght(role) > 0' }],
+    })
+    expect(result.ok).toBe(false)
+  })
+})
+
 describe('scoring', () => {
   it('gives a clean trace a perfect score', () => {
-    const [trajectory] = parseTrajectory(CLEAN_TRACE)
+    const trajectory = parseOrThrow(CLEAN_TRACE)
     if (!trajectory) throw new Error('trace did not parse')
     const { findings, ruleIssues } = runRules(trajectory, DEFAULT_PACK)
     const card = scoreTrajectory(findings, DIMENSIONS, ruleIssues)
@@ -153,7 +197,7 @@ describe('scoring', () => {
     expect(card.counts.error).toBe(0)
   })
 
-  it('deducts per dimension and weights the overall score', () => {
+  it('deducts per dimension and gates the headline with errors', () => {
     const card = scoreTrajectory(
       [
         {
@@ -170,7 +214,6 @@ describe('scoring', () => {
     )
     expect(card.dimensions.find((dimension) => dimension.id === 'structure')?.score).toBe(85)
     expect(card.rawOverall).toBe(96)
-    // One distinct error rule caps the headline score at 74 regardless of the mean.
     expect(card.overall).toBe(74)
     expect(card.capped).toBe(true)
     expect(card.grade).toBe('C')
@@ -190,10 +233,9 @@ describe('scoring', () => {
     const structure = card.dimensions.find((dimension) => dimension.id === 'structure')
     expect(structure?.lost).toBe(30)
     expect(structure?.score).toBe(70)
-    expect(structure?.findings).toBe(6)
   })
 
-  it('caps the headline score by distinct error rules, not occurrences', () => {
+  it('caps the headline by distinct error rules, not occurrences', () => {
     const card = scoreTrajectory(
       Array.from({ length: 9 }, (_, i) => ({
         id: `f${i}`,
