@@ -37,7 +37,9 @@ export type WorkspaceAction =
   | { type: 'annotation/add'; annotation: Annotation }
   | { type: 'annotation/remove'; id: string }
   | { type: 'note/set'; note: SessionNote }
+  | { type: 'note/batch'; notes: SessionNote[] }
   | { type: 'note/clear'; trajectoryId: string }
+  | { type: 'session/remove'; ids: string[] }
 
 /** 展示名：用户起的名字优先，否则回退文件名。 */
 export function labelOf(notes: SessionNote[], trajectory: Trajectory): string {
@@ -168,8 +170,47 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       return { ...state, notes: [...rest, { trajectoryId: action.note.trajectoryId, name, note }] }
     }
 
+    case 'note/batch': {
+      // 一次合并多条：先按 id 去脏，再统一 trim；空值代表「这条不要名字了」。
+      const incoming = new Map<string, SessionNote>()
+      const blanked = new Set<string>()
+      for (const note of action.notes) {
+        const name = note.name.trim()
+        const text = note.note.trim()
+        if (name === '' && text === '') {
+          incoming.delete(note.trajectoryId)
+          blanked.add(note.trajectoryId)
+        } else {
+          blanked.delete(note.trajectoryId)
+          incoming.set(note.trajectoryId, { trajectoryId: note.trajectoryId, name, note: text })
+        }
+      }
+      const rest = state.notes.filter(
+        (item) => !incoming.has(item.trajectoryId) && !blanked.has(item.trajectoryId),
+      )
+      return { ...state, notes: [...rest, ...incoming.values()] }
+    }
+
     case 'note/clear':
       return { ...state, notes: state.notes.filter((item) => item.trajectoryId !== action.trajectoryId) }
+
+    case 'session/remove': {
+      if (action.ids.length === 0) return state
+      const drop = new Set(action.ids)
+      const sessions = state.sessions.filter((session) => !drop.has(session.id))
+      if (sessions.length === state.sessions.length) return state
+
+      const next = sessions.find((session) => session.id === state.selectedId) ?? sessions[0]
+      return {
+        ...state,
+        sessions,
+        phase: sessions.length > 0 ? state.phase : 'idle',
+        selectedId: next?.id ?? null,
+        selectedStep: next
+          ? pickStepFor(next, scoreSession(next, state.pack.dimensions, state.annotations))
+          : null,
+      }
+    }
 
     default:
       return state

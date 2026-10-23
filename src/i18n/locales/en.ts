@@ -94,6 +94,21 @@ export const en: Record<MessageKey, string> = {
   'session.notePlaceholder': 'e.g. third run after the system-prompt change',
   'session.resetName': 'Use file name',
 
+
+  'common.delete': 'Delete',
+  'session.select': 'Select',
+  'session.selectExit': 'Exit selection',
+  'session.selectedCount': '{count} selected',
+  'session.batchRename': 'Batch rename',
+  'session.batchDelete': 'Delete selected',
+  'session.batchDeleteConfirm': 'Confirm deleting {count}',
+  'session.batchPrefix': 'Name prefix',
+  'session.batchStart': 'Start number',
+  'session.batchPad': 'Zero padding',
+  'session.batchNote': 'Shared note (optional)',
+  'session.batchPreview': 'Preview: {names}',
+  'session.batchApply': 'Apply names',
+
   'session.title': 'Sessions',
   'session.untitled': 'Untitled trace',
   'session.meta': '{steps} steps · {tokens} · {score} pts',

@@ -183,3 +183,97 @@
   align-items: center;
   gap: 6px;
 }
+
+/* ---------- 批量选择 ---------- */
+
+.session-select-toggle {
+  border: 0;
+  background: transparent;
+  color: var(--text-mute);
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
+}
+
+.session-select-toggle:hover,
+.session-select-toggle.active {
+  background: rgba(94, 234, 212, 0.12);
+  color: #d9fff8;
+}
+
+.session-row.selecting .session-item {
+  padding-left: 30px;
+}
+
+.session-row.picked .session-item {
+  border-color: rgba(94, 234, 212, 0.32);
+  background: rgba(94, 234, 212, 0.06);
+}
+
+.session-check {
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 13px;
+  height: 13px;
+  accent-color: #5eead4;
+  cursor: pointer;
+}
+
+.batch-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-top: 1px solid var(--line);
+  background: rgba(94, 234, 212, 0.04);
+}
+
+.batch-count {
+  font-size: 10px;
+  color: #d9fff8;
+}
+
+.batch-editor {
+  margin: 0 8px 8px;
+}
+
+.batch-labels,
+.batch-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 62px 56px;
+  gap: 5px;
+}
+
+.batch-labels {
+  font-size: 8.5px;
+  letter-spacing: 0.04em;
+  color: var(--text-mute);
+  margin-bottom: -2px;
+}
+
+.batch-labels span:nth-child(2),
+.batch-labels span:nth-child(3) {
+  text-align: center;
+}
+
+.batch-preview {
+  margin: 0;
+  font-size: 9.5px;
+  color: var(--text-mute);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn.ghost.danger {
+  color: #fda4af;
+  border-color: rgba(251, 113, 133, 0.32);
+  background: rgba(251, 113, 133, 0.08);
+}

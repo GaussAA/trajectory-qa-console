@@ -109,6 +109,48 @@ describe('App smoke', () => {
     expect(await screen.findByRole('button', { name: /demo-01/ })).toBeTruthy()
   })
 
+  it('batch-renames the selected sessions with a prefix', async () => {
+    const { user } = setup()
+    await loadSamples(user)
+
+    await user.click(screen.getByRole('button', { name: '选择' }))
+    const items = screen.getAllByRole('button', { name: /demo-0/ })
+    await user.click(items[0]!)
+    await user.click(items[1]!)
+    expect(screen.getByText('已选 2 条')).toBeTruthy()
+
+    await user.click(screen.getByRole('button', { name: '批量命名' }))
+    await user.type(screen.getByLabelText('名称前缀'), 'exp')
+    expect(screen.getByText(/exp-01/)).toBeTruthy()
+
+    await user.click(screen.getByRole('button', { name: '应用命名' }))
+    expect(await screen.findByRole('button', { name: /exp-01/ })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /exp-02/ })).toBeTruthy()
+    // 选完即退出选择态，避免误触下一次批量操作
+    expect(screen.queryByText('已选 2 条')).toBeNull()
+  })
+
+  it('deletes selected sessions only after a second confirmation', async () => {
+    const { user } = setup()
+    await loadSamples(user)
+    expect(screen.getAllByRole('button', { name: /demo-0/ })).toHaveLength(4)
+
+    await user.click(screen.getByRole('button', { name: '选择' }))
+    const items = screen.getAllByRole('button', { name: /demo-0/ })
+    await user.click(items[0]!)
+    await user.click(items[1]!)
+
+    await user.click(screen.getByRole('button', { name: '删除所选' }))
+    // 第一次点击只进入确认态，不删
+    expect(screen.getAllByRole('button', { name: /demo-0/ })).toHaveLength(4)
+    await user.click(screen.getByRole('button', { name: '确认删除 2 条' }))
+
+    await waitFor(() => expect(screen.getAllByRole('button', { name: /demo-0/ })).toHaveLength(2))
+    // 删完自动退出选择态
+    expect(screen.queryByText(/已选/)).toBeNull()
+    expect(screen.queryByRole('button', { name: '退出选择' })).toBeNull()
+  })
+
   it('records a manual annotation and surfaces it as a finding', async () => {
     const { user } = setup()
     await loadSamples(user)

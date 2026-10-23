@@ -143,7 +143,9 @@ describe('pickStepFor', () => {
     if (!cleanCard) throw new Error('missing card')
     expect(pickStepFor(cleanAnalysis, cleanCard)).toBe(1)
   })
+})
 
+describe('session notes and removal', () => {
   it('stores session names and trims them', () => {
     const analysis = firstSession()
     const state = createInitialState(DEFAULT_PACK, [], [analysis])
@@ -183,5 +185,73 @@ describe('pickStepFor', () => {
       note: { trajectoryId: analysis.trajectory.id, name: 'x', note: '' },
     })
     expect(workspaceReducer(named, { type: 'workspace/clear' }).notes).toHaveLength(0)
+  })
+
+  it('merges batch notes in one dispatch and trims them', () => {
+    const state = createInitialState(DEFAULT_PACK)
+    const merged = workspaceReducer(state, {
+      type: 'note/batch',
+      notes: [
+        { trajectoryId: 'a', name: ' exp-01 ', note: ' 第三版 ' },
+        { trajectoryId: 'b', name: 'exp-02', note: '' },
+      ],
+    })
+    expect(merged.notes).toEqual([
+      { trajectoryId: 'a', name: 'exp-01', note: '第三版' },
+      { trajectoryId: 'b', name: 'exp-02', note: '' },
+    ])
+  })
+
+  it('drops blank entries in a batch and keeps unrelated notes', () => {
+    const state = createInitialState(DEFAULT_PACK, [], [], [{ trajectoryId: 'keep', name: 'keep', note: '' }])
+    const merged = workspaceReducer(state, {
+      type: 'note/batch',
+      notes: [
+        { trajectoryId: 'keep', name: '  ', note: ' ' },
+        { trajectoryId: 'new', name: 'n', note: '' },
+      ],
+    })
+    expect(merged.notes).toEqual([{ trajectoryId: 'new', name: 'n', note: '' }])
+  })
+
+  it('removes sessions and keeps the selection valid', () => {
+    const sessions = ['a.json', 'b.json', 'c.json'].map((label) => {
+      const parsed = analyze({ source: TRACE, label, pack: DEFAULT_PACK })
+      if (!parsed.ok) throw new Error(parsed.error.message)
+      return parsed.value[0]!
+    })
+    const state = createInitialState(DEFAULT_PACK, [], sessions)
+    const selected = state.selectedId as string
+
+    const afterRemove = workspaceReducer(state, { type: 'session/remove', ids: [selected] })
+    expect(afterRemove.sessions).toHaveLength(2)
+    expect(afterRemove.selectedId).not.toBe(selected)
+    expect(afterRemove.sessions.some((session) => session.id === afterRemove.selectedId)).toBe(true)
+    // 选中步号必须落在新会话的范围内
+    const next = afterRemove.sessions.find((session) => session.id === afterRemove.selectedId)
+    expect(afterRemove.selectedStep).toBeGreaterThanOrEqual(0)
+    expect(afterRemove.selectedStep).toBeLessThan(next!.trajectory.steps.length)
+  })
+
+  it('goes back to the empty state when every session is removed', () => {
+    const parsed = analyze({ source: TRACE, label: 'trace.json', pack: DEFAULT_PACK })
+    if (!parsed.ok) throw new Error(parsed.error.message)
+    const state = createInitialState(DEFAULT_PACK, [], parsed.value)
+    const cleared = workspaceReducer(state, {
+      type: 'session/remove',
+      ids: state.sessions.map((session) => session.id),
+    })
+    expect(cleared.sessions).toHaveLength(0)
+    expect(cleared.selectedId).toBeNull()
+    expect(cleared.selectedStep).toBeNull()
+    expect(cleared.phase).toBe('idle')
+  })
+
+  it('ignores removal requests for unknown ids', () => {
+    const parsed = analyze({ source: TRACE, label: 'trace.json', pack: DEFAULT_PACK })
+    if (!parsed.ok) throw new Error(parsed.error.message)
+    const state = createInitialState(DEFAULT_PACK, [], parsed.value)
+    expect(workspaceReducer(state, { type: 'session/remove', ids: ['ghost'] })).toBe(state)
+    expect(workspaceReducer(state, { type: 'session/remove', ids: [] })).toBe(state)
   })
 })

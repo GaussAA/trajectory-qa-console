@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import type { ScoreCard, SessionAnalysis } from '../core/analysis'
-import type { Annotation, RulePack, Severity } from '../core/model'
+import type { Annotation, RulePack, SessionNote, Severity } from '../core/model'
 import { useI18n, type MessageKey, type TranslateParams } from '../i18n'
 import { buildStressTrace } from '../core/sample'
 import { createAnalyzer, type AnalyzerPort } from '../app/analyzer'
@@ -259,6 +259,22 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
     [telemetry],
   )
 
+  const setSessionNotes = useCallback(
+    (notes: SessionNote[]) => {
+      dispatch({ type: 'note/batch', notes })
+      telemetry.emit('session:notes-batch', { count: notes.length })
+    },
+    [telemetry],
+  )
+
+  const removeSessions = useCallback(
+    (ids: string[]) => {
+      dispatch({ type: 'session/remove', ids })
+      telemetry.emit('session:remove', { count: ids.length })
+    },
+    [telemetry],
+  )
+
   const removeAnnotation = useCallback((id: string) => {
     dispatch({ type: 'annotation/remove', id })
   }, [])
@@ -322,6 +338,8 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
       addAnnotation,
       removeAnnotation,
       setSessionNote,
+      setSessionNotes,
+      removeSessions,
       exportMarkdown,
       exportJson,
       exportDiagnostics,

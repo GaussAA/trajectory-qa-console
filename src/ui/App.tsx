@@ -247,6 +247,8 @@ export default function App({
                 selectedId={session.id}
                 onSelect={actions.chooseSession}
                 onRename={actions.setSessionNote}
+                onBatchRename={actions.setSessionNotes}
+                onRemove={actions.removeSessions}
                 onAdd={() => fileRef.current?.click()}
                 onClear={actions.clear}
               />

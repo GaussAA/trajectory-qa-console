@@ -90,6 +90,21 @@ export const zhCN = {
   'session.notePlaceholder': '例如：改了 system prompt 的第三版',
   'session.resetName': '恢复原名',
 
+
+  'common.delete': '删除',
+  'session.select': '选择',
+  'session.selectExit': '退出选择',
+  'session.selectedCount': '已选 {count} 条',
+  'session.batchRename': '批量命名',
+  'session.batchDelete': '删除所选',
+  'session.batchDeleteConfirm': '确认删除 {count} 条',
+  'session.batchPrefix': '名称前缀',
+  'session.batchStart': '起始序号',
+  'session.batchPad': '补零位数',
+  'session.batchNote': '统一备注（可选）',
+  'session.batchPreview': '预览：{names}',
+  'session.batchApply': '应用命名',
+
   'session.title': '会话',
   'session.untitled': '未命名轨迹',
   'session.meta': '{steps} 步 · {tokens} · {score} 分',
