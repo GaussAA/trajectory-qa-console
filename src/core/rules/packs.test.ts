@@ -82,7 +82,7 @@ describe('builtin packs', () => {
       const analyzed = analyze({ source, label: file })
       if (!analyzed.ok) throw new Error(`${file}: ${analyzed.error.message}`)
 
-      for (const session of analyzed.value) {
+      for (const session of analyzed.value.sessions) {
         const english = runRules(session.trajectory, BUILTIN_PACK_EN).findings.map((finding) => ({
           ruleId: finding.ruleId,
           severity: finding.severity,

@@ -18,7 +18,7 @@ function recordFor(sample: (typeof SAMPLE_FILES)[number]) {
     idPrefix: 'golden',
   })
   if (!result.ok) throw new Error(`analyze failed: ${result.error.message}`)
-  const analysis = result.value[0]
+  const analysis = result.value.sessions[0]
   if (!analysis) throw new Error('expected one analysis')
 
   const card = scoreSession(analysis, DEFAULT_PACK)
@@ -78,7 +78,7 @@ describe('golden master', () => {
     })
     expect(result.ok).toBe(true)
     if (result.ok) {
-      const analysis = result.value[0]
+      const analysis = result.value.sessions[0]
       expect(analysis?.diagnostics.parseMs).toBe(5)
       expect(analysis?.diagnostics.metricsMs).toBeGreaterThanOrEqual(5)
       expect(analysis?.diagnostics.sourceChars).toBeGreaterThan(0)

@@ -136,7 +136,7 @@ export async function runBatch(files: string[], options: BatchOptions): Promise<
     }
 
     const cards: ScoreCard[] = []
-    for (const session of analyzed.value) {
+    for (const session of analyzed.value.sessions) {
       const extra: Finding[] = []
       if (options.semantic && semantic) {
         try {
@@ -160,11 +160,21 @@ export async function runBatch(files: string[], options: BatchOptions): Promise<
     }
 
     const score = mean(cards.map((card) => card.overall))
+    const dropped = analyzed.value.issues
     outcomes.push({
       file: label,
       sessions: cards.length,
       score,
       grade: cards.length > 0 ? gradeOf(score).grade : '—',
+      // Sessions were skipped, so this file was never fully inspected. Count it
+      // as failed — the same rule the CLI exit code now enforces.
+      error:
+        dropped.length > 0
+          ? {
+              code: 'analysis-failed',
+              message: translate(options.locale, 'cli.err.sessionsDropped', { count: dropped.length }),
+            }
+          : undefined,
     })
   }
 

@@ -50,9 +50,9 @@ describe('analyzer port', () => {
     const result = await createSyncAnalyzer().analyze(request)
     expect(result.ok).toBe(true)
     if (result.ok) {
-      expect(result.value).toHaveLength(1)
-      expect(result.value[0]?.diagnostics.stepCount).toBe(2)
-      expect(result.value[0]?.trajectory.label).toBe('demo.json')
+      expect(result.value.sessions).toHaveLength(1)
+      expect(result.value.sessions[0]?.diagnostics.stepCount).toBe(2)
+      expect(result.value.sessions[0]?.trajectory.label).toBe('demo.json')
     }
   })
 
@@ -115,7 +115,7 @@ describe('analyzer port', () => {
     worker.emit('message', {
       data: {
         id: message?.id,
-        result: { ok: true, value: [] },
+        result: { ok: true, value: { sessions: [], issues: [] } },
       },
     })
 
@@ -155,7 +155,7 @@ describe('analyzer port', () => {
     const workerFactory = (): AnalyzerPort => ({
       analyze: async () => {
         workerCalls += 1
-        return { ok: true, value: [] }
+        return { ok: true, value: { sessions: [], issues: [] } }
       },
     })
 
@@ -178,7 +178,7 @@ describe('analyzer port', () => {
     })
     const result = await analyzer.analyze(request)
     expect(result.ok).toBe(true)
-    if (result.ok) expect(result.value).toHaveLength(1)
+    if (result.ok) expect(result.value.sessions).toHaveLength(1)
   })
 
   it('passes cancellation through to the worker adapter', async () => {
@@ -188,7 +188,7 @@ describe('analyzer port', () => {
         analyze: async (_req, signal) =>
           signal?.aborted
             ? { ok: false, error: { code: 'aborted', message: '已取消分析' } }
-            : { ok: true, value: [] },
+            : { ok: true, value: { sessions: [], issues: [] } },
       }),
     })
     const controller = new AbortController()

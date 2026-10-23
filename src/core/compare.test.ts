@@ -41,7 +41,7 @@ function finding(ruleId: string, stepIndex: number | undefined, message = 'x'): 
 function side(source: string, label: string) {
   const parsed = analyze({ source, label })
   if (!parsed.ok) throw new Error(parsed.error.message)
-  const analysis = parsed.value[0] as SessionAnalysis
+  const analysis = parsed.value.sessions[0] as SessionAnalysis
   return { card: scoreSession(analysis, DEFAULT_PACK), trajectory: analysis.trajectory }
 }
 

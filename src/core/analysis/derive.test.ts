@@ -24,7 +24,7 @@ function sessionFor(index = BROKEN): SessionAnalysis {
   if (!sample) throw new Error('missing sample')
   const result = analyze({ source: sample.content, label: sample.name, idPrefix: 'derive' })
   if (!result.ok) throw new Error(result.error.message)
-  const analysis = result.value[0]
+  const analysis = result.value.sessions[0]
   if (!analysis) throw new Error('expected one analysis')
   return analysis
 }

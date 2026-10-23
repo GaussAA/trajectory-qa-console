@@ -25,7 +25,7 @@ const TRACE = JSON.stringify([
 function trajectory(): Trajectory {
   const parsed = analyze({ source: TRACE, label: 'trace.json' })
   if (!parsed.ok) throw new Error(parsed.error.message)
-  return parsed.value[0]!.trajectory
+  return parsed.value.sessions[0]!.trajectory
 }
 
 const VALID_FINDINGS = JSON.stringify({

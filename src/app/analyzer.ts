@@ -9,7 +9,7 @@
  *  worker cannot start or fails mid-flight.
  */
 
-import { analyze as analyzeCore, type SessionAnalysis } from '../core/analysis'
+import { analyze as analyzeCore, type AnalyzeOutcome } from '../core/analysis'
 import { fail, type Result } from '../core/model'
 import AnalyzeWorker from '../workers/analyze.worker?worker&inline'
 import type { WorkerRequest, WorkerResponse } from '../workers/protocol'
@@ -29,7 +29,7 @@ export interface AnalyzerPort {
    *  analysis already in flight, whereas the sync adapter — being synchronous —
    *  can only honour a signal that was already aborted when it was called.
    *  Both report it the same way: `{ code: 'aborted' }`. */
-  analyze(request: AnalyzeRequest, signal?: AbortSignal): Promise<Result<SessionAnalysis[]>>
+  analyze(request: AnalyzeRequest, signal?: AbortSignal): Promise<Result<AnalyzeOutcome>>
 }
 
 export const WORKER_THRESHOLD_CHARS = 256 * 1024
@@ -85,7 +85,7 @@ export function createWorkerAnalyzer(
 
   return {
     analyze(request, signal) {
-      return new Promise<Result<SessionAnalysis[]>>((resolve) => {
+      return new Promise<Result<AnalyzeOutcome>>((resolve) => {
         let worker: Worker
         try {
           worker = factory()
@@ -117,7 +117,7 @@ export function createWorkerAnalyzer(
           worker.removeEventListener('error', onError)
           signal?.removeEventListener('abort', onAbort)
         }
-        const finish = (result: Result<SessionAnalysis[]>) => {
+        const finish = (result: Result<AnalyzeOutcome>) => {
           cleanup()
           worker.terminate()
           resolve(result)

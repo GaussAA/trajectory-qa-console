@@ -16,7 +16,7 @@ const TRACE = JSON.stringify([
 function sessionFrom(source: string, label = 'trace.json') {
   const parsed = analyze({ source, label })
   if (!parsed.ok) throw new Error(parsed.error.message)
-  const analysis = parsed.value[0]!
+  const analysis = parsed.value.sessions[0]!
   return { id: analysis.id, trajectory: analysis.trajectory }
 }
 

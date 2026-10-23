@@ -12,7 +12,7 @@ const TRACE = JSON.stringify([
 function fixture(): SessionAnalysis {
   const result = analyze({ source: TRACE, label: 'fixture.json', idPrefix: 'test' })
   if (!result.ok) throw new Error(result.error.message)
-  const analysis = result.value[0]
+  const analysis = result.value.sessions[0]
   if (!analysis) throw new Error('no analysis')
   return analysis
 }
@@ -20,7 +20,7 @@ function fixture(): SessionAnalysis {
 function firstSession() {
   const result = analyze({ source: TRACE, label: 'trace.json' })
   if (!result.ok) throw new Error(result.error.message)
-  return result.value[0]!
+  return result.value.sessions[0]!
 }
 
 describe('workspace reducer', () => {
@@ -138,7 +138,7 @@ describe('pickStepFor', () => {
       label: 'clean.json',
     })
     if (!clean.ok) throw new Error(clean.error.message)
-    const cleanAnalysis = clean.value[0] as SessionAnalysis
+    const cleanAnalysis = clean.value.sessions[0] as SessionAnalysis
     const cleanCard = scoreCards([cleanAnalysis], DEFAULT_PACK, []).get(cleanAnalysis.id)
     if (!cleanCard) throw new Error('missing card')
     expect(pickStepFor(cleanAnalysis, cleanCard)).toBe(1)
@@ -218,7 +218,7 @@ describe('session notes and removal', () => {
     const sessions = ['a.json', 'b.json', 'c.json'].map((label) => {
       const parsed = analyze({ source: TRACE, label })
       if (!parsed.ok) throw new Error(parsed.error.message)
-      return parsed.value[0]!
+      return parsed.value.sessions[0]!
     })
     const state = createInitialState(DEFAULT_PACK, [], sessions)
     const selected = state.selectedId as string
@@ -236,7 +236,7 @@ describe('session notes and removal', () => {
   it('goes back to the empty state when every session is removed', () => {
     const parsed = analyze({ source: TRACE, label: 'trace.json' })
     if (!parsed.ok) throw new Error(parsed.error.message)
-    const state = createInitialState(DEFAULT_PACK, [], parsed.value)
+    const state = createInitialState(DEFAULT_PACK, [], parsed.value.sessions)
     const cleared = workspaceReducer(state, {
       type: 'session/remove',
       ids: state.sessions.map((session) => session.id),
@@ -250,7 +250,7 @@ describe('session notes and removal', () => {
   it('ignores removal requests for unknown ids', () => {
     const parsed = analyze({ source: TRACE, label: 'trace.json' })
     if (!parsed.ok) throw new Error(parsed.error.message)
-    const state = createInitialState(DEFAULT_PACK, [], parsed.value)
+    const state = createInitialState(DEFAULT_PACK, [], parsed.value.sessions)
     expect(workspaceReducer(state, { type: 'session/remove', ids: ['ghost'] })).toBe(state)
     expect(workspaceReducer(state, { type: 'session/remove', ids: [] })).toBe(state)
   })

@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import type { ScoreCard, SessionAnalysis } from '../core/analysis'
 import type { Annotation, PackVariant, RulePack, SessionNote, Severity } from '../core/model'
-import { useI18n, type MessageKey, type TranslateParams } from '../i18n'
+import { useI18n, useT, type MessageKey, type TranslateParams } from '../i18n'
 import { buildStressTrace } from '../core/sample'
 import { createAnalyzer, type AnalyzerPort } from '../app/analyzer'
 import { buildDiagnostics, buildReportBundle, downloadText } from '../app/exporters'
@@ -61,6 +61,7 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
   const generationRef = useRef(0)
   const [toast, setToast] = useState<ToastMessage | null>(null)
   const { locale } = useI18n()
+  const t = useT()
   const [events, setEvents] = useState<TelemetryEvent[]>(() => telemetry.snapshot())
 
   useEffect(() => telemetry.subscribe(() => setEvents(telemetry.snapshot())), [telemetry])
@@ -158,11 +159,26 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
           continue
         }
 
-        collected.push(...result.value)
+        const outcome = result.value
+        collected.push(...outcome.sessions)
+        // A dropped session costs only itself, but it must still be reported —
+        // otherwise "10 sessions loaded" quietly means "10 of 11".
+        for (const issue of outcome.issues) {
+          issues.push({
+            file: input.name,
+            message: t('ingest.sessionFailed', {
+              index: issue.index + 1,
+              label: issue.label,
+              message: issue.message,
+            }),
+            code: 'analysis-failed',
+          })
+          telemetry.emit('ingest:session-failed', { file: input.name, index: issue.index }, 'error')
+        }
         telemetry.emit('ingest:file', {
           file: input.name,
-          sessions: result.value.length,
-          steps: result.value.reduce((sum, item) => sum + item.trajectory.steps.length, 0),
+          sessions: outcome.sessions.length,
+          steps: outcome.sessions.reduce((sum, item) => sum + item.trajectory.steps.length, 0),
           chars: input.text.length,
         })
       }
@@ -189,7 +205,7 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
           : { key: 'toast.loaded', params: { count: collected.length } },
       )
     },
-    [port, telemetry],
+    [port, telemetry, t],
   )
 
   const ingestFiles = useCallback(

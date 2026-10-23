@@ -25,7 +25,7 @@ function measure(steps: number): { ms: number; parsedSteps: number } {
   const result = analyze({ source, label: `perf-${steps}.json` })
   const ms = performance.now() - started
   if (!result.ok) throw new Error(result.error.message)
-  const analysis = result.value[0]
+  const analysis = result.value.sessions[0]
   if (!analysis) throw new Error('no analysis')
   return { ms, parsedSteps: analysis.trajectory.steps.length }
 }

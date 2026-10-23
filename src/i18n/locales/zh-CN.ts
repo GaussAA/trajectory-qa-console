@@ -348,6 +348,8 @@ export const zhCN = {
   'cli.err.too-many-files': '文件过多：{count} 个，上限 {limit}；请分批处理或调大 --max-files',
   'cli.err.no-files': '未找到可分析的轨迹文件（.json / .jsonl / .txt）',
   'cli.err.partialFailure': '{files} 个文件未能分析、{dirs} 个路径无法读取——没检查过就不能算通过',
+  'cli.err.sessionsDropped': '{count} 条会话未能分析',
+  'ingest.sessionFailed': '第 {index} 条（{label}）：{message}',
   'cli.err.pack-invalid': '规则包校验失败：{detail}',
   'cli.err.write-failed': '写入 {path} 失败：{message}',
   'cli.err.run-failed': '分析过程出错：{message}',

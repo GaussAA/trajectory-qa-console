@@ -89,8 +89,9 @@ describe('both analyzer adapters answer identically', () => {
     const result = await port.analyze(request(VALID))
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    expect(result.value).toHaveLength(1)
-    expect(result.value[0]?.trajectory.steps).toHaveLength(3)
+    expect(result.value.sessions).toHaveLength(1)
+    expect(result.value.issues).toHaveLength(0)
+    expect(result.value.sessions[0]?.trajectory.steps).toHaveLength(3)
   })
 
   it.each(adapters())('$name reports unusable input as a Result', async ({ port }) => {
@@ -107,7 +108,7 @@ describe('both analyzer adapters answer identically', () => {
 
     expect(a.ok).toBe(b.ok)
     if (!a.ok || !b.ok) return
-    expect(shape(b.value)).toEqual(shape(a.value))
+    expect(shape(b.value.sessions)).toEqual(shape(a.value.sessions))
   })
 
   it('sync and worker agree on every sample that matters', async () => {
@@ -119,7 +120,7 @@ describe('both analyzer adapters answer identically', () => {
       const b = await worker.analyze(request(text))
       expect(a.ok, `ok for ${text}`).toBe(b.ok)
       if (a.ok && b.ok) {
-        expect(shape(b.value), `shape for ${text}`).toEqual(shape(a.value))
+        expect(shape(b.value.sessions), `shape for ${text}`).toEqual(shape(a.value.sessions))
       } else if (!a.ok && !b.ok) {
         expect(b.error.code, `code for ${text}`).toBe(a.error.code)
       }

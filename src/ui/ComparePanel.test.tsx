@@ -26,7 +26,7 @@ function fixtures() {
   const sessions = [GOOD, WORSE].map((source, index) => {
     const parsed = analyze({ source, label: `trace-${index + 1}.json` })
     if (!parsed.ok) throw new Error(parsed.error.message)
-    return parsed.value[0]!
+    return parsed.value.sessions[0]!
   })
   const cards = new Map<string, ScoreCard>(
     sessions.map((session) => [session.id, scoreSession(session, DEFAULT_PACK)]),

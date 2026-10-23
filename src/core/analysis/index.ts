@@ -67,6 +67,21 @@ export interface SessionAnalysis {
   diagnostics: AnalysisDiagnostics
 }
 
+/** A session that could not be analysed. Reported, never swallowed. */
+export interface SessionIssue {
+  /** Ordinal of the session inside its file. */
+  index: number
+  label: string
+  message: string
+}
+
+export interface AnalyzeOutcome {
+  sessions: SessionAnalysis[]
+  /** Sessions dropped because they threw. One bad session costs only itself —
+   *  invariant 5 — but the caller still hears about it. */
+  issues: SessionIssue[]
+}
+
 export interface AnalyzeOptions {
   source: string
   label: string
@@ -78,7 +93,7 @@ export interface AnalyzeOptions {
 
 let runSequence = 0
 
-export function analyze(options: AnalyzeOptions): Result<SessionAnalysis[]> {
+export function analyze(options: AnalyzeOptions): Result<AnalyzeOutcome> {
   const clock = options.clock ?? defaultClock
   const started = clock()
 
@@ -87,16 +102,17 @@ export function analyze(options: AnalyzeOptions): Result<SessionAnalysis[]> {
 
   const parseMs = clock() - started
   const prefix = options.idPrefix ?? `run${(runSequence += 1)}`
-  const analyses: SessionAnalysis[] = []
+  const sessions: SessionAnalysis[] = []
+  const issues: SessionIssue[] = []
 
-  try {
-    for (let index = 0; index < parsed.value.length; index += 1) {
-      const trajectory = parsed.value[index] as Trajectory
-      const sessionStart = clock()
+  for (let index = 0; index < parsed.value.length; index += 1) {
+    const trajectory = parsed.value[index] as Trajectory
+    const sessionStart = clock()
+    try {
       const metrics = computeMetrics(trajectory)
       const sessionEnd = clock()
 
-      analyses.push({
+      sessions.push({
         id: `${prefix}-${index}-${trajectory.id}`,
         trajectory,
         metrics,
@@ -108,15 +124,27 @@ export function analyze(options: AnalyzeOptions): Result<SessionAnalysis[]> {
           stepCount: trajectory.steps.length,
         },
       })
+    } catch (error) {
+      // Isolated per session: the loop used to sit inside one try, so a single
+      // bad session failed the whole file and discarded the good ones with it.
+      issues.push({
+        index,
+        label: trajectory.label,
+        message: error instanceof Error ? error.message : String(error),
+      })
     }
-  } catch (error) {
+  }
+
+  // Nothing usable is still a failure — "I analysed your file" must not be
+  // claimed when every session in it was dropped.
+  if (sessions.length === 0 && issues.length > 0) {
     return fail('analysis-failed', '分析过程出错', {
-      reason: error instanceof Error ? error.message : String(error),
+      reason: issues[0]?.message ?? '未知错误',
       label: options.label,
     })
   }
 
-  return ok(analyses)
+  return ok({ sessions, issues })
 }
 
 /** The one place a score comes from: trajectory + metrics + pack → score card.

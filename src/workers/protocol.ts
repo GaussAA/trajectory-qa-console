@@ -1,4 +1,4 @@
-import type { SessionAnalysis } from '../core/analysis'
+import type { AnalyzeOutcome } from '../core/analysis'
 import type { Result } from '../core/model'
 
 export interface WorkerRequest {
@@ -11,5 +11,5 @@ export interface WorkerRequest {
 
 export interface WorkerResponse {
   id: number
-  result: Result<SessionAnalysis[]>
+  result: Result<AnalyzeOutcome>
 }

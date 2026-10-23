@@ -14,7 +14,7 @@ const TRACE = JSON.stringify([
 function sessions() {
   const parsed = analyze({ source: TRACE, label: 'trace.json' })
   if (!parsed.ok) throw new Error(parsed.error.message)
-  return parsed.value
+  return parsed.value.sessions
 }
 
 const strict: RulePack = { ...DEFAULT_PACK, name: '严格' }

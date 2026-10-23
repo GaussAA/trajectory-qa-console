@@ -255,7 +255,7 @@ export async function main(
       stderr(`✗ ${t(`error.${analyzed.error.code}` as MessageKey)}\n`)
       return EXIT.error
     }
-    const session = analyzed.value[0]
+    const session = analyzed.value.sessions[0]
     if (!session) {
       stderr(`✗ ${t('cli.nothingAnalyzable')}\n`)
       return EXIT.error
