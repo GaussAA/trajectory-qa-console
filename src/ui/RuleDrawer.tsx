@@ -28,6 +28,8 @@ interface Props {
   onApplyVariant?: (id: string) => void
   onRenameVariant?: (id: string, name: string) => void
   onRemoveVariant?: (id: string) => void
+  onExportVariants?: () => void
+  onImportVariants?: (parsed: unknown) => void
 }
 
 export function RuleDrawer({
@@ -43,6 +45,8 @@ export function RuleDrawer({
   onApplyVariant,
   onRenameVariant,
   onRemoveVariant,
+  onExportVariants,
+  onImportVariants,
 }: Props) {
   const { locale, t } = useI18n()
   const [draft, setDraft] = useState('')
@@ -52,6 +56,7 @@ export function RuleDrawer({
   const [variantError, setVariantError] = useState('')
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameDraft, setRenameDraft] = useState('')
+  const variantFileRef = useRef<HTMLInputElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
 
@@ -284,7 +289,45 @@ export function RuleDrawer({
           )}
 
           <section className="variant-section">
-            <h4>{t('variants.title')}</h4>
+            <div className="variant-head">
+              <h4>{t('variants.title')}</h4>
+              <span className="variant-tools">
+                <input
+                  ref={variantFileRef}
+                  type="file"
+                  accept=".json"
+                  hidden
+                  onChange={(event) => {
+                    const file = event.target.files?.[0]
+                    if (file) {
+                      void file.text().then((text) => {
+                        try {
+                          onImportVariants?.(JSON.parse(text))
+                        } catch {
+                          onImportVariants?.(null)
+                        }
+                      })
+                    }
+                    event.target.value = ''
+                  }}
+                />
+                <button
+                  type="button"
+                  className="btn ghost sm"
+                  disabled={variants.length === 0}
+                  onClick={() => onExportVariants?.()}
+                >
+                  {t('variants.exportAll')}
+                </button>
+                <button
+                  type="button"
+                  className="btn ghost sm"
+                  onClick={() => variantFileRef.current?.click()}
+                >
+                  {t('variants.import')}
+                </button>
+              </span>
+            </div>
             <div className="variant-save-row">
               <input
                 value={variantName}

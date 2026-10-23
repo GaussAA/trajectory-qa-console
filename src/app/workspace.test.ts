@@ -310,6 +310,19 @@ describe('pack variants', () => {
     expect(cleared.activeVariantId).toBeNull()
   })
 
+  it('imports variants on top and overrides by id', () => {
+    const state = createInitialState(DEFAULT_PACK, [], [], [], [variant('keep', '原有的')])
+    const imported = workspaceReducer(state, {
+      type: 'variant/import',
+      variants: [variant('keep', '覆盖版'), variant('new', '新来的')],
+    })
+    // 整块置顶、同 id 覆盖：文件是权威口径
+    expect(imported.variants.map((item) => item.id)).toEqual(['keep', 'new'])
+    expect(imported.variants.find((item) => item.id === 'keep')?.name).toBe('覆盖版')
+
+    expect(workspaceReducer(state, { type: 'variant/import', variants: [] })).toBe(state)
+  })
+
   it('renames a variant in place and treats empty names as no-op', () => {
     const state = createInitialState(DEFAULT_PACK, [], [], [], [variant('v1', '严格')])
     const renamed = workspaceReducer(state, { type: 'variant/rename', id: 'v1', name: '  严格 v2 ' })

@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { PackVariant } from '../core/model'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
-import { STORAGE_KEYS, createMemoryStorage, createPersistence } from './persistence'
+import {
+  STORAGE_KEYS,
+  createMemoryStorage,
+  createPersistence,
+  parsePackVariants,
+  serializePackVariants,
+} from './persistence'
 import { createTelemetry } from './telemetry'
 
 describe('persistence', () => {
@@ -114,6 +120,23 @@ describe('persistence', () => {
       }),
     )
     expect(port.loadPackVariants()).toEqual([good])
+  })
+
+  it('round-trips a variant bundle and tolerates hand-edited files', () => {
+    const variant: PackVariant = {
+      id: 'v1',
+      name: '宽松',
+      pack: { ...DEFAULT_PACK, name: '宽松口径' },
+      savedAt: '2026-10-23T10:00:00.000Z',
+    }
+
+    const bundle = JSON.parse(serializePackVariants([variant]))
+    expect(bundle.format).toBe('tqa-variants')
+    expect(parsePackVariants(bundle)).toEqual([variant])
+
+    // 裸数组（手工编辑）与坏记录都容忍
+    expect(parsePackVariants([variant, { nope: 1 }])).toEqual([variant])
+    expect(parsePackVariants({ garbage: true })).toEqual([])
   })
 
   it('works with no storage at all', () => {

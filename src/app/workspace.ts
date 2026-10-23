@@ -40,6 +40,7 @@ export type WorkspaceAction =
   | { type: 'variant/save'; variant: PackVariant }
   | { type: 'variant/apply'; id: string }
   | { type: 'variant/rename'; id: string; name: string }
+  | { type: 'variant/import'; variants: PackVariant[] }
   | { type: 'variant/remove'; id: string }
   | { type: 'annotation/add'; annotation: Annotation }
   | { type: 'annotation/remove'; id: string }
@@ -197,6 +198,14 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
           variant.id === action.id ? { ...variant, name } : variant,
         ),
       }
+    }
+
+    case 'variant/import': {
+      // 导入置顶（刚带来的最显眼），同 id 覆盖：文件是权威口径。
+      if (action.variants.length === 0) return state
+      const ids = new Set(action.variants.map((variant) => variant.id))
+      const rest = state.variants.filter((variant) => !ids.has(variant.id))
+      return { ...state, variants: [...action.variants, ...rest] }
     }
 
     case 'variant/remove': {

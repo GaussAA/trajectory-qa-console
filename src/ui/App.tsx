@@ -331,6 +331,8 @@ export default function App({
         onApplyVariant={actions.applyVariant}
         onRenameVariant={actions.renameVariant}
         onRemoveVariant={actions.removeVariant}
+        onExportVariants={actions.exportVariants}
+        onImportVariants={actions.importVariants}
         onClose={() => setDrawerOpen(false)}
         onApply={(next) => {
           actions.applyPack(next)

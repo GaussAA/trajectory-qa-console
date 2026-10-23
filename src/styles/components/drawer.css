@@ -512,3 +512,24 @@
   background: rgba(148, 163, 184, 0.12);
   color: var(--text-dim);
 }
+
+.variant-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.variant-head h4 {
+  margin: 0;
+}
+
+.variant-tools {
+  display: flex;
+  gap: 4px;
+}
+
+.variant-tools .btn {
+  padding: 2px 8px;
+  font-size: 9.5px;
+}

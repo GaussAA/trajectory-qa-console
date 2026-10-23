@@ -11,7 +11,7 @@ import { useI18n, type MessageKey, type TranslateParams } from '../i18n'
 import { buildStressTrace } from '../core/sample'
 import { createAnalyzer, type AnalyzerPort } from '../app/analyzer'
 import { buildDiagnostics, buildReportBundle, downloadText } from '../app/exporters'
-import { MAX_PACK_VARIANTS } from '../app/persistence'
+import { MAX_PACK_VARIANTS, parsePackVariants, serializePackVariants } from '../app/persistence'
 import { readFiles, sampleInputs, type IngestFile, type IngestIssue, type TextInput } from '../app/ingest'
 import type { PersistencePort } from '../app/persistence'
 import type { Telemetry, TelemetryEvent } from '../app/telemetry'
@@ -322,6 +322,39 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
     [telemetry],
   )
 
+  const exportVariants = useCallback(() => {
+    const variants = stateRef.current.variants
+    if (variants.length === 0) return
+    downloadFile(
+      `pack-variants-${nowStamp()}.json`,
+      serializePackVariants(variants),
+      'application/json',
+    )
+    telemetry.emit('variant:export-all', { count: variants.length })
+    setToast({ key: 'variants.exported', params: { count: variants.length } })
+  }, [telemetry])
+
+  /** 导入：文件内容已解析；这里管上限与合并，坏记录已在 parse 层丢掉。 */
+  const importVariants = useCallback(
+    (parsed: unknown) => {
+      const incoming = parsePackVariants(parsed)
+      if (incoming.length === 0) {
+        setToast({ key: 'variants.importInvalid' })
+        return
+      }
+      const existingIds = new Set(stateRef.current.variants.map((variant) => variant.id))
+      const fresh = incoming.filter((variant) => !existingIds.has(variant.id))
+      if (stateRef.current.variants.length + fresh.length > MAX_PACK_VARIANTS) {
+        setToast({ key: 'variants.limit', params: { count: MAX_PACK_VARIANTS } })
+        return
+      }
+      dispatch({ type: 'variant/import', variants: incoming })
+      telemetry.emit('variant:import', { count: incoming.length })
+      setToast({ key: 'variants.imported', params: { count: incoming.length } })
+    },
+    [telemetry],
+  )
+
   const removeVariant = useCallback(
     (id: string) => {
       dispatch({ type: 'variant/remove', id })
@@ -409,6 +442,8 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
       saveVariant,
       applyVariant,
       renameVariant,
+      exportVariants,
+      importVariants,
       removeVariant,
       removeSessions,
       exportMarkdown,

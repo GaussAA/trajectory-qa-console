@@ -177,6 +177,9 @@ node dist-cli/qa.mjs a.json b.json --compare --fail-below 80    # 只卡「对�
 - 「生效中」按内容判定：`variant/save|apply` 设置，`pack/apply`（手改包）清空；
   删变体不动当前包；`workspace/clear` 不清变体（ADR-0017）。
 - 变体只在界面；CLI 仍走 `--pack <文件>`，从抽屉导出即得同一格式。
+- **打包迁移**：`打包导出` / `导入变体` 产出与读取 `tqa-variants` 信封
+  （`serializePackVariants` / `parsePackVariants`，容忍裸数组、逐条校验）；
+  导入同 id 覆盖、整块置顶，超上限整体拒绝。
 
 ### 口径对比
 

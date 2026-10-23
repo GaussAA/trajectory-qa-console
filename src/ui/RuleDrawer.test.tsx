@@ -210,6 +210,34 @@ describe('RuleDrawer variants', () => {
     expect(onRenameVariant).not.toHaveBeenCalled()
   })
 
+  it('exports all variants as one bundle and imports from a parsed file', async () => {
+    // 导出内容已由 persistence 的 round-trip 测试覆盖，这里只验证接线
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
+    const onExportVariants = vi.fn()
+    const onImportVariants = vi.fn()
+
+    try {
+      const { container } = setup({ variants: [renameTarget()], onExportVariants, onImportVariants })
+
+      fireEvent.click(screen.getByRole('button', { name: '打包导出' }))
+      expect(onExportVariants).toHaveBeenCalledTimes(1)
+
+      fireEvent.click(screen.getByRole('button', { name: '导入变体' }))
+      // 抽屉里有两个 file input（规则包 / 变体），定位变体自己的那个
+      const input = container.querySelector('.variant-section input[type=file]') as HTMLInputElement
+      const file = new File([JSON.stringify({ variants: [renameTarget()] })], 'variants.json', {
+        type: 'application/json',
+      })
+      Object.defineProperty(input, 'files', { value: [file] })
+      fireEvent.change(input)
+      await waitFor(() => expect(onImportVariants).toHaveBeenCalledTimes(1))
+      // 抽屉只负责 JSON.parse；格式校验在 parsePackVariants（持久化测试已覆盖）
+      expect(onImportVariants.mock.calls[0]?.[0]).toMatchObject({ variants: [expect.anything()] })
+    } finally {
+      click.mockRestore()
+    }
+  })
+
   function renameTarget() {
     return {
       id: 'v1',

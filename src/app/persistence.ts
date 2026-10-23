@@ -96,6 +96,34 @@ export interface PersistencePort {
   savePackVariants(variants: PackVariant[]): boolean
 }
 
+/** 变体打包格式：跨机器迁移口径库用。与存储键同一条校验路径。 */
+export interface PackVariantBundle {
+  format: 'tqa-variants'
+  version: 1
+  exportedAt: string
+  variants: PackVariant[]
+}
+
+export function serializePackVariants(variants: PackVariant[]): string {
+  const bundle: PackVariantBundle = {
+    format: 'tqa-variants',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    variants,
+  }
+  return JSON.stringify(bundle, null, 2)
+}
+
+/** 容忍裸数组（手工编辑过的文件），逐条校验，坏记录只丢自己。 */
+export function parsePackVariants(parsed: unknown): PackVariant[] {
+  const list = Array.isArray(parsed)
+    ? parsed
+    : parsed && typeof parsed === 'object' && Array.isArray((parsed as { variants?: unknown }).variants)
+      ? (parsed as { variants: unknown[] }).variants
+      : []
+  return list.filter(isPackVariant)
+}
+
 /** 上限是防线不是功能：变体应是少数几个精心调出来的口径，不是杂物堆。 */
 export const MAX_PACK_VARIANTS = 20
 
