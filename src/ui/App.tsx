@@ -329,6 +329,7 @@ export default function App({
         activeVariantId={state.activeVariantId}
         onSaveVariant={actions.saveVariant}
         onApplyVariant={actions.applyVariant}
+        onRenameVariant={actions.renameVariant}
         onRemoveVariant={actions.removeVariant}
         onClose={() => setDrawerOpen(false)}
         onApply={(next) => {

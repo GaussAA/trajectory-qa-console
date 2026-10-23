@@ -183,6 +183,42 @@ describe('RuleDrawer variants', () => {
     expect(onApplyVariant).not.toHaveBeenCalled()
   })
 
+  it('renames a variant inline via the pencil button', () => {
+    const onRenameVariant = vi.fn()
+    setup({ variants: [renameTarget()], onRenameVariant })
+
+    fireEvent.click(screen.getByRole('button', { name: '重命名变体 宽松口径' }))
+    const input = screen.getByLabelText('重命名变体') as HTMLInputElement
+    expect(input.value).toBe('宽松口径')
+
+    fireEvent.change(input, { target: { value: '宽松 v2' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(onRenameVariant).toHaveBeenCalledWith('v1', '宽松 v2')
+    expect(screen.queryByLabelText('重命名变体')).toBeNull()
+  })
+
+  it('treats an empty rename as cancel', () => {
+    const onRenameVariant = vi.fn()
+    setup({ variants: [renameTarget()], onRenameVariant })
+
+    fireEvent.click(screen.getByRole('button', { name: '重命名变体 宽松口径' }))
+    const input = screen.getByLabelText('重命名变体') as HTMLInputElement
+    fireEvent.change(input, { target: { value: '   ' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(onRenameVariant).not.toHaveBeenCalled()
+  })
+
+  function renameTarget() {
+    return {
+      id: 'v1',
+      name: '宽松口径',
+      pack: DEFAULT_PACK,
+      savedAt: '2026-10-23T10:00:00.000Z',
+    }
+  }
+
   it('shows the empty hint when nothing is saved', () => {
     setup()
     expect(screen.getByText('还没有保存的变体。')).toBeTruthy()

@@ -196,7 +196,6 @@ export const zhCN = {
   'rules.columnGain': '禁用后',
   'rules.threshold': '阈值',
 
-
   'packcmp.title': '口径对比',
   'packcmp.current': '当前包',
   'packcmp.builtin': '内置中文包',
@@ -213,6 +212,9 @@ export const zhCN = {
   'variants.namePlaceholder': '例如：宽松口径',
   'variants.empty': '还没有保存的变体。',
   'variants.apply': '应用',
+  'variants.rename': '重命名变体',
+  'variants.renameHint': '双击重命名',
+  'variants.renamed': '已重命名为「{name}」',
   'variants.delete': '删除',
   'variants.active': '生效中',
   'variants.ruleCount': '{count} 条规则',

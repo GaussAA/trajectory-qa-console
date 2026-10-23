@@ -201,7 +201,6 @@ export const en: Record<MessageKey, string> = {
   'rules.columnGain': 'If off',
   'rules.threshold': 'Threshold',
 
-
   'packcmp.title': 'Pack comparison',
   'packcmp.current': 'Current pack',
   'packcmp.builtin': 'Builtin zh pack',
@@ -218,6 +217,9 @@ export const en: Record<MessageKey, string> = {
   'variants.namePlaceholder': 'e.g. Lenient thresholds',
   'variants.empty': 'No saved variants yet.',
   'variants.apply': 'Apply',
+  'variants.rename': 'Rename variant',
+  'variants.renameHint': 'double-click to rename',
+  'variants.renamed': 'Renamed to "{name}"',
   'variants.delete': 'Delete',
   'variants.active': 'active',
   'variants.ruleCount': '{count} rules',
@@ -421,7 +423,8 @@ export const en: Record<MessageKey, string> = {
   'report.compare.truncated': 'Showing the first {count} differences.',
   'report.compare.noDifferences': 'The two traces are identical.',
 
-  'cli.optPackCompare': '--pack-compare <pack|en|zh>  compare against another pack, writes pack-compare.md/json',
+  'cli.optPackCompare':
+    '--pack-compare <pack|en|zh>  compare against another pack, writes pack-compare.md/json',
   'cli.packCompareLine': 'Pack compare: {base} {baseScore} → {target} {targetScore} ({delta})',
   'cli.err.packCompareConflict': '--pack-compare cannot be combined with --compare',
 

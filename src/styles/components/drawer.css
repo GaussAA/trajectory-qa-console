@@ -461,3 +461,54 @@
   justify-content: flex-end;
   margin-bottom: 8px;
 }
+
+.variant-name {
+  position: relative;
+}
+
+.variant-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.variant-name input {
+  width: 100%;
+  padding: 2px 6px;
+  border-radius: 5px;
+  border: 1px solid rgba(94, 234, 212, 0.35);
+  background: rgba(8, 12, 20, 0.7);
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.variant-name input:focus {
+  outline: 1px solid rgba(94, 234, 212, 0.55);
+}
+
+.variant-edit {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-mute);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 0.14s ease,
+    background 0.14s ease;
+}
+
+.variant-row:hover .variant-edit,
+.variant-edit:focus-visible {
+  opacity: 1;
+}
+
+.variant-edit:hover {
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--text-dim);
+}

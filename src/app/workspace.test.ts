@@ -310,6 +310,17 @@ describe('pack variants', () => {
     expect(cleared.activeVariantId).toBeNull()
   })
 
+  it('renames a variant in place and treats empty names as no-op', () => {
+    const state = createInitialState(DEFAULT_PACK, [], [], [], [variant('v1', '严格')])
+    const renamed = workspaceReducer(state, { type: 'variant/rename', id: 'v1', name: '  严格 v2 ' })
+    expect(renamed.variants[0]?.name).toBe('严格 v2')
+
+    expect(workspaceReducer(renamed, { type: 'variant/rename', id: 'v1', name: '   ' })).toBe(renamed)
+    expect(workspaceReducer(renamed, { type: 'variant/rename', id: 'ghost', name: 'x' })).toBe(renamed)
+    // 同名不产生新状态：订阅者不必空转
+    expect(workspaceReducer(renamed, { type: 'variant/rename', id: 'v1', name: '严格 v2' })).toBe(renamed)
+  })
+
   it('ignores unknown variant ids', () => {
     const state = createInitialState(DEFAULT_PACK, [], [], [], [variant('v1', '严格')])
     expect(workspaceReducer(state, { type: 'variant/apply', id: 'ghost' })).toBe(state)

@@ -26,6 +26,7 @@ interface Props {
   /** 存变体：包由抽屉给定（含未应用的调参草稿）。返回 null 表示被拒（空名/超限）。 */
   onSaveVariant?: (name: string, pack: RulePack) => unknown
   onApplyVariant?: (id: string) => void
+  onRenameVariant?: (id: string, name: string) => void
   onRemoveVariant?: (id: string) => void
 }
 
@@ -40,6 +41,7 @@ export function RuleDrawer({
   onApply,
   onSaveVariant,
   onApplyVariant,
+  onRenameVariant,
   onRemoveVariant,
 }: Props) {
   const { locale, t } = useI18n()
@@ -48,6 +50,8 @@ export function RuleDrawer({
   const [status, setStatus] = useState('')
   const [variantName, setVariantName] = useState('')
   const [variantError, setVariantError] = useState('')
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameDraft, setRenameDraft] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
 
@@ -192,6 +196,19 @@ export function RuleDrawer({
     setStatus(t('variants.saved', { name }))
   }
 
+  const startRename = (variant: PackVariant) => {
+    setRenamingId(variant.id)
+    setRenameDraft(variant.name)
+  }
+  /** 空名视为取消：reducer 对空名与原名都是 no-op，这里少发一次事件。 */
+  const commitRename = () => {
+    if (renamingId && renameDraft.trim() !== '' && renameDraft.trim() !== currentNameOf(renamingId)) {
+      onRenameVariant?.(renamingId, renameDraft)
+    }
+    setRenamingId(null)
+  }
+  const currentNameOf = (id: string) => variants.find((variant) => variant.id === id)?.name ?? ''
+
   const uniqueIssues = new Map<string, string>()
   for (const issue of ruleIssues) uniqueIssues.set(`${issue.ruleId}:${issue.message}`, issue.message)
 
@@ -293,9 +310,41 @@ export function RuleDrawer({
                   const active = variant.id === activeVariantId
                   return (
                     <li key={variant.id} className={active ? 'variant-row active' : 'variant-row'}>
-                      <span className="variant-name" title={variant.name}>
-                        {variant.name}
-                        {active && <em>{t('variants.active')}</em>}
+                      <span className="variant-name">
+                        {renamingId === variant.id ? (
+                          <input
+                            autoFocus
+                            value={renameDraft}
+                            aria-label={t('variants.rename')}
+                            maxLength={40}
+                            onChange={(event) => setRenameDraft(event.target.value)}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter') commitRename()
+                              if (event.key === 'Escape') setRenamingId(null)
+                            }}
+                            onBlur={commitRename}
+                          />
+                        ) : (
+                          <>
+                            <span
+                              className="variant-name-text"
+                              title={`${variant.name} · ${t('variants.renameHint')}`}
+                              onDoubleClick={() => startRename(variant)}
+                            >
+                              {variant.name}
+                            </span>
+                            {active && <em>{t('variants.active')}</em>}
+                            <button
+                              type="button"
+                              className="variant-edit"
+                              aria-label={`${t('variants.rename')} ${variant.name}`}
+                              title={t('variants.rename')}
+                              onClick={() => startRename(variant)}
+                            >
+                              <Icon name="edit" size={11} />
+                            </button>
+                          </>
+                        )}
                       </span>
                       <span className="variant-meta">
                         {t('variants.ruleCount', { count: variant.pack.rules.length })} ·{' '}

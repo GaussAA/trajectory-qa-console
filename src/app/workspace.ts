@@ -39,6 +39,7 @@ export type WorkspaceAction =
   | { type: 'pack/apply'; pack: RulePack }
   | { type: 'variant/save'; variant: PackVariant }
   | { type: 'variant/apply'; id: string }
+  | { type: 'variant/rename'; id: string; name: string }
   | { type: 'variant/remove'; id: string }
   | { type: 'annotation/add'; annotation: Annotation }
   | { type: 'annotation/remove'; id: string }
@@ -183,6 +184,19 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       const variant = state.variants.find((item) => item.id === action.id)
       if (!variant) return state
       return { ...state, pack: variant.pack, activeVariantId: variant.id }
+    }
+
+    case 'variant/rename': {
+      const name = action.name.trim()
+      if (name === '') return state
+      const target = state.variants.find((variant) => variant.id === action.id)
+      if (!target || target.name === name) return state
+      return {
+        ...state,
+        variants: state.variants.map((variant) =>
+          variant.id === action.id ? { ...variant, name } : variant,
+        ),
+      }
     }
 
     case 'variant/remove': {

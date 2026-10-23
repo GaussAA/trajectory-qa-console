@@ -311,6 +311,17 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
     [telemetry],
   )
 
+  const renameVariant = useCallback(
+    (id: string, name: string) => {
+      const trimmed = name.trim()
+      if (trimmed === '') return
+      dispatch({ type: 'variant/rename', id, name: trimmed })
+      telemetry.emit('variant:rename')
+      setToast({ key: 'variants.renamed', params: { name: trimmed } })
+    },
+    [telemetry],
+  )
+
   const removeVariant = useCallback(
     (id: string) => {
       dispatch({ type: 'variant/remove', id })
@@ -397,6 +408,7 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
       setSessionNotes,
       saveVariant,
       applyVariant,
+      renameVariant,
       removeVariant,
       removeSessions,
       exportMarkdown,
