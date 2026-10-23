@@ -178,6 +178,15 @@ node dist-cli/qa.mjs a.json b.json --compare --fail-below 80    # 只卡「对�
   删变体不动当前包；`workspace/clear` 不清变体（ADR-0017）。
 - 变体只在界面；CLI 仍走 `--pack <文件>`，从抽屉导出即得同一格式。
 
+### 口径对比
+
+抽屉「口径对比」：当前包 / 内置中文包 / 各变体两两对跑同一批轨迹。
+
+- `core/pack-compare.ts`：`scoreUnderPack`（真跑规则）与 `comparePacks`（逐会话分数 + 双平均 + identical 判定）。
+- 与调参/CLI 同一边界：不含人工标注。
+- 注意：存变体即生效，因此「当前包 vs 刚存的变体」恒等——比较变体与原版的正确姿势是
+  基准选「内置中文包」（或另一变体）。identical 时界面如实说明，不出空表。
+
 ## 质量门槛
 
 `pnpm verify` = typecheck + lint + 覆盖率测试 + 构建。覆盖率门槛：行/函数/语句 ≥85%，分支 ≥75%。

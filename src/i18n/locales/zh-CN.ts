@@ -196,6 +196,17 @@ export const zhCN = {
   'rules.columnGain': '禁用后',
   'rules.threshold': '阈值',
 
+
+  'packcmp.title': '口径对比',
+  'packcmp.current': '当前包',
+  'packcmp.builtin': '内置中文包',
+  'packcmp.base': '基准口径',
+  'packcmp.target': '对照口径',
+  'packcmp.delta': '变化',
+  'packcmp.average': '平均',
+  'packcmp.same': '两份口径相同，没有可比的差异。',
+  'packcmp.needSessions': '载入轨迹后才能对比口径。',
+
   'variants.title': '变体',
   'variants.save': '存为变体',
   'variants.namePlaceholder': '例如：宽松口径',

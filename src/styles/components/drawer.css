@@ -364,3 +364,94 @@
   gap: 4px;
   align-items: flex-start;
 }
+
+/* ---------- 口径对比 ---------- */
+
+.packcmp-pickers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.packcmp-pickers label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.packcmp-pickers span {
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--text-mute);
+}
+
+.packcmp-pickers select {
+  width: 100%;
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(8, 12, 20, 0.7);
+  color: var(--text-dim);
+  font-size: 10.5px;
+}
+
+.packcmp-table {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: 8px;
+}
+
+.packcmp-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px 44px 52px;
+  gap: 8px;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  color: var(--text-mute);
+}
+
+.packcmp-row > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.packcmp-row .num {
+  text-align: right;
+  font-family: var(--mono);
+}
+
+.packcmp-head {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  padding-bottom: 4px;
+}
+
+.packcmp-row.packcmp-average {
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  color: var(--text-dim);
+  padding-top: 5px;
+  margin-top: 2px;
+}
+
+.packcmp-row .up {
+  color: #34d399;
+}
+
+.packcmp-row .down {
+  color: #fb7185;
+}
+
+.packcmp-row .flat {
+  color: var(--text-mute);
+}

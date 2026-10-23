@@ -201,6 +201,17 @@ export const en: Record<MessageKey, string> = {
   'rules.columnGain': 'If off',
   'rules.threshold': 'Threshold',
 
+
+  'packcmp.title': 'Pack comparison',
+  'packcmp.current': 'Current pack',
+  'packcmp.builtin': 'Builtin zh pack',
+  'packcmp.base': 'Baseline pack',
+  'packcmp.target': 'Candidate pack',
+  'packcmp.delta': 'Delta',
+  'packcmp.average': 'Average',
+  'packcmp.same': 'The two packs are identical.',
+  'packcmp.needSessions': 'Load a trace first to compare packs.',
+
   'variants.title': 'Variants',
   'variants.save': 'Save variant',
   'variants.namePlaceholder': 'e.g. Lenient thresholds',

@@ -48,6 +48,70 @@ function hitCount(container: HTMLElement, ruleId: string): string {
 
 afterEach(cleanup)
 
+describe('RuleDrawer pack comparison', () => {
+  // 只有一条 error 的轨迹：禁用该规则后，封顶解除，分数差才可见
+  const SINGLE_ERROR = JSON.stringify([
+    { role: 'system', content: '你是助手' },
+    { role: 'user', content: '查一下' },
+    { role: 'assistant', tool_calls: [{ id: 'c1', function: { name: 'search', arguments: '{"q":' } }] },
+    { role: 'tool', tool_call_id: 'c1', content: '结果' },
+    { role: 'assistant', content: '答复完毕' },
+  ])
+
+  function lenientVariant() {
+    return {
+      id: 'v-lenient',
+      name: '宽松口径',
+      pack: {
+        ...DEFAULT_PACK,
+        name: '宽松',
+        rules: DEFAULT_PACK.rules.map((rule) =>
+          rule.id === 'structure-invalid-args' ? { ...rule, enabled: false } : rule,
+        ),
+      },
+      savedAt: '2026-10-23T10:00:00.000Z',
+    }
+  }
+
+  function setupSingleError(props: Partial<Parameters<typeof RuleDrawer>[0]> = {}) {
+    const parsed = analyze({ source: SINGLE_ERROR, label: 'single-error.json', pack: DEFAULT_PACK })
+    if (!parsed.ok) throw new Error(parsed.error.message)
+    return setup({
+      sessions: parsed.value.map((session) => ({ id: session.id, trajectory: session.trajectory })),
+      ...props,
+    })
+  }
+
+  it('compares the current pack against a variant across loaded sessions', () => {
+    const { container } = setupSingleError({ variants: [lenientVariant()] })
+
+    fireEvent.click(screen.getByText('口径对比'))
+    // 默认对照是「内置中文包」；切到变体后才与当前包有差异
+    const selects = container.querySelectorAll('.packcmp-pickers select')
+    expect(selects).toHaveLength(2)
+    fireEvent.change(selects[1] as HTMLSelectElement, { target: { value: 'v-lenient' } })
+
+    const table = container.querySelector('.packcmp-table') as HTMLElement
+    expect(table.textContent).toContain('single-error.json')
+    // 禁掉唯一一条 error：封顶解除，对照分应高于基准分
+    const cells = [...table.querySelectorAll('.packcmp-row:not(.packcmp-head) .num')].map((node) =>
+      Number(node.textContent),
+    )
+    expect(cells).toHaveLength(6) // 一条轨迹 base/target/delta + 平均行三格
+    expect(cells[2] as number).toBeGreaterThan(0)
+    expect(cells[5] as number).toBeGreaterThan(0)
+  })
+
+  it('says so when both sides are the same pack', () => {
+    const { container } = setup()
+    fireEvent.click(screen.getByText('口径对比'))
+    const selects = container.querySelectorAll('.packcmp-pickers select')
+    fireEvent.change(selects[1] as HTMLSelectElement, { target: { value: 'current' } })
+    expect(container.querySelector('.packcmp-table')).toBeNull()
+    expect(screen.getByText('两份口径相同，没有可比的差异。')).toBeTruthy()
+  })
+})
+
 describe('RuleDrawer variants', () => {
   function variantProps() {
     return {

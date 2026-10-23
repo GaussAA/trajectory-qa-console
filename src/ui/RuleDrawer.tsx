@@ -3,6 +3,8 @@ import { EXPR_FUNCTIONS } from '../core/expr'
 import type { PackVariant, RuleIssue, RulePack } from '../core/model'
 import { fieldsForScope, formatPackErrors, validatePack } from '../core/rules/contract'
 import { buildTuningReport, numericLiterals, replaceLiteral, type TuningSession } from '../core/rules/tuning'
+import { DEFAULT_PACK } from '../core/rules/builtin-pack'
+import { comparePacks, type PackOption } from '../core/pack-compare'
 import { formatDateTime } from '../i18n/core'
 import { useI18n } from '../i18n'
 import { downloadFile, nowStamp } from '../lib/format'
@@ -81,6 +83,25 @@ export function RuleDrawer({
     () => (previewPack && sessions.length > 0 ? buildTuningReport(sessions, previewPack) : null),
     [previewPack, sessions],
   )
+
+  // 口径对比：当前包 / 内置包 / 各变体，两两对跑同一批轨迹。
+  const packOptions = useMemo<PackOption[]>(
+    () => [
+      { id: 'current', name: t('packcmp.current'), pack },
+      { id: 'builtin', name: t('packcmp.builtin'), pack: DEFAULT_PACK },
+      ...variants.map((variant) => ({ id: variant.id, name: variant.name, pack: variant.pack })),
+    ],
+    [t, pack, variants],
+  )
+  const [baseId, setBaseId] = useState('current')
+  const [targetPick, setTargetPick] = useState<string | null>(null)
+  // 未选对照时挑第一个不等于基准的选项：打开就能看到差异，而不是「自己比自己」。
+  const targetId = targetPick ?? packOptions.find((option) => option.id !== baseId)?.id ?? baseId
+  const comparison = useMemo(() => {
+    const resolve = (id: string): PackOption =>
+      packOptions.find((option) => option.id === id) ?? (packOptions[0] as PackOption)
+    return comparePacks(sessions, resolve(baseId).pack, resolve(targetId).pack)
+  }, [sessions, baseId, targetId, packOptions])
 
   if (!open) return null
 
@@ -299,6 +320,96 @@ export function RuleDrawer({
               </ul>
             )}
           </section>
+
+          <details className="drawer-help">
+            <summary>{t('packcmp.title')}</summary>
+            {sessions.length === 0 ? (
+              <p className="hint">{t('packcmp.needSessions')}</p>
+            ) : (
+              <>
+                <div className="packcmp-pickers">
+                  <label>
+                    <span>{t('packcmp.base')}</span>
+                    <select value={baseId} onChange={(event) => setBaseId(event.target.value)}>
+                      {packOptions.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>{t('packcmp.target')}</span>
+                    <select value={targetId} onChange={(event) => setTargetPick(event.target.value)}>
+                      {packOptions.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                {comparison.identical ? (
+                  <p className="hint">{t('packcmp.same')}</p>
+                ) : (
+                  <div className="packcmp-table" role="table" aria-label={t('packcmp.title')}>
+                    <div className="packcmp-row packcmp-head" role="row">
+                      <span role="columnheader">{t('report.sessionHeader')}</span>
+                      <span role="columnheader" className="num">
+                        {t('report.compare.baseColumn')}
+                      </span>
+                      <span role="columnheader" className="num">
+                        {t('report.compare.targetColumn')}
+                      </span>
+                      <span role="columnheader" className="num">
+                        {t('packcmp.delta')}
+                      </span>
+                    </div>
+                    {comparison.rows.map((row) => (
+                      <div key={row.sessionId} className="packcmp-row" role="row" title={row.label}>
+                        <span role="cell">{row.label}</span>
+                        <span className="num" role="cell">
+                          {row.base}
+                        </span>
+                        <span className="num" role="cell">
+                          {row.target}
+                        </span>
+                        <span
+                          className={row.delta === 0 ? 'num flat' : row.delta > 0 ? 'num up' : 'num down'}
+                          role="cell"
+                        >
+                          {row.delta > 0 ? `+${row.delta}` : row.delta}
+                        </span>
+                      </div>
+                    ))}
+                    <div className="packcmp-row packcmp-average" role="row">
+                      <span role="cell">{t('packcmp.average')}</span>
+                      <span className="num" role="cell">
+                        {comparison.baseAverage}
+                      </span>
+                      <span className="num" role="cell">
+                        {comparison.targetAverage}
+                      </span>
+                      <span
+                        className={
+                          comparison.targetAverage - comparison.baseAverage === 0
+                            ? 'num flat'
+                            : comparison.targetAverage > comparison.baseAverage
+                              ? 'num up'
+                              : 'num down'
+                        }
+                        role="cell"
+                      >
+                        {comparison.targetAverage - comparison.baseAverage > 0
+                          ? `+${comparison.targetAverage - comparison.baseAverage}`
+                          : comparison.targetAverage - comparison.baseAverage}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </details>
 
           <details className="drawer-help" open>
             <summary>
