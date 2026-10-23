@@ -1,0 +1,65 @@
+name: release
+
+# 打 v* tag 即发版：先过同一道 verify 门禁，再挂产物。
+# 门禁不过就没有 Release——发版权在测试手里，不在谁手滑 push tag 手里。
+
+on:
+  push:
+    tags: ['v*']
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: verify & publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.14.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify
+        run: pnpm verify
+
+      - name: Guard tag against package version
+        run: |
+          PKG="v$(node -p "require('./package.json').version")"
+          TAG="${GITHUB_REF_NAME}"
+          if [ "$PKG" != "$TAG" ]; then
+            echo "::error::tag $TAG 与 package.json 的 $PKG 不一致"
+            exit 1
+          fi
+          echo "tag 与版本一致：$TAG"
+
+      - name: Build CLI bundle (verify 里未含 CLI 构建)
+        run: pnpm build:cli
+
+      - name: Create release and upload artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes \
+            dist/index.html#trajectory-qa-console.html \
+            dist-cli/qa.mjs#trajectory-qa-cli.mjs
