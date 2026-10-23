@@ -129,7 +129,7 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
         const controller = new AbortController()
         abortRef.current = controller
         const result = await port.analyze(
-          { text: input.text, label: input.name, pack: stateRef.current.pack, idPrefix: batch },
+          { text: input.text, label: input.name, idPrefix: batch },
           controller.signal,
         )
         abortRef.current = null

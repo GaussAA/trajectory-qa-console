@@ -262,7 +262,7 @@ export const en: Record<MessageKey, string> = {
   'diag.noEvents': 'No events yet',
   'diag.sessionTiming': 'Session timings',
   'diag.parse': 'parse',
-  'diag.rules': 'rules',
+  'diag.metrics': 'metrics',
   'diag.export': 'Export diagnostics JSON',
 
   'boundary.unavailable': '{name} unavailable',

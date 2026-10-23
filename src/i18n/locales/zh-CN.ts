@@ -256,7 +256,7 @@ export const zhCN = {
   'diag.noEvents': '暂无事件',
   'diag.sessionTiming': '会话耗时',
   'diag.parse': '解析',
-  'diag.rules': '规则',
+  'diag.metrics': '指标',
   'diag.export': '导出诊断 JSON',
 
   'boundary.unavailable': '{name}不可用',

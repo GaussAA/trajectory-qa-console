@@ -250,7 +250,7 @@ export async function main(
   if (options.semanticDryRun) {
     const first = collected.value.files[0] as string
     const read = readFileSync(first, 'utf8')
-    const analyzed = analyze({ source: read, label: displayPath(first), pack })
+    const analyzed = analyze({ source: read, label: displayPath(first) })
     if (!analyzed.ok) {
       stderr(`✗ ${t(`error.${analyzed.error.code}` as MessageKey)}\n`)
       return EXIT.error

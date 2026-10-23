@@ -15,14 +15,13 @@ function recordFor(sample: (typeof SAMPLE_FILES)[number]) {
   const result = analyze({
     source: sample.content,
     label: sample.name,
-    pack: DEFAULT_PACK,
     idPrefix: 'golden',
   })
   if (!result.ok) throw new Error(`analyze failed: ${result.error.message}`)
   const analysis = result.value[0]
   if (!analysis) throw new Error('expected one analysis')
 
-  const card = scoreSession(analysis, DEFAULT_PACK.dimensions)
+  const card = scoreSession(analysis, DEFAULT_PACK)
   return {
     file: sample.name,
     label: analysis.trajectory.label,
@@ -72,7 +71,6 @@ describe('golden master', () => {
     const result = analyze({
       source: SAMPLE_FILES[0]?.content ?? '',
       label: 'timing',
-      pack: DEFAULT_PACK,
       clock: (() => {
         let tick = 0
         return () => (tick += 5)
@@ -82,7 +80,7 @@ describe('golden master', () => {
     if (result.ok) {
       const analysis = result.value[0]
       expect(analysis?.diagnostics.parseMs).toBe(5)
-      expect(analysis?.diagnostics.rulesMs).toBeGreaterThanOrEqual(5)
+      expect(analysis?.diagnostics.metricsMs).toBeGreaterThanOrEqual(5)
       expect(analysis?.diagnostics.sourceChars).toBeGreaterThan(0)
     }
   })

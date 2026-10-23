@@ -79,7 +79,7 @@ describe('builtin packs', () => {
   it('produces identical findings on the example traces', () => {
     for (const file of EXAMPLE_FILES) {
       const source = readFileSync(new URL(`../../../${file}`, import.meta.url), 'utf8')
-      const analyzed = analyze({ source, label: file, pack: DEFAULT_PACK })
+      const analyzed = analyze({ source, label: file })
       if (!analyzed.ok) throw new Error(`${file}: ${analyzed.error.message}`)
 
       for (const session of analyzed.value) {

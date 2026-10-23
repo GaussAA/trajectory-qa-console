@@ -5,7 +5,6 @@ export interface WorkerRequest {
   id: number
   text: string
   label: string
-  pack: import('../core/model').RulePack
   idPrefix: string
   maxSteps?: number
 }

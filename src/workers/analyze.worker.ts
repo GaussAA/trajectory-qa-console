@@ -11,7 +11,7 @@ interface WorkerScope {
 const scope = self as unknown as WorkerScope
 
 scope.onmessage = (event) => {
-  const { id, text, label, pack, idPrefix, maxSteps } = event.data
-  const result = analyze({ source: text, label, pack, idPrefix, maxSteps })
+  const { id, text, label, idPrefix, maxSteps } = event.data
+  const result = analyze({ source: text, label, idPrefix, maxSteps })
   scope.postMessage({ id, result })
 }

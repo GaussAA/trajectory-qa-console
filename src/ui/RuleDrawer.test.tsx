@@ -14,7 +14,7 @@ const TRACE = JSON.stringify([
 ])
 
 function sessions() {
-  const parsed = analyze({ source: TRACE, label: 'trace.json', pack: DEFAULT_PACK })
+  const parsed = analyze({ source: TRACE, label: 'trace.json' })
   if (!parsed.ok) throw new Error(parsed.error.message)
   return parsed.value.map((session) => ({ id: session.id, trajectory: session.trajectory }))
 }
@@ -74,7 +74,7 @@ describe('RuleDrawer pack comparison', () => {
   }
 
   function setupSingleError(props: Partial<Parameters<typeof RuleDrawer>[0]> = {}) {
-    const parsed = analyze({ source: SINGLE_ERROR, label: 'single-error.json', pack: DEFAULT_PACK })
+    const parsed = analyze({ source: SINGLE_ERROR, label: 'single-error.json' })
     if (!parsed.ok) throw new Error(parsed.error.message)
     return setup({
       sessions: parsed.value.map((session) => ({ id: session.id, trajectory: session.trajectory })),

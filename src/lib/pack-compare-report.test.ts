@@ -12,7 +12,7 @@ const TRACE = JSON.stringify([
 ])
 
 function sessions() {
-  const parsed = analyze({ source: TRACE, label: 'single-error.json', pack: DEFAULT_PACK })
+  const parsed = analyze({ source: TRACE, label: 'single-error.json' })
   if (!parsed.ok) throw new Error(parsed.error.message)
   return parsed.value.map((session) => ({ id: session.id, trajectory: session.trajectory }))
 }

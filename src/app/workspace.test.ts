@@ -10,7 +10,7 @@ const TRACE = JSON.stringify([
 ])
 
 function fixture(): SessionAnalysis {
-  const result = analyze({ source: TRACE, label: 'fixture.json', pack: DEFAULT_PACK, idPrefix: 'test' })
+  const result = analyze({ source: TRACE, label: 'fixture.json', idPrefix: 'test' })
   if (!result.ok) throw new Error(result.error.message)
   const analysis = result.value[0]
   if (!analysis) throw new Error('no analysis')
@@ -18,7 +18,7 @@ function fixture(): SessionAnalysis {
 }
 
 function firstSession() {
-  const result = analyze({ source: TRACE, label: 'trace.json', pack: DEFAULT_PACK })
+  const result = analyze({ source: TRACE, label: 'trace.json' })
   if (!result.ok) throw new Error(result.error.message)
   return result.value[0]!
 }
@@ -136,7 +136,6 @@ describe('pickStepFor', () => {
         { role: 'assistant', content: 'hello' },
       ]),
       label: 'clean.json',
-      pack: DEFAULT_PACK,
     })
     if (!clean.ok) throw new Error(clean.error.message)
     const cleanAnalysis = clean.value[0] as SessionAnalysis
@@ -217,7 +216,7 @@ describe('session notes and removal', () => {
 
   it('removes sessions and keeps the selection valid', () => {
     const sessions = ['a.json', 'b.json', 'c.json'].map((label) => {
-      const parsed = analyze({ source: TRACE, label, pack: DEFAULT_PACK })
+      const parsed = analyze({ source: TRACE, label })
       if (!parsed.ok) throw new Error(parsed.error.message)
       return parsed.value[0]!
     })
@@ -235,7 +234,7 @@ describe('session notes and removal', () => {
   })
 
   it('goes back to the empty state when every session is removed', () => {
-    const parsed = analyze({ source: TRACE, label: 'trace.json', pack: DEFAULT_PACK })
+    const parsed = analyze({ source: TRACE, label: 'trace.json' })
     if (!parsed.ok) throw new Error(parsed.error.message)
     const state = createInitialState(DEFAULT_PACK, [], parsed.value)
     const cleared = workspaceReducer(state, {
@@ -249,7 +248,7 @@ describe('session notes and removal', () => {
   })
 
   it('ignores removal requests for unknown ids', () => {
-    const parsed = analyze({ source: TRACE, label: 'trace.json', pack: DEFAULT_PACK })
+    const parsed = analyze({ source: TRACE, label: 'trace.json' })
     if (!parsed.ok) throw new Error(parsed.error.message)
     const state = createInitialState(DEFAULT_PACK, [], parsed.value)
     expect(workspaceReducer(state, { type: 'session/remove', ids: ['ghost'] })).toBe(state)
@@ -380,5 +379,50 @@ describe('pack variants', () => {
     const state = createInitialState(DEFAULT_PACK, [], [], [], [variant('v1', '严格')])
     expect(workspaceReducer(state, { type: 'variant/apply', id: 'ghost' })).toBe(state)
     expect(workspaceReducer(state, { type: 'variant/remove', id: 'ghost' })).toBe(state)
+  })
+})
+
+/** Invariant 3, at the layer where the bug actually lived: the workspace used
+ *  to keep the findings computed at import time, so editing the pack in the
+ *  drawer changed nothing. Scoring now runs through the pack every time. */
+describe('scoreCards follows the pack', () => {
+  it('re-scores when the pack is applied by hand', () => {
+    const analysis = fixture()
+    const state = createInitialState(DEFAULT_PACK, [], [analysis])
+    const before = scoreCards(state.sessions, state.pack, state.annotations).get(analysis.id)
+    expect(before?.findings.length).toBeGreaterThan(0)
+
+    const disabled: typeof DEFAULT_PACK = {
+      ...DEFAULT_PACK,
+      rules: DEFAULT_PACK.rules.map((rule) => ({ ...rule, enabled: false })),
+    }
+    const edited = workspaceReducer(state, { type: 'pack/apply', pack: disabled })
+    const after = scoreCards(edited.sessions, edited.pack, edited.annotations).get(analysis.id)
+
+    expect(after?.findings).toHaveLength(0)
+    expect(after?.overall).toBe(100)
+    expect(after?.overall).toBeGreaterThan(before?.overall ?? 100)
+  })
+
+  it('re-scores when a variant is applied', () => {
+    const analysis = fixture()
+    const disabled: typeof DEFAULT_PACK = {
+      ...DEFAULT_PACK,
+      rules: DEFAULT_PACK.rules.map((rule) => ({ ...rule, enabled: false })),
+    }
+    const quiet: PackVariant = {
+      id: 'quiet',
+      name: '全静音',
+      pack: disabled,
+      savedAt: new Date('2026-10-23T12:00:00Z').toISOString(),
+    }
+    const state = createInitialState(DEFAULT_PACK, [], [analysis], [], [quiet])
+    const before = scoreCards(state.sessions, state.pack, state.annotations).get(analysis.id)
+
+    const applied = workspaceReducer(state, { type: 'variant/apply', id: 'quiet' })
+    const after = scoreCards(applied.sessions, applied.pack, applied.annotations).get(analysis.id)
+
+    expect(after?.findings).toHaveLength(0)
+    expect(after?.overall).toBeGreaterThan(before?.overall ?? 100)
   })
 })

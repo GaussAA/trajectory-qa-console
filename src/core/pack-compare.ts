@@ -2,12 +2,13 @@
  *
  *  与调参、CLI 同一条边界：只算规则与维度，不含人工标注（标注属于工作区，
  *  依赖会话 id；而这里同一批轨迹要在两套口径下各跑一遍）。
+ *
+ *  分数一律来自 `buildCard`——与工作区主路径同一个函数，所以「界面显示的
+ *  分数」和「口径对比的分数」不可能分叉。
  */
 
-import type { ScoreCard } from './analysis'
-import { scoreTrajectory } from './analysis/score'
+import { buildCard, computeMetrics, type ScoreCard } from './analysis'
 import type { RulePack, Trajectory } from './model'
-import { runRules } from './rules/engine'
 
 /** 只要轨迹本体：调参面板传的是轻量会话（id + trajectory），也能直接用。 */
 export interface PackCompareSession {
@@ -39,8 +40,7 @@ export interface PackComparison {
 
 /** 单条会话在指定口径下的得分：真跑规则，不估算。 */
 export function scoreUnderPack(session: PackCompareSession, pack: RulePack): ScoreCard {
-  const { findings, ruleIssues } = runRules(session.trajectory, pack)
-  return scoreTrajectory(findings, pack.dimensions, ruleIssues)
+  return buildCard(session.trajectory, computeMetrics(session.trajectory), pack)
 }
 
 export function comparePacks(
@@ -49,8 +49,11 @@ export function comparePacks(
   targetPack: RulePack,
 ): PackComparison {
   const rows = sessions.map((session) => {
-    const base = scoreUnderPack(session, basePack).overall
-    const target = scoreUnderPack(session, targetPack).overall
+    // Metrics do not depend on the pack, so compute them once per session and
+    // let both packs reuse them.
+    const metrics = computeMetrics(session.trajectory)
+    const base = buildCard(session.trajectory, metrics, basePack).overall
+    const target = buildCard(session.trajectory, metrics, targetPack).overall
     return { sessionId: session.id, label: session.trajectory.label, base, target, delta: target - base }
   })
 

@@ -39,10 +39,10 @@ function finding(ruleId: string, stepIndex: number | undefined, message = 'x'): 
 }
 
 function side(source: string, label: string) {
-  const parsed = analyze({ source, label, pack: DEFAULT_PACK })
+  const parsed = analyze({ source, label })
   if (!parsed.ok) throw new Error(parsed.error.message)
   const analysis = parsed.value[0] as SessionAnalysis
-  return { card: scoreSession(analysis, DEFAULT_PACK.dimensions), trajectory: analysis.trajectory }
+  return { card: scoreSession(analysis, DEFAULT_PACK), trajectory: analysis.trajectory }
 }
 
 const GOOD = JSON.stringify([

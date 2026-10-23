@@ -58,7 +58,7 @@ export function buildDiagnostics(
       generatedAt: generatedAt.toISOString(),
       rulePack: { name: state.pack.name, version: state.pack.version, rules: state.pack.rules.length },
       sessions: state.sessions.map((session) => {
-        const card = cards.get(session.id) ?? scoreSession(session, state.pack.dimensions)
+        const card = cards.get(session.id) ?? scoreSession(session, state.pack)
         return {
           id: session.id,
           label: session.trajectory.label,
@@ -69,7 +69,7 @@ export function buildDiagnostics(
           grade: card.grade,
           diagnostics: session.diagnostics,
           parseNotes: session.trajectory.parseNotes,
-          ruleIssues: session.ruleIssues,
+          ruleIssues: card.ruleIssues,
         }
       }),
       issues: state.issues,

@@ -129,7 +129,7 @@ export async function runBatch(files: string[], options: BatchOptions): Promise<
       continue
     }
 
-    const analyzed = analyze({ source: read.text, label, pack: options.pack, idPrefix: `file${index}` })
+    const analyzed = analyze({ source: read.text, label, idPrefix: `file${index}` })
     if (!analyzed.ok) {
       outcomes.push({ file: label, sessions: 0, score: 0, grade: '—', error: analyzed.error })
       continue
@@ -154,7 +154,7 @@ export async function runBatch(files: string[], options: BatchOptions): Promise<
           })
         }
       }
-      const card: ScoreCard = scoreSession(session, options.pack.dimensions, [], extra)
+      const card: ScoreCard = scoreSession(session, options.pack, [], extra)
       cards.push(card)
       entries.push({ trajectory: session.trajectory, card })
     }

@@ -10,14 +10,15 @@
  */
 
 import { analyze as analyzeCore, type SessionAnalysis } from '../core/analysis'
-import { fail, type Result, type RulePack } from '../core/model'
+import { fail, type Result } from '../core/model'
 import AnalyzeWorker from '../workers/analyze.worker?worker&inline'
 import type { WorkerRequest, WorkerResponse } from '../workers/protocol'
 
+/** Parsing and metrics only. The rule pack belongs to scoring (`buildCard`),
+ *  not to analysis, so it is deliberately absent here. */
 export interface AnalyzeRequest {
   text: string
   label: string
-  pack: RulePack
   idPrefix: string
   maxSteps?: number
 }
@@ -35,7 +36,6 @@ export function createSyncAnalyzer(): AnalyzerPort {
         return analyzeCore({
           source: request.text,
           label: request.label,
-          pack: request.pack,
           idPrefix: request.idPrefix,
           maxSteps: request.maxSteps,
         })
@@ -133,7 +133,6 @@ export function createWorkerAnalyzer(
           id,
           text: request.text,
           label: request.label,
-          pack: request.pack,
           idPrefix: request.idPrefix,
           maxSteps: request.maxSteps,
         }

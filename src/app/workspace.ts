@@ -78,7 +78,7 @@ export function createInitialState(
     phase: sessions.length > 0 ? 'ready' : 'idle',
     sessions,
     selectedId: first?.id ?? null,
-    selectedStep: first ? pickStepFor(first, scoreSession(first, pack.dimensions, annotations)) : null,
+    selectedStep: first ? pickStepFor(first, scoreSession(first, pack, annotations)) : null,
     pack,
     annotations,
     notes,
@@ -133,7 +133,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         phase: 'ready',
         issues: action.issues,
         selectedId: first.id,
-        selectedStep: pickStepFor(first, scoreSession(first, state.pack.dimensions, state.annotations)),
+        selectedStep: pickStepFor(first, scoreSession(first, state.pack, state.annotations)),
       }
     }
 
@@ -146,7 +146,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       return {
         ...state,
         selectedId: action.id,
-        selectedStep: pickStepFor(session, scoreSession(session, state.pack.dimensions, state.annotations)),
+        selectedStep: pickStepFor(session, scoreSession(session, state.pack, state.annotations)),
       }
     }
 
@@ -296,7 +296,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         phase: sessions.length > 0 ? state.phase : 'idle',
         selectedId: next?.id ?? null,
         selectedStep: next
-          ? pickStepFor(next, scoreSession(next, state.pack.dimensions, state.annotations))
+          ? pickStepFor(next, scoreSession(next, state.pack, state.annotations))
           : null,
       }
     }
@@ -317,7 +317,7 @@ export function scoreCards(
 ): Map<string, ScoreCard> {
   const cards = new Map<string, ScoreCard>()
   for (const session of sessions) {
-    cards.set(session.id, scoreSession(session, pack.dimensions, annotations))
+    cards.set(session.id, scoreSession(session, pack, annotations))
   }
   return cards
 }
@@ -328,7 +328,7 @@ export function findSessionById(sessions: SessionAnalysis[], id: string | null):
 }
 
 export function scoreFor(session: SessionAnalysis, pack: RulePack, annotations: Annotation[]): ScoreCard {
-  return scoreSession(session, pack.dimensions, annotations)
+  return scoreSession(session, pack, annotations)
 }
 
 export function stepAt(session: SessionAnalysis | null, index: number | null) {

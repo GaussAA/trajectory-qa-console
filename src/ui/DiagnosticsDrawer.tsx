@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import type { SessionAnalysis } from '../core/analysis'
+import type { ScoreCard, SessionAnalysis } from '../core/analysis'
 import { formatTokens } from '../core/estimate'
 import type { TelemetryEvent } from '../app/telemetry'
 import { useI18n } from '../i18n'
@@ -11,6 +11,8 @@ interface Props {
   open: boolean
   events: TelemetryEvent[]
   sessions: SessionAnalysis[]
+  /** 当前口径下的评分卡：规则异常随包变化，只能从卡上读，不能从会话读。 */
+  cards: Map<string, ScoreCard>
   onClose: () => void
   onExport: () => void
   onClear: () => void
@@ -34,7 +36,7 @@ function durationText(value: number): string {
   return `${Math.round(value)}ms`
 }
 
-export function DiagnosticsDrawer({ open, events, sessions, onClose, onExport, onClear }: Props) {
+export function DiagnosticsDrawer({ open, events, sessions, cards, onClose, onExport, onClear }: Props) {
   const { t } = useI18n()
   const panelRef = useRef<HTMLDivElement>(null)
   useFocusTrap(panelRef, open)
@@ -133,20 +135,21 @@ export function DiagnosticsDrawer({ open, events, sessions, onClose, onExport, o
             <details className="drawer-help" open>
               <summary>{t('diag.sessionTiming')}</summary>
               <ul>
-                {sessions.map((session) => (
-                  <li key={session.id}>
-                    <b>{session.trajectory.label}</b>
-                    <span>
-                      {t('score.stepUnit', { count: session.trajectory.steps.length })} ·{' '}
-                      {formatTokens(session.trajectory.meta.totalTokens)} tk · {t('diag.parse')}{' '}
-                      {durationText(session.diagnostics.parseMs)} · {t('diag.rules')}{' '}
-                      {durationText(session.diagnostics.rulesMs)}
-                      {session.ruleIssues.length > 0
-                        ? ` · ${t('score.ruleIssues', { count: session.ruleIssues.length })}`
-                        : ''}
-                    </span>
-                  </li>
-                ))}
+                {sessions.map((session) => {
+                  const issueCount = cards.get(session.id)?.ruleIssues.length ?? 0
+                  return (
+                    <li key={session.id}>
+                      <b>{session.trajectory.label}</b>
+                      <span>
+                        {t('score.stepUnit', { count: session.trajectory.steps.length })} ·{' '}
+                        {formatTokens(session.trajectory.meta.totalTokens)} tk · {t('diag.parse')}{' '}
+                        {durationText(session.diagnostics.parseMs)} · {t('diag.metrics')}{' '}
+                        {durationText(session.diagnostics.metricsMs)}
+                        {issueCount > 0 ? ` · ${t('score.ruleIssues', { count: issueCount })}` : ''}
+                      </span>
+                    </li>
+                  )
+                })}
               </ul>
             </details>
           )}

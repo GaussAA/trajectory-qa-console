@@ -12,7 +12,7 @@ const TRACE = JSON.stringify([
 ])
 
 function sessions() {
-  const parsed = analyze({ source: TRACE, label: 'trace.json', pack: DEFAULT_PACK })
+  const parsed = analyze({ source: TRACE, label: 'trace.json' })
   if (!parsed.ok) throw new Error(parsed.error.message)
   return parsed.value
 }

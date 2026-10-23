@@ -11,7 +11,7 @@ const TRACE = JSON.stringify([
 ])
 
 function fixtureState() {
-  const result = analyze({ source: TRACE, label: 'trace.json', pack: DEFAULT_PACK, idPrefix: 'export' })
+  const result = analyze({ source: TRACE, label: 'trace.json', idPrefix: 'export' })
   if (!result.ok) throw new Error(result.error.message)
   const analysis = result.value[0] as SessionAnalysis
   const state = workspaceReducer(createInitialState(DEFAULT_PACK), {

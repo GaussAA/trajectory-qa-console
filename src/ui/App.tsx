@@ -345,6 +345,7 @@ export default function App({
         open={diagnosticsOpen}
         events={events}
         sessions={state.sessions}
+        cards={cards}
         onClose={() => setDiagnosticsOpen(false)}
         onExport={actions.exportDiagnostics}
         onClear={actions.clearTelemetry}

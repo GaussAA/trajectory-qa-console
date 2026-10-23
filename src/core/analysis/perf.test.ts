@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { analyze } from './index'
-import { DEFAULT_PACK } from '../rules/builtin-pack'
 
 /** Synthetic trace with realistic proportions: alternating user/assistant/tool,
  *  one tool call per assistant turn, 200-char results. */
@@ -23,7 +22,7 @@ function syntheticSource(steps: number): string {
 function measure(steps: number): { ms: number; parsedSteps: number } {
   const source = syntheticSource(steps)
   const started = performance.now()
-  const result = analyze({ source, label: `perf-${steps}.json`, pack: DEFAULT_PACK })
+  const result = analyze({ source, label: `perf-${steps}.json` })
   const ms = performance.now() - started
   if (!result.ok) throw new Error(result.error.message)
   const analysis = result.value[0]
