@@ -16,16 +16,17 @@
 | **规则（Rule）**                | 数据：`scope + expr + message`，不含代码。                                  |
 | **规则包（RulePack）**          | 维度 + 规则 + 版本，可在界面内编辑、导入导出。                              |
 | **评分卡（ScoreCard）**         | 派生结果：维度分、加权分、封顶分、等级、问题计数。                          |
+| **评分派生（buildCard）**       | `(trajectory, metrics, pack, 标注) → 评分卡`。唯一的算分入口，规则在此现算。 |
 | **错误封顶（Error gate）**      | 按「不同 error 级规则数」限制总分：≥1→74、≥3→54、≥5→39。                    |
 | **会话分析（SessionAnalysis）** | 一条轨迹的质检产物：指标、发现、规则异常、耗时诊断。                        |
 | **工作区（Workspace）**         | 会话集合 + 选中态 + 规则包 + 人工标注 + 导入问题。                          |
-| **分析端口（Analyzer port）**   | `analyze(request, signal)`；同步 adapter 与 worker adapter 两个实现。       |
+| **分析端口（Analyzer port）**   | `analyze(request, signal)`：只做解析与指标，不接规则包。同步/worker 两个 adapter。 |
 
 ## 不变量
 
 1. 只有 `analyze()` 能把原始文本变成 `SessionAnalysis`；UI 不得直接调用 parse / metrics / rules / score。
 2. 每条 Finding 都必须指向一个已定义的维度；规则包在应用前必须通过契约校验。
-3. 评分卡永远派生，不落库；标注或规则包一变，所有分数立即重算。
+3. 评分卡永远派生，不落库；标注或规则包一变，所有分数立即重算。会话只存与规则包无关的 `trajectory + metrics`，findings 由 `buildCard` 现算——这条因此是**结构上成立**，不是靠记得重算。工作区主路径与「口径对比」共用 `buildCard`，同一份数据不可能显示两个分数。
 4. 持久化数据一律带 `schemaVersion`，读取时迁移；损坏数据降级为默认值并记录事件。
 5. 单条坏轨迹、单条坏规则、单个面板崩溃都不得影响其余部分。
 6. 估算 token 必须带 `estimated: true`，报告中要注明。
@@ -64,7 +65,9 @@ node dist-cli/qa.mjs examples --pack en --locale en --out ./qa-out   # 全英文
 ```
 
 退出码：`0` 通过、`1` 门禁未通过、`2` 用法/读写/无可分析内容。**空跑必须是 2**——
-没有可分析内容却返回 0，等于让门禁永远绿。
+没有可分析内容却返回 0，等于让门禁永远绿。**部分失败同样是 2**：只要有一条文件没
+能分析、或一个路径扫不进去，即使其余全达标也不算通过——“没检查过”不能被算进
+“通过”。判定放在写盘之后，以免盖掉真正的写入错误。
 
 ### 规则调参（抽屉内）
 
@@ -202,6 +205,8 @@ node dist-cli/qa.mjs a.json b.json --compare --fail-below 80    # 只卡「对�
 样式分四层（tokens / base / layout / components），只允许上层引用下层变量，不靠权重压制。
 交互元素均可键盘到达；抽屉有焦点陷阱与 Esc 关闭；动效尊重 `prefers-reduced-motion`。
 性能基线：1k 步 < 500ms、10k 步 < 3s（实测约 20ms / 98ms）。
+改包重跑规则实测：10k 步约 10ms、50×1k 步约 44ms（解析同规模需 39ms）——远低于交互阈值，
+故评分留在主线程、按 `(sessions, pack, annotations)` 记忆化即可，不必挪进 worker。
 时间线 > 400 步切紧凑虚拟滚动（固定行高 46px），概览条降采样至 ≤180 段。
 调试深链：`#demo` / `#demo:N` 载入示例，`#stress:N` 生成 N 步合成轨迹，`?drawer=1`、`?diag=1` 打开抽屉。
 
