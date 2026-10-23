@@ -27,7 +27,7 @@
 1. 只有 `analyze()` 能把原始文本变成 `SessionAnalysis`；UI 不得直接调用 parse / metrics / rules / score。
 2. 每条 Finding 都必须指向一个已定义的维度；规则包在应用前必须通过契约校验。
 3. 评分卡永远派生，不落库；标注或规则包一变，所有分数立即重算。会话只存与规则包无关的 `trajectory + metrics`，findings 由 `buildCard` 现算——这条因此是**结构上成立**，不是靠记得重算。工作区主路径与「口径对比」共用 `buildCard`，同一份数据不可能显示两个分数。
-4. 持久化数据一律带 `schemaVersion`，读取时迁移；损坏数据降级为默认值并记录事件。
+4. 持久化数据一律带 `schemaVersion`，读取时迁移；损坏数据降级为默认值并记录事件。版本判定在 `persistence.ts`：未来版本（`FutureSchemaVersionError`）拒绝而非误读，迁移链是 `MIGRATIONS` 表——新增版本只加一条，不逐个改 loader。
 5. 单条坏轨迹、单条坏规则、单个面板崩溃都不得影响其余部分。坏轨迹由 `analyze` **会话级**隔离：跳过并记入 `issues` 上报，不静默；只有**全部**会话都失败才算这个文件失败。
 6. 估算 token 必须带 `estimated: true`，报告中要注明。
 

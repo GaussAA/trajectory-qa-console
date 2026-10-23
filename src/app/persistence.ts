@@ -63,10 +63,40 @@ function wrap<T>(data: T): string {
   return JSON.stringify({ schemaVersion: SCHEMA_VERSION, data } satisfies Envelope<T>)
 }
 
+/** Raised when stored data was written by a *newer* version of this app.
+ *
+ *  This is not corruption — reading it as v1 would silently misinterpret the
+ *  payload. Degrading to defaults and saying so is the honest option. */
+export class FutureSchemaVersionError extends Error {
+  constructor(readonly foundVersion: number) {
+    super(`存储数据版本 ${foundVersion} 高于本程序支持的 ${SCHEMA_VERSION}`)
+    this.name = 'FutureSchemaVersionError'
+  }
+}
+
+/** The migration chain: each entry upgrades data from version N to N+1.
+ *
+ *  Adding a version means adding one entry here — not editing every loader.
+ *  Keep them small and pure so they can be tested without a storage. */
+const MIGRATIONS: Record<number, (data: unknown) => unknown> = {
+  // Example shape, added when v2 ships:
+  // 1: (data) => ({ ...data, renamedField: (data as { old?: string }).old }),
+}
+
 function unwrap(raw: string): unknown {
   const parsed: unknown = JSON.parse(raw)
   if (parsed && typeof parsed === 'object' && 'schemaVersion' in parsed && 'data' in parsed) {
-    return (parsed as Envelope<unknown>).data
+    const envelope = parsed as Envelope<unknown>
+    const version = envelope.schemaVersion
+    if (typeof version !== 'number') return envelope.data
+    if (version > SCHEMA_VERSION) throw new FutureSchemaVersionError(version)
+
+    let data = envelope.data
+    for (let from = version; from < SCHEMA_VERSION; from += 1) {
+      const migrate = MIGRATIONS[from]
+      if (migrate) data = migrate(data)
+    }
+    return data
   }
   // v0.1 wrote the payload bare; treat it as schemaVersion 1.
   return parsed

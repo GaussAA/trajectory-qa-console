@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Annotation, PackVariant } from '../core/model'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
 import {
+  SCHEMA_VERSION,
   STORAGE_KEYS,
   createMemoryStorage,
   createPersistence,
@@ -64,6 +65,35 @@ describe('persistence', () => {
     // fractional index used to slip through and gate the score anyway.
     const loaded = port.loadAnnotations()
     expect(loaded.map((item) => item.id)).toEqual(['ok'])
+  })
+
+  it('refuses data written by a newer schema instead of misreading it', () => {
+    const telemetry = createTelemetry()
+    // A future version must not be interpreted as v1 — that would silently
+    // reinterpret a payload this build does not understand.
+    const future = createPersistence(
+      createMemoryStorage({
+        [STORAGE_KEYS.pack]: JSON.stringify({ schemaVersion: SCHEMA_VERSION + 1, data: DEFAULT_PACK }),
+        [STORAGE_KEYS.annotations]: JSON.stringify({
+          schemaVersion: SCHEMA_VERSION + 1,
+          data: [{ id: 'x', trajectoryId: 't', dimension: 'd', severity: 'warn', note: 'n' }],
+        }),
+      }),
+      telemetry,
+    )
+
+    expect(future.loadPack()).toBe(DEFAULT_PACK)
+    expect(future.loadAnnotations()).toEqual([])
+
+    // Degrading is fine; degrading silently is not.
+    const events = telemetry.snapshot()
+    expect(events.some((event) => event.name === 'storage:pack-corrupt')).toBe(true)
+    expect(events.some((event) => event.name === 'storage:annotations-corrupt')).toBe(true)
+  })
+
+  it('still reads bare v0.1 payloads as version 1', () => {
+    const store = createMemoryStorage({ [STORAGE_KEYS.pack]: JSON.stringify(DEFAULT_PACK) })
+    expect(createPersistence(store).loadPack().rules).toHaveLength(DEFAULT_PACK.rules.length)
   })
 
   it('falls back to defaults on corrupt or invalid data and records why', () => {
