@@ -156,7 +156,7 @@ describe('session notes and removal', () => {
       note: { trajectoryId: analysis.trajectory.id, name: '  第三版  ', note: '  改了 system prompt ' },
     })
     expect(named.notes).toEqual([
-      { trajectoryId: analysis.trajectory.id, name: '第三版', note: '改了 system prompt' },
+      { trajectoryId: analysis.trajectory.id, name: '第三版', note: '改了 system prompt', tags: [] },
     ])
     expect(labelOf(named.notes, analysis.trajectory)).toBe('第三版')
     expect(noteOf(named.notes, analysis.trajectory)?.note).toBe('改了 system prompt')
@@ -194,12 +194,12 @@ describe('session notes and removal', () => {
       type: 'note/batch',
       notes: [
         { trajectoryId: 'a', name: ' exp-01 ', note: ' 第三版 ' },
-        { trajectoryId: 'b', name: 'exp-02', note: '' },
+        { trajectoryId: 'b', name: 'exp-02', note: '', tags: [] },
       ],
     })
     expect(merged.notes).toEqual([
-      { trajectoryId: 'a', name: 'exp-01', note: '第三版' },
-      { trajectoryId: 'b', name: 'exp-02', note: '' },
+      { trajectoryId: 'a', name: 'exp-01', note: '第三版', tags: [] },
+      { trajectoryId: 'b', name: 'exp-02', note: '', tags: [] },
     ])
   })
 
@@ -212,7 +212,7 @@ describe('session notes and removal', () => {
         { trajectoryId: 'new', name: 'n', note: '' },
       ],
     })
-    expect(merged.notes).toEqual([{ trajectoryId: 'new', name: 'n', note: '' }])
+    expect(merged.notes).toEqual([{ trajectoryId: 'new', name: 'n', note: '', tags: [] }])
   })
 
   it('removes sessions and keeps the selection valid', () => {
@@ -308,6 +308,48 @@ describe('pack variants', () => {
     expect(cleared.variants).toHaveLength(1)
     // 初始包还不是变体包：未应用前不标记生效
     expect(cleared.activeVariantId).toBeNull()
+  })
+
+  it('sets tags with dedupe, preserves them across renames and batch notes', () => {
+    const analysis = firstSession()
+    const state = createInitialState(DEFAULT_PACK, [], [analysis])
+    const id = analysis.trajectory.id
+
+    const tagged = workspaceReducer(state, {
+      type: 'note/tags',
+      trajectoryId: id,
+      tags: [' 回归 ', 'prompt-v3', '回归', ''],
+    })
+    expect(tagged.notes.find((note) => note.trajectoryId === id)?.tags).toEqual(['回归', 'prompt-v3'])
+
+    // 重命名不丢标签
+    const renamed = workspaceReducer(tagged, {
+      type: 'note/set',
+      note: { trajectoryId: id, name: '第三版', note: '', tags: [] },
+    })
+    expect(renamed.notes.find((note) => note.trajectoryId === id)).toMatchObject({
+      name: '第三版',
+      tags: ['回归', 'prompt-v3'],
+    })
+
+    // 批量命名也不冲掉标签
+    const batched = workspaceReducer(renamed, {
+      type: 'note/batch',
+      notes: [{ trajectoryId: id, name: '批量名', note: '' }],
+    })
+    expect(batched.notes.find((note) => note.trajectoryId === id)?.tags).toEqual(['回归', 'prompt-v3'])
+
+    // 清空全部三个字段才删记录
+    const cleared = workspaceReducer(batched, {
+      type: 'note/tags',
+      trajectoryId: id,
+      tags: [],
+    })
+    const cleared2 = workspaceReducer(cleared, {
+      type: 'note/set',
+      note: { trajectoryId: id, name: '', note: '', tags: [] },
+    })
+    expect(cleared2.notes).toHaveLength(0)
   })
 
   it('imports variants on top and overrides by id', () => {

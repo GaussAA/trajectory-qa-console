@@ -82,6 +82,9 @@ export const zhCN = {
   'panel.findings': '问题清单面板',
 
   'session.rename': '重命名会话',
+  'session.tags': '标签（逗号分隔）',
+  'session.tagsPlaceholder': '如：回归, prompt-v3',
+  'session.filterAll': '全部',
   'session.renameHint': '重命名 / 备注（也可双击会话）',
   'session.name': '会话名称',
   'session.note': '会话备注',

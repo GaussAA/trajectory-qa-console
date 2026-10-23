@@ -363,6 +363,14 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
     [telemetry],
   )
 
+  const setSessionTags = useCallback(
+    (trajectoryId: string, tags: string[]) => {
+      dispatch({ type: 'note/tags', trajectoryId, tags })
+      telemetry.emit('session:tags', { trajectoryId, count: tags.length })
+    },
+    [telemetry],
+  )
+
   const removeAnnotation = useCallback((id: string) => {
     dispatch({ type: 'annotation/remove', id })
   }, [])
@@ -439,6 +447,7 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
       removeAnnotation,
       setSessionNote,
       setSessionNotes,
+      setSessionTags,
       saveVariant,
       applyVariant,
       renameVariant,

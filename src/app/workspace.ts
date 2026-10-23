@@ -45,6 +45,7 @@ export type WorkspaceAction =
   | { type: 'annotation/add'; annotation: Annotation }
   | { type: 'annotation/remove'; id: string }
   | { type: 'note/set'; note: SessionNote }
+  | { type: 'note/tags'; trajectoryId: string; tags: string[] }
   | { type: 'note/batch'; notes: SessionNote[] }
   | { type: 'note/clear'; trajectoryId: string }
   | { type: 'session/remove'; ids: string[] }
@@ -231,10 +232,26 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
     case 'note/set': {
       const name = action.note.name.trim()
       const note = action.note.note.trim()
+      const existing = state.notes.find((item) => item.trajectoryId === action.note.trajectoryId)
       const rest = state.notes.filter((item) => item.trajectoryId !== action.note.trajectoryId)
-      // 两个字段都清空等于「恢复原名」，顺手把记录也删掉，避免脏数据堆积。
-      if (name === '' && note === '') return { ...state, notes: rest }
-      return { ...state, notes: [...rest, { trajectoryId: action.note.trajectoryId, name, note }] }
+      // 三个字段都空等于「恢复原名」，顺手把记录也删掉，避免脏数据堆积。
+      const tags = existing?.tags ?? []
+      if (name === '' && note === '' && tags.length === 0) return { ...state, notes: rest }
+      // 重命名不丢标签：合并已存的 tags
+      return {
+        ...state,
+        notes: [...rest, { trajectoryId: action.note.trajectoryId, name, note, tags }],
+      }
+    }
+
+    case 'note/tags': {
+      const tags = [...new Set(action.tags.map((tag) => tag.trim()).filter(Boolean))]
+      const existing = state.notes.find((item) => item.trajectoryId === action.trajectoryId)
+      const rest = state.notes.filter((item) => item.trajectoryId !== action.trajectoryId)
+      const name = existing?.name ?? ''
+      const note = existing?.note ?? ''
+      if (tags.length === 0 && name === '' && note === '') return { ...state, notes: rest }
+      return { ...state, notes: [...rest, { trajectoryId: action.trajectoryId, name, note, tags }] }
     }
 
     case 'note/batch': {
@@ -255,7 +272,12 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       const rest = state.notes.filter(
         (item) => !incoming.has(item.trajectoryId) && !blanked.has(item.trajectoryId),
       )
-      return { ...state, notes: [...rest, ...incoming.values()] }
+      // 批量命名不该把已有标签冲掉：合并进各条记录
+      const merged = [...incoming.values()].map((note) => ({
+        ...note,
+        tags: state.notes.find((item) => item.trajectoryId === note.trajectoryId)?.tags ?? [],
+      }))
+      return { ...state, notes: [...merged, ...rest] }
     }
 
     case 'note/clear':

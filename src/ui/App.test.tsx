@@ -145,6 +145,34 @@ describe('App smoke', () => {
     expect(await screen.findByRole('button', { name: /demo-01/ })).toBeTruthy()
   })
 
+  it('tags a session and filters the list by tag', async () => {
+    const { user } = setup()
+    await loadSamples(user)
+    // 「全部」在问题清单的严重度筛选里也有；标签筛选行以容器存在与否判断
+    expect(document.querySelector('.tag-filter')).toBeNull()
+
+    // 给第一条打标签
+    const item = await screen.findByRole('button', { name: /demo-01/ })
+    const row = item.closest('.session-row') as HTMLElement
+    await user.click(within(row).getByRole('button', { name: '重命名会话' }))
+    await user.type(within(row).getByLabelText('标签（逗号分隔）'), '回归, prompt-v3')
+    await user.click(within(row).getByRole('button', { name: '保存' }))
+
+    // 行内 chips + 筛选行出现（行内与筛选行都有「回归」，取筛选行的）
+    await screen.findAllByText('回归')
+    const filterRow = document.querySelector('.tag-filter') as HTMLElement
+    expect(filterRow).toBeTruthy()
+    await user.click(within(filterRow).getByRole('button', { name: '回归' }))
+
+    // 只剩打了该标签的一条；计数显示 1/4
+    await waitFor(() => expect(screen.getAllByRole('button', { name: /demo-0/ })).toHaveLength(1))
+    expect(screen.getByText('1/4')).toBeTruthy()
+
+    // 回到「全部」恢复（同样取标签筛选行的）
+    await user.click(within(filterRow).getByRole('button', { name: '全部' }))
+    await waitFor(() => expect(screen.getAllByRole('button', { name: /demo-0/ })).toHaveLength(4))
+  })
+
   it('batch-renames the selected sessions with a prefix', async () => {
     const { user } = setup()
     await loadSamples(user)

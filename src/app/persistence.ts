@@ -140,11 +140,11 @@ function isPackVariant(value: unknown): value is PackVariant {
 function isSessionNote(value: unknown): value is SessionNote {
   if (!value || typeof value !== 'object') return false
   const record = value as Record<string, unknown>
-  return (
-    typeof record.trajectoryId === 'string' &&
-    typeof record.name === 'string' &&
-    typeof record.note === 'string'
-  )
+  if (!(typeof record.trajectoryId === 'string' && typeof record.name === 'string' && typeof record.note === 'string'))
+    return false
+  // tags 可选（旧数据没有）；存在则必须是字符串数组
+  if (record.tags === undefined) return true
+  return Array.isArray(record.tags) && record.tags.every((tag) => typeof tag === 'string')
 }
 
 export function createPersistence(store: StorageLike | null, telemetry?: Telemetry): PersistencePort {

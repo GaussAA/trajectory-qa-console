@@ -139,6 +139,45 @@ describe('persistence', () => {
     expect(parsePackVariants({ garbage: true })).toEqual([])
   })
 
+  it('tolerates legacy notes without tags and keeps tag data', () => {
+    const store = createMemoryStorage()
+    const port = createPersistence(store)
+
+    store.setItem(
+      STORAGE_KEYS.annotations,
+      JSON.stringify({
+        schemaVersion: 1,
+        data: [{ trajectoryId: 't1', name: 'n', note: '' }],
+      }),
+    )
+    store.setItem(
+      STORAGE_KEYS.annotations,
+      JSON.stringify({
+        schemaVersion: 1,
+        data: [{ trajectoryId: 't1', name: 'n', note: '', tags: ['回归'] }],
+      }),
+    )
+    // 注：notes 走的是 sessionNotes 键，这里直接验证其读写路径
+    port.saveSessionNotes([
+      { trajectoryId: 't1', name: 'n', note: '', tags: ['回归'] },
+      { trajectoryId: 't2', name: 'n2', note: 'x' },
+    ])
+    expect(port.loadSessionNotes()).toEqual([
+      { trajectoryId: 't1', name: 'n', note: '', tags: ['回归'] },
+      { trajectoryId: 't2', name: 'n2', note: 'x' },
+    ])
+
+    // tags 字段类型错误 → 整条丢弃
+    store.setItem(
+      STORAGE_KEYS.sessionNotes,
+      JSON.stringify({
+        schemaVersion: 1,
+        data: [{ trajectoryId: 'bad', name: 'n', note: '', tags: 'not-an-array' }],
+      }),
+    )
+    expect(port.loadSessionNotes()).toEqual([])
+  })
+
   it('works with no storage at all', () => {
     const port = createPersistence(null)
     expect(port.loadPack()).toBe(DEFAULT_PACK)

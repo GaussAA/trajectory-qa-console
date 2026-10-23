@@ -163,6 +163,8 @@ export interface SessionNote {
   trajectoryId: string
   name: string
   note: string
+  /** 组织用标签：筛选列表，不进评分与报告。 */
+  tags?: string[]
 }
 
 export interface Annotation {

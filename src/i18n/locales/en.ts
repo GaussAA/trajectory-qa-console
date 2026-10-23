@@ -86,6 +86,9 @@ export const en: Record<MessageKey, string> = {
   'common.save': 'Save',
 
   'session.rename': 'Rename session',
+  'session.tags': 'Tags (comma separated)',
+  'session.tagsPlaceholder': 'e.g. regression, prompt-v3',
+  'session.filterAll': 'All',
   'session.renameHint': 'Rename / add a note (or double-click the item)',
   'session.name': 'Session name',
   'session.note': 'Session note',

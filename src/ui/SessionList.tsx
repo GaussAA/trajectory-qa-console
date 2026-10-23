@@ -14,8 +14,10 @@ interface Props {
   notes: SessionNote[]
   selectedId: string | null
   onSelect: (id: string) => void
-  /** 保存重命名与备注；空名称 + 空备注表示恢复原名。 */
+  /** 保存重命名与备注；三字段皆空表示恢复原名。 */
   onRename: (trajectoryId: string, name: string, note: string) => void
+  /** 设置轨迹标签（组织用，不进评分与报告）。 */
+  onSetTags: (trajectoryId: string, tags: string[]) => void
   /** 批量命名：一次提交多条，避免逐条 dispatch 造成多次重算。 */
   onBatchRename: (notes: SessionNote[]) => void
   /** 批量移除会话（工作区层面，不影响已落盘的数据）。 */
@@ -31,6 +33,7 @@ export function SessionList({
   selectedId,
   onSelect,
   onRename,
+  onSetTags,
   onBatchRename,
   onRemove,
   onAdd,
@@ -40,6 +43,8 @@ export function SessionList({
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draftName, setDraftName] = useState('')
   const [draftNote, setDraftNote] = useState('')
+  const [draftTags, setDraftTags] = useState('')
+  const [tagFilter, setTagFilter] = useState<string | null>(null)
   const nameRef = useRef<HTMLInputElement>(null)
 
   const [selecting, setSelecting] = useState(false)
@@ -68,6 +73,22 @@ export function SessionList({
     () => sessions.filter((session) => picked.has(session.id)),
     [sessions, picked],
   )
+
+  /** 已载入会话身上的全部标签：按出现次数排序，作为筛选 chips。 */
+  const allTags = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const session of sessions) {
+      for (const tag of noteOf(notes, session.trajectory)?.tags ?? []) {
+        counts.set(tag, (counts.get(tag) ?? 0) + 1)
+      }
+    }
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([tag]) => tag)
+  }, [sessions, notes])
+
+  const visibleSessions = useMemo(() => {
+    const tagsOf = (session: SessionAnalysis) => noteOf(notes, session.trajectory)?.tags ?? []
+    return tagFilter ? sessions.filter((session) => tagsOf(session).includes(tagFilter)) : sessions
+  }, [sessions, notes, tagFilter])
 
   const previewNames = useMemo(
     () =>
@@ -100,11 +121,19 @@ export function SessionList({
     const existing = noteOf(notes, session.trajectory)
     setDraftName(existing?.name ?? '')
     setDraftNote(existing?.note ?? '')
+    setDraftTags((existing?.tags ?? []).join(', '))
     setEditingId(session.id)
   }
 
   const commit = (session: SessionAnalysis) => {
     onRename(session.trajectory.id, draftName, draftNote)
+    onSetTags(
+      session.trajectory.id,
+      draftTags
+        .split(/[,，]/)
+        .map((tag) => tag.trim())
+        .filter(Boolean),
+    )
     setEditingId(null)
   }
 
@@ -122,7 +151,9 @@ export function SessionList({
     <section className="panel session-panel glass">
       <header className="panel-head">
         <span className="panel-title">{t('session.title')}</span>
-        <span className="panel-sub">{sessions.length}</span>
+        <span className="panel-sub">
+          {tagFilter ? `${visibleSessions.length}/${sessions.length}` : sessions.length}
+        </span>
         <span className="grow" />
         <button
           type="button"
@@ -135,8 +166,32 @@ export function SessionList({
         </button>
       </header>
 
+      {allTags.length > 0 && (
+        <div className="tag-filter" role="group" aria-label={t('session.tags')}>
+          <button
+            type="button"
+            className={cx('tag-chip', tagFilter === null && 'active')}
+            aria-pressed={tagFilter === null}
+            onClick={() => setTagFilter(null)}
+          >
+            {t('session.filterAll')}
+          </button>
+          {allTags.map((tag) => (
+            <button
+              key={tag}
+              type="button"
+              className={cx('tag-chip', tagFilter === tag && 'active')}
+              aria-pressed={tagFilter === tag}
+              onClick={() => setTagFilter((current) => (current === tag ? null : tag))}
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="session-list">
-        {sessions.map((session) => {
+        {visibleSessions.map((session) => {
           const card = cards.get(session.id)
           const color = card ? (GRADE_COLOR[card.grade] ?? '#e9eef8') : '#e9eef8'
           const name = labelOf(notes, session.trajectory)
@@ -188,6 +243,15 @@ export function SessionList({
                   ) : (
                     <span className="session-meta">{meta}</span>
                   )}
+                  {(noteOf(notes, session.trajectory)?.tags ?? []).length > 0 && (
+                    <span className="session-tags">
+                      {(noteOf(notes, session.trajectory)?.tags ?? []).map((tag) => (
+                        <span key={tag} className="tag-chip mini">
+                          {tag}
+                        </span>
+                      ))}
+                    </span>
+                  )}
                 </span>
                 {card !== undefined && card.counts.error > 0 && (
                   <span className="session-badge">{card.counts.error}</span>
@@ -234,6 +298,13 @@ export function SessionList({
                     onChange={(event) => setDraftNote(event.target.value)}
                     placeholder={t('session.notePlaceholder')}
                     aria-label={t('session.note')}
+                    maxLength={120}
+                  />
+                  <input
+                    value={draftTags}
+                    onChange={(event) => setDraftTags(event.target.value)}
+                    placeholder={t('session.tagsPlaceholder')}
+                    aria-label={t('session.tags')}
                     maxLength={120}
                   />
                   <div className="session-editor-actions">

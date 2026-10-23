@@ -277,3 +277,50 @@
   border-color: rgba(251, 113, 133, 0.32);
   background: rgba(251, 113, 133, 0.08);
 }
+
+/* ---------- 标签 ---------- */
+
+.tag-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 10px 2px;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(148, 163, 184, 0.06);
+  color: var(--text-mute);
+  font-size: 9.5px;
+  cursor: pointer;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
+}
+
+.tag-chip:hover {
+  color: var(--text-dim);
+}
+
+.tag-chip.active {
+  color: #d9fff8;
+  border-color: rgba(94, 234, 212, 0.35);
+  background: rgba(94, 234, 212, 0.12);
+}
+
+.tag-chip.mini {
+  padding: 0 6px;
+  font-size: 8.5px;
+  cursor: default;
+}
+
+.session-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 2px;
+}
