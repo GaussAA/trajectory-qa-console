@@ -170,16 +170,22 @@ describe('main', () => {
     }
   })
 
-  it('refuses an HTML comparison instead of writing a half report', async () => {
+  it('writes an HTML comparison with --compare --format html', async () => {
     const dir = tempDir()
     trace(dir, 'a.json', CLEAN)
     trace(dir, 'b.json', BROKEN)
     const out = join(dir, 'cmp-html')
     const { io, chunks } = capture()
 
-    expect(await main([dir, '--compare', '--format', 'html', '--out', out], io)).toBe(EXIT.error)
-    expect(chunks.err).toContain('只支持 md / json')
-    expect(existsSync(join(out, 'compare.html'))).toBe(false)
+    expect(await main([dir, '--compare', '--format', 'html', '--out', out, '--quiet'], io)).toBe(EXIT.ok)
+
+    expect(existsSync(join(out, 'compare.html'))).toBe(true)
+    expect(existsSync(join(out, 'compare.md'))).toBe(false)
+    const html = readFileSync(join(out, 'compare.html'), 'utf8')
+    expect(html.startsWith('<!doctype html>')).toBe(true)
+    expect(html).toContain('轨迹对比报告')
+    expect(html).not.toMatch(/<script/i)
+    expect(chunks.out).toContain('compare.html')
   })
 
   it('exits 2 when the output directory cannot be created', async () => {

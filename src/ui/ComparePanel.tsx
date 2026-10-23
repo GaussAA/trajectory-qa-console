@@ -5,6 +5,7 @@ import type { Finding, SessionNote, Step } from '../core/model'
 import { useI18n } from '../i18n'
 import { downloadFile, nowStamp } from '../lib/format'
 import { buildComparisonReport } from '../lib/report'
+import { buildComparisonHtml } from '../lib/comparison-html'
 import type { MessageKey } from '../i18n'
 import { cx, truncate } from '../lib/format'
 import { Icon } from './Icons'
@@ -90,6 +91,15 @@ export function ComparePanel({ sessions, cards, notes = [], initialBaseId, onClo
     const session = sessions.find((item) => item.id === id)
     return session ? titleOf(session) : id
   }
+  /** 报告入口的重命名口径：与导出 bundle 保持一致。 */
+  const withName = (session: SessionAnalysis, card: ScoreCard) => {
+    const custom = notes.find((note) => note.trajectoryId === session.trajectory.id)?.name
+    return {
+      trajectory:
+        custom && custom.trim() !== '' ? { ...session.trajectory, label: custom } : session.trajectory,
+      card,
+    }
+  }
 
   const findingList = (items: Finding[], tone: string) => (
     <ul className="compare-finding-list">
@@ -121,17 +131,40 @@ export function ComparePanel({ sessions, cards, notes = [], initialBaseId, onClo
             const baseCard = cards.get(base.id)
             const targetCard = cards.get(target.id)
             if (!baseCard || !targetCard) return
-            const markdown = buildComparisonReport({
-              base: { trajectory: base.trajectory, card: baseCard },
-              target: { trajectory: target.trajectory, card: targetCard },
+            const input = {
+              base: withName(base, baseCard),
+              target: withName(target, targetCard),
               generatedAt: new Date(),
               locale,
-            })
-            downloadFile(`trajectory-compare-${nowStamp()}.md`, markdown, 'text/markdown')
+            }
+            downloadFile(`trajectory-compare-${nowStamp()}.md`, buildComparisonReport(input), 'text/markdown')
           }}
         >
           <Icon name="download" size={12} />
           {t('compare.export')}
+        </button>
+        <button
+          type="button"
+          className="btn ghost sm"
+          title={t('action.htmlHint')}
+          onClick={() => {
+            const baseCard = cards.get(base.id)
+            const targetCard = cards.get(target.id)
+            if (!baseCard || !targetCard) return
+            downloadFile(
+              `trajectory-compare-${nowStamp()}.html`,
+              buildComparisonHtml({
+                base: withName(base, baseCard),
+                target: withName(target, targetCard),
+                generatedAt: new Date(),
+                locale,
+              }),
+              'text/html',
+            )
+          }}
+        >
+          <Icon name="download" size={12} />
+          HTML
         </button>
         <button type="button" className="btn ghost sm" onClick={onClose}>
           <Icon name="close" size={12} />

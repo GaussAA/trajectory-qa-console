@@ -4,22 +4,22 @@
 
 ## 领域词汇
 
-| 术语 | 含义 |
-| --- | --- |
-| **轨迹（Trajectory）** | 一次 Agent 运行的完整消息序列，含 meta（模型、起止时间、token）。 |
-| **步（Step）** | 轨迹中的一条消息，已归一为 `role / text / reasoning / toolCalls / result`。 |
-| **工具调用（ToolCall）** | 助手发起的调用；`argsValid` 为 false 表示参数不是合法 JSON。 |
-| **工具结果（ToolResult）** | 由 tool 消息承载的返回值；`isError` 来自显式标记或 `Error:` 前缀。 |
-| **配对（Pairing）** | 用 call id 把结果挂回调用；没有 id 时才按函数名兜底，悬空 id 只报告不猜。 |
-| **发现（Finding）** | 一次规则命中：规则 id、维度、严重度、步号、证据、扣分。 |
-| **维度（Dimension）** | 质检口径，带权重与颜色；默认四维：结构 / 执行 / 效率 / 语义。 |
-| **规则（Rule）** | 数据：`scope + expr + message`，不含代码。 |
-| **规则包（RulePack）** | 维度 + 规则 + 版本，可在界面内编辑、导入导出。 |
-| **评分卡（ScoreCard）** | 派生结果：维度分、加权分、封顶分、等级、问题计数。 |
-| **错误封顶（Error gate）** | 按「不同 error 级规则数」限制总分：≥1→74、≥3→54、≥5→39。 |
-| **会话分析（SessionAnalysis）** | 一条轨迹的质检产物：指标、发现、规则异常、耗时诊断。 |
-| **工作区（Workspace）** | 会话集合 + 选中态 + 规则包 + 人工标注 + 导入问题。 |
-| **分析端口（Analyzer port）** | `analyze(request, signal)`；同步 adapter 与 worker adapter 两个实现。 |
+| 术语                            | 含义                                                                        |
+| ------------------------------- | --------------------------------------------------------------------------- |
+| **轨迹（Trajectory）**          | 一次 Agent 运行的完整消息序列，含 meta（模型、起止时间、token）。           |
+| **步（Step）**                  | 轨迹中的一条消息，已归一为 `role / text / reasoning / toolCalls / result`。 |
+| **工具调用（ToolCall）**        | 助手发起的调用；`argsValid` 为 false 表示参数不是合法 JSON。                |
+| **工具结果（ToolResult）**      | 由 tool 消息承载的返回值；`isError` 来自显式标记或 `Error:` 前缀。          |
+| **配对（Pairing）**             | 用 call id 把结果挂回调用；没有 id 时才按函数名兜底，悬空 id 只报告不猜。   |
+| **发现（Finding）**             | 一次规则命中：规则 id、维度、严重度、步号、证据、扣分。                     |
+| **维度（Dimension）**           | 质检口径，带权重与颜色；默认四维：结构 / 执行 / 效率 / 语义。               |
+| **规则（Rule）**                | 数据：`scope + expr + message`，不含代码。                                  |
+| **规则包（RulePack）**          | 维度 + 规则 + 版本，可在界面内编辑、导入导出。                              |
+| **评分卡（ScoreCard）**         | 派生结果：维度分、加权分、封顶分、等级、问题计数。                          |
+| **错误封顶（Error gate）**      | 按「不同 error 级规则数」限制总分：≥1→74、≥3→54、≥5→39。                    |
+| **会话分析（SessionAnalysis）** | 一条轨迹的质检产物：指标、发现、规则异常、耗时诊断。                        |
+| **工作区（Workspace）**         | 会话集合 + 选中态 + 规则包 + 人工标注 + 导入问题。                          |
+| **分析端口（Analyzer port）**   | `analyze(request, signal)`；同步 adapter 与 worker adapter 两个实现。       |
 
 ## 不变量
 
@@ -42,14 +42,14 @@ src/lib/      格式化与报告文本
 
 ### 命令行（`src/cli`）
 
-| 文件 | 职责 |
-|---|---|
-| `args.ts` | 参数解析，错误以 `UsageErrorCode` 返回（不含文案） |
-| `collect.ts` | 目录递归展开、跳过依赖/隐藏目录、超限即失败 |
-| `batch.ts` | 逐文件 `analyze` + 评分 + 两份报告 + 门禁判定（只算，不打印） |
-| `summary.ts` | 终端表格与帮助（CJK 按两列对齐） |
-| `main.ts` | 参数 → 收集 → 批处理 → 打印/落盘 → 退出码 |
-| `bin.ts` | 进程边界：argv、`process.exitCode`、未捕获异常 |
+| 文件         | 职责                                                          |
+| ------------ | ------------------------------------------------------------- |
+| `args.ts`    | 参数解析，错误以 `UsageErrorCode` 返回（不含文案）            |
+| `collect.ts` | 目录递归展开、跳过依赖/隐藏目录、超限即失败                   |
+| `batch.ts`   | 逐文件 `analyze` + 评分 + 两份报告 + 门禁判定（只算，不打印） |
+| `summary.ts` | 终端表格与帮助（CJK 按两列对齐）                              |
+| `main.ts`    | 参数 → 收集 → 批处理 → 打印/落盘 → 退出码                     |
+| `bin.ts`     | 进程边界：argv、`process.exitCode`、未捕获异常                |
 
 规则包：内置中文包为默认；`packs/builtin-en.json` 是结构完全等价的英文包，
 `--pack en` 直接选用（界面可从规则抽屉导入同一份文件）。翻译只改文案，
@@ -164,7 +164,9 @@ node dist-cli/qa.mjs a.json b.json --compare --fail-below 80    # 只卡「对�
 - 出口：顶栏「HTML 报告」按钮；CLI `--format html`（只写 `report.html`）、
   `--format all`（md + json + html）。
 - 与 Markdown / JSON 同源（同一 `ReportInput`），三份数字不会分叉。
-- 对比报告暂无 HTML：`--compare --format html` 明确报错，不写残缺产物（ADR-0016）。
+- 对比报告同样有 HTML：`buildComparisonHtml`（`comparison-html.ts`），
+  界面对比面板「HTML」按钮 / CLI `--compare --format html` 写 `compare.html`；
+  共享样式在 `report-style.ts`，两份报告同一副面孔（ADR-0016）。
 - `ReportBundle.html` 随会话数线性增长；三条约 20 KB。
 
 ## 质量门槛

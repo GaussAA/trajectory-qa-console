@@ -11,6 +11,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { analyze } from '../core/analysis'
 import { buildComparisonJson, buildComparisonReport } from '../lib/report'
+import { buildComparisonHtml } from '../lib/comparison-html'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
 import { BUILTIN_PACK_EN } from '../core/rules/builtin-pack-en'
 import { validatePack } from '../core/rules/contract'
@@ -312,15 +313,12 @@ export async function main(
       stderr(`✗ ${t('cli.err.compareNeedsTwo', { count: result.entries.length })}\n`)
       return EXIT.error
     }
-    // 对比报告只有 md / json 两种形态：宁可明确拒绝，也不写一个残缺的 HTML。
-    if (artifactsFor(options.format).includes('html')) {
-      stderr(`✗ ${t('cli.err.compareNoHtml')}\n`)
-      return EXIT.error
-    }
     const [base, target] = result.entries as [(typeof result.entries)[0], (typeof result.entries)[0]]
     const generatedAt = new Date()
-    const markdown = buildComparisonReport({ base, target, generatedAt, locale })
-    const json = buildComparisonJson({ base, target, generatedAt, locale })
+    const comparisonInput = { base, target, generatedAt, locale }
+    const markdown = buildComparisonReport(comparisonInput)
+    const json = buildComparisonJson(comparisonInput)
+    const html = buildComparisonHtml(comparisonInput)
 
     stdout(
       `${t('cli.compareLine', {
@@ -336,6 +334,7 @@ export async function main(
       const written = writeArtifacts(resolve(options.out), 'compare', artifactsFor(options.format), {
         md: markdown,
         json,
+        html,
       })
       for (const path of written) stdout(`${t('cli.wrote', { path })}\n`)
     }

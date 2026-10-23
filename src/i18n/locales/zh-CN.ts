@@ -382,7 +382,6 @@ export const zhCN = {
   'report.compare.noDifferences': '两条轨迹没有差异。',
   'cli.optCompare': '--compare                对比两份轨迹（第一份为基准）',
   'cli.compareLine': '对比：{base} {baseScore} → {target} {targetScore}（{delta}）',
-  'cli.err.compareNoHtml': '--compare 只支持 md / json，HTML 目前仅用于逐会话报告',
   'cli.err.compareNeedsTwo': '对比需要恰好两条可分析轨迹，当前 {count} 条',
   'report.advice': '建议',
   'report.adviceCount': '{count} 处',

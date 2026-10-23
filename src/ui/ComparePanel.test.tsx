@@ -118,6 +118,32 @@ describe('ComparePanel', () => {
     }
   })
 
+  it('exports the comparison as a self-contained html', async () => {
+    const bodies: string[] = []
+    const originalUrl = URL.createObjectURL
+    const originalRevoke = URL.revokeObjectURL
+    URL.createObjectURL = ((blob: Blob) => {
+      void blob.text().then((text) => bodies.push(text))
+      return 'blob:html'
+    }) as typeof URL.createObjectURL
+    URL.revokeObjectURL = (() => undefined) as typeof URL.revokeObjectURL
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
+
+    try {
+      setup()
+      fireEvent.click(screen.getByRole('button', { name: 'HTML' }))
+      await waitFor(() => expect(bodies).toHaveLength(1))
+      expect(bodies[0]?.startsWith('<!doctype html>')).toBe(true)
+      expect(bodies[0]).toContain('轨迹对比报告')
+      expect(bodies[0]).not.toMatch(/<script/i)
+      expect(click).toHaveBeenCalled()
+    } finally {
+      URL.createObjectURL = originalUrl
+      URL.revokeObjectURL = originalRevoke ?? (() => undefined)
+      click.mockRestore()
+    }
+  })
+
   it('renders in English', () => {
     setup('en')
     expect(screen.getByText('Trace comparison')).toBeTruthy()

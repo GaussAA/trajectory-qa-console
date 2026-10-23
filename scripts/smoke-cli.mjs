@@ -84,6 +84,15 @@ try {
   check('写出 compare.md', existsSync(join(cmpDir, 'compare.md')))
   check('对比报告含标题', readFileSync(join(cmpDir, 'compare.md'), 'utf8').startsWith('# '))
 
+  const cmpHtmlDir = join(outDir, 'cmp-html')
+  const cmpHtml = run(['examples/healthy.json', 'examples/tool-failure.json', '--compare', '--format', 'html', '--out', cmpHtmlDir, '--quiet'])
+  check('--compare --format html 退出码 0', cmpHtml.code === 0, `实际 ${cmpHtml.code}：${cmpHtml.stderr.trim()}`)
+  const cmpHtmlText = readFileSync(join(cmpHtmlDir, 'compare.html'), 'utf8')
+  check(
+    '对比 HTML 自包含（无外链、无脚本）',
+    cmpHtmlText.startsWith('<!doctype html>') && !/<script/i.test(cmpHtmlText) && !/<link\b/i.test(cmpHtmlText),
+  )
+
   const cmpBad = run(['examples/healthy.json', '--compare', '--quiet'])
   check('单文件对比退出码 2', cmpBad.code === 2, `实际 ${cmpBad.code}`)
 

@@ -3,7 +3,8 @@ import { scoreTrajectory } from '../core/analysis/score'
 import { parseTrajectory } from '../core/parsing'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
 import { runRules } from '../core/rules/engine'
-import { buildHtmlReport, escapeHtml } from './report-html'
+import { buildHtmlReport } from './report-html'
+import { escapeHtml } from './report-style'
 
 const TRACE = JSON.stringify([
   { role: 'system', content: '你是助手' },

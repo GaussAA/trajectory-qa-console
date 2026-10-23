@@ -33,11 +33,24 @@ Markdown 不够体面，界面截图又没法检索。
 打印态不改就会在白纸上印出一块黑饼；表格首列用了浅色文字，白纸上不可见——
 两处都在打印块里显式覆盖，并有截图核对。
 
+## 修订（同日）：对比报告也出 HTML
+
+原决定「对比报告暂不出 HTML」在当天即被推翻——出口都齐了，唯独对比不能外发，
+反而是最常被问「能不能发我看看」的场景。已落地 `buildComparisonHtml`
+（`src/lib/comparison-html.ts`）：
+
+- 与 Markdown 对比报告同一份 `ComparisonInput`，直接读 `core/compare` 的 diff，
+  不从 Markdown 做文本替换；
+- 双分数环 + 差值徽章、维度增量表、问题三分（新增/已修复/仍在）、
+  步骤差异表、只针对「对照新增」的建议；
+- 共享样式抽到 `src/lib/report-style.ts`（STYLE / escapeHtml / toneOf / clampPercent），
+  两份报告长同一副面孔，不存在第二套设计令牌。
+
+出口：界面对比面板新增「HTML」按钮；CLI `--compare --format html` 写 `compare.html`，
+`--format all` 时 md + json + html 三份齐出。`cli.err.compareNoHtml` 已删除。
+
 ## 取舍
 
-- **对比报告暂不出 HTML**：`--compare --format html` 明确报错
-  （`cli.err.compareNoHtml`），宁可拒绝也不写一个残缺的半成品；后续如需要，
-  应作为独立的对比 HTML 生成器，而不是在 Markdown 里做文本替换。
 - HTML 体积随会话数线性增长（三条约 20 KB），超长轨迹的证据摘录按既有
   截断规则处理；暂不加分页。
 

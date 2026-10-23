@@ -390,7 +390,6 @@ export const en: Record<MessageKey, string> = {
   'report.compare.noDifferences': 'The two traces are identical.',
   'cli.optCompare': '--compare                compare two traces (first one is the baseline)',
   'cli.compareLine': 'Compare: {base} {baseScore} → {target} {targetScore} ({delta})',
-  'cli.err.compareNoHtml': '--compare supports md / json only; HTML is for per-session reports',
   'cli.err.compareNeedsTwo': 'Comparison needs exactly two analyzable traces, got {count}',
   'report.advice': 'Recommendations',
   'report.adviceCount': '{count}×',
