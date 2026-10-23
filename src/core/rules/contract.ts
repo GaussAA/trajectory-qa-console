@@ -182,6 +182,19 @@ export const rulePackSchema = z.object({
   rules: z.array(ruleSchema).max(PACK_LIMITS.maxRules),
 })
 
+// ---------- type / schema agreement ----------
+
+type Equals<X, Y> = (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y ? 1 : 2 ? true : false
+type Assert<T extends true> = T
+
+/** The hand-written `RulePack` type and the zod schema must describe exactly
+ *  the same shape. Adding a field to only one of them used to fail silently —
+ *  at runtime, inside a pack someone imported. Now it fails here, at compile
+ *  time, in the face of whoever made the change.
+ *
+ *  Drag: `Equals<RulePack, z.output<typeof rulePackSchema>>` */
+export type PackSchemaAgrees = Assert<Equals<RulePack, z.output<typeof rulePackSchema>>>
+
 export interface PackError {
   path: string
   message: string
@@ -229,7 +242,8 @@ export function validatePack(input: unknown): PackValidation {
     }
   }
 
-  const pack = parsed.data as RulePack
+  // No cast: `PackSchemaAgrees` proves the schema output *is* a RulePack.
+  const pack: RulePack = parsed.data
   const errors: PackError[] = []
   const dimensionIds = new Set<string>()
 
