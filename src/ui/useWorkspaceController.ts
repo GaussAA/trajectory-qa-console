@@ -6,11 +6,12 @@
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import type { ScoreCard, SessionAnalysis } from '../core/analysis'
-import type { Annotation, RulePack, SessionNote, Severity } from '../core/model'
+import type { Annotation, PackVariant, RulePack, SessionNote, Severity } from '../core/model'
 import { useI18n, type MessageKey, type TranslateParams } from '../i18n'
 import { buildStressTrace } from '../core/sample'
 import { createAnalyzer, type AnalyzerPort } from '../app/analyzer'
 import { buildDiagnostics, buildReportBundle, downloadText } from '../app/exporters'
+import { MAX_PACK_VARIANTS } from '../app/persistence'
 import { readFiles, sampleInputs, type IngestFile, type IngestIssue, type TextInput } from '../app/ingest'
 import type { PersistencePort } from '../app/persistence'
 import type { Telemetry, TelemetryEvent } from '../app/telemetry'
@@ -275,6 +276,49 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
     [telemetry],
   )
 
+  /** 存变体：包由调用方给定（抽屉存的是含未应用调参的草稿）。 */
+  const saveVariant = useCallback(
+    (name: string, pack: RulePack): PackVariant | null => {
+      const trimmed = name.trim()
+      if (trimmed === '') return null
+      if (stateRef.current.variants.length >= MAX_PACK_VARIANTS) {
+        setToast({ key: 'variants.limit', params: { count: MAX_PACK_VARIANTS } })
+        return null
+      }
+      const variant: PackVariant = {
+        id: uid(),
+        name: trimmed,
+        // 存深拷贝：之后手改包不该悄悄改掉已存的口径。
+        pack: JSON.parse(JSON.stringify(pack)) as RulePack,
+        savedAt: new Date().toISOString(),
+      }
+      dispatch({ type: 'variant/save', variant })
+      telemetry.emit('variant:save', { name: trimmed, rules: pack.rules.length })
+      setToast({ key: 'variants.saved', params: { name: trimmed } })
+      return variant
+    },
+    [telemetry],
+  )
+
+  const applyVariant = useCallback(
+    (id: string) => {
+      const variant = stateRef.current.variants.find((item) => item.id === id)
+      if (!variant) return
+      dispatch({ type: 'variant/apply', id })
+      telemetry.emit('variant:apply', { name: variant.name, rules: variant.pack.rules.length })
+      setToast({ key: 'variants.applied', params: { name: variant.name } })
+    },
+    [telemetry],
+  )
+
+  const removeVariant = useCallback(
+    (id: string) => {
+      dispatch({ type: 'variant/remove', id })
+      telemetry.emit('variant:remove')
+    },
+    [telemetry],
+  )
+
   const removeAnnotation = useCallback((id: string) => {
     dispatch({ type: 'annotation/remove', id })
   }, [])
@@ -351,6 +395,9 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
       removeAnnotation,
       setSessionNote,
       setSessionNotes,
+      saveVariant,
+      applyVariant,
+      removeVariant,
       removeSessions,
       exportMarkdown,
       exportJson,

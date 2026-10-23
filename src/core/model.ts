@@ -149,6 +149,15 @@ export interface RuleIssue {
   message: string
 }
 
+/** 命名保存的规则包变体：调参满意后存一份，随时切回。 */
+export interface PackVariant {
+  id: string
+  name: string
+  pack: RulePack
+  /** ISO 时间串：列表里展示「多久之前」。 */
+  savedAt: string
+}
+
 /** 用户给会话起的名字与备注；按 trajectory.id 存，重新导入同一份轨迹仍能认出来。 */
 export interface SessionNote {
   trajectoryId: string

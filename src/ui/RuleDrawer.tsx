@@ -1,8 +1,9 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { EXPR_FUNCTIONS } from '../core/expr'
-import type { RuleIssue, RulePack } from '../core/model'
+import type { PackVariant, RuleIssue, RulePack } from '../core/model'
 import { fieldsForScope, formatPackErrors, validatePack } from '../core/rules/contract'
 import { buildTuningReport, numericLiterals, replaceLiteral, type TuningSession } from '../core/rules/tuning'
+import { formatDateTime } from '../i18n/core'
 import { useI18n } from '../i18n'
 import { downloadFile, nowStamp } from '../lib/format'
 import { Icon } from './Icons'
@@ -14,15 +15,36 @@ interface Props {
   /** 已载入的轨迹：试跑要拿它们真跑一遍，而不是估算。 */
   sessions: TuningSession[]
   ruleIssues: RuleIssue[]
+  /** 已保存的变体与当前生效者；抽屉负责展示，状态归工作区。 */
+  variants?: PackVariant[]
+  activeVariantId?: string | null
   onClose: () => void
   onApply: (pack: RulePack) => void
+  /** 存变体：包由抽屉给定（含未应用的调参草稿）。返回 null 表示被拒（空名/超限）。 */
+  onSaveVariant?: (name: string, pack: RulePack) => unknown
+  onApplyVariant?: (id: string) => void
+  onRemoveVariant?: (id: string) => void
 }
 
-export function RuleDrawer({ open, pack, sessions, ruleIssues, onClose, onApply }: Props) {
-  const { t } = useI18n()
+export function RuleDrawer({
+  open,
+  pack,
+  sessions,
+  ruleIssues,
+  variants = [],
+  activeVariantId = null,
+  onClose,
+  onApply,
+  onSaveVariant,
+  onApplyVariant,
+  onRemoveVariant,
+}: Props) {
+  const { locale, t } = useI18n()
   const [draft, setDraft] = useState('')
   const [errors, setErrors] = useState<string[]>([])
   const [status, setStatus] = useState('')
+  const [variantName, setVariantName] = useState('')
+  const [variantError, setVariantError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
 
@@ -119,6 +141,31 @@ export function RuleDrawer({ open, pack, sessions, ruleIssues, onClose, onApply 
     setDraft(JSON.stringify(parsed, null, 2))
   }
 
+  /** 存变体：存的是**当前草稿**（含未应用的调参）——这是变体的全部意义。 */
+  const saveVariant = () => {
+    const name = variantName.trim()
+    if (name === '') {
+      setVariantError(t('variants.nameRequired'))
+      return
+    }
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(draft)
+    } catch {
+      setVariantError(t('rules.tuneJsonInvalid'))
+      return
+    }
+    const result = validatePack(parsed)
+    if (!result.ok) {
+      setVariantError(t('variants.invalidDraft'))
+      return
+    }
+    setVariantError('')
+    onSaveVariant?.(name, result.pack)
+    setVariantName('')
+    setStatus(t('variants.saved', { name }))
+  }
+
   const uniqueIssues = new Map<string, string>()
   for (const issue of ruleIssues) uniqueIssues.set(`${issue.ruleId}:${issue.message}`, issue.message)
 
@@ -192,6 +239,66 @@ export function RuleDrawer({ open, pack, sessions, ruleIssues, onClose, onApply 
               </ul>
             </div>
           )}
+
+          <section className="variant-section">
+            <h4>{t('variants.title')}</h4>
+            <div className="variant-save-row">
+              <input
+                value={variantName}
+                onChange={(event) => {
+                  setVariantName(event.target.value)
+                  setVariantError('')
+                }}
+                placeholder={t('variants.namePlaceholder')}
+                aria-label={t('variants.save')}
+                maxLength={40}
+              />
+              <button type="button" className="btn ghost sm" onClick={saveVariant}>
+                <Icon name="edit" size={12} />
+                {t('variants.save')}
+              </button>
+            </div>
+            {variantError && <p className="hint warn-text">{variantError}</p>}
+            {variants.length === 0 ? (
+              <p className="hint">{t('variants.empty')}</p>
+            ) : (
+              <ul className="variant-list">
+                {variants.map((variant) => {
+                  const active = variant.id === activeVariantId
+                  return (
+                    <li key={variant.id} className={active ? 'variant-row active' : 'variant-row'}>
+                      <span className="variant-name" title={variant.name}>
+                        {variant.name}
+                        {active && <em>{t('variants.active')}</em>}
+                      </span>
+                      <span className="variant-meta">
+                        {t('variants.ruleCount', { count: variant.pack.rules.length })} ·{' '}
+                        {formatDateTime(locale, new Date(variant.savedAt))}
+                      </span>
+                      <span className="variant-actions">
+                        <button
+                          type="button"
+                          className="btn ghost sm"
+                          onClick={() => onApplyVariant?.(variant.id)}
+                          disabled={active}
+                        >
+                          {t('variants.apply')}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn ghost sm danger"
+                          aria-label={`${t('variants.delete')} ${variant.name}`}
+                          onClick={() => onRemoveVariant?.(variant.id)}
+                        >
+                          {t('variants.delete')}
+                        </button>
+                      </span>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </section>
 
           <details className="drawer-help" open>
             <summary>

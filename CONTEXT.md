@@ -169,6 +169,15 @@ node dist-cli/qa.mjs a.json b.json --compare --fail-below 80    # 只卡「对�
   共享样式在 `report-style.ts`，两份报告同一副面孔（ADR-0016）。
 - `ReportBundle.html` 随会话数线性增长；三条约 20 KB。
 
+### 规则包变体
+
+抽屉「变体」区：把**当前草稿**（含未应用的调参）存成命名变体，随时一键切回。
+
+- 存 `tqa.pack-variants`（同信封、逐条校验、上限 20）；存的是深拷贝。
+- 「生效中」按内容判定：`variant/save|apply` 设置，`pack/apply`（手改包）清空；
+  删变体不动当前包；`workspace/clear` 不清变体（ADR-0017）。
+- 变体只在界面；CLI 仍走 `--pack <文件>`，从抽屉导出即得同一格式。
+
 ## 质量门槛
 
 `pnpm verify` = typecheck + lint + 覆盖率测试 + 构建。覆盖率门槛：行/函数/语句 ≥85%，分支 ≥75%。

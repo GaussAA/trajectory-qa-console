@@ -8,7 +8,7 @@
  */
 
 import { scoreSession, type ScoreCard, type SessionAnalysis } from '../core/analysis'
-import type { Annotation, AppError, RulePack, SessionNote, Trajectory } from '../core/model'
+import type { Annotation, AppError, PackVariant, RulePack, SessionNote, Trajectory } from '../core/model'
 import type { IngestIssue } from './ingest'
 
 export type WorkspacePhase = 'idle' | 'loading' | 'ready'
@@ -22,6 +22,9 @@ export interface WorkspaceState {
   annotations: Annotation[]
   /** 会话重命名与备注，按 trajectory.id 索引（重新导入同一份轨迹仍生效）。 */
   notes: SessionNote[]
+  /** 已保存的规则包变体与当前生效者；清理工作区不清掉它们——变体是口径库。 */
+  variants: PackVariant[]
+  activeVariantId: string | null
   issues: IngestIssue[]
   lastError: AppError | null
 }
@@ -34,12 +37,20 @@ export type WorkspaceAction =
   | { type: 'step/select'; index: number | null }
   | { type: 'workspace/clear' }
   | { type: 'pack/apply'; pack: RulePack }
+  | { type: 'variant/save'; variant: PackVariant }
+  | { type: 'variant/apply'; id: string }
+  | { type: 'variant/remove'; id: string }
   | { type: 'annotation/add'; annotation: Annotation }
   | { type: 'annotation/remove'; id: string }
   | { type: 'note/set'; note: SessionNote }
   | { type: 'note/batch'; notes: SessionNote[] }
   | { type: 'note/clear'; trajectoryId: string }
   | { type: 'session/remove'; ids: string[] }
+
+/** 判断当前包是否就是某个变体存的包：变体保存后未被手改即视为「生效中」。 */
+function samePack(a: RulePack, b: RulePack): boolean {
+  return JSON.stringify(a) === JSON.stringify(b)
+}
 
 /** 展示名：用户起的名字优先，否则回退文件名。 */
 export function labelOf(notes: SessionNote[], trajectory: Trajectory): string {
@@ -56,7 +67,9 @@ export function createInitialState(
   annotations: Annotation[] = [],
   sessions: SessionAnalysis[] = [],
   notes: SessionNote[] = [],
+  variants: PackVariant[] = [],
 ): WorkspaceState {
+  const activeVariantId = variants.find((variant) => samePack(variant.pack, pack))?.id ?? null
   const first = sessions[0] ?? null
   return {
     phase: sessions.length > 0 ? 'ready' : 'idle',
@@ -66,6 +79,8 @@ export function createInitialState(
     pack,
     annotations,
     notes,
+    variants,
+    activeVariantId,
     issues: [],
     lastError: null,
   }
@@ -150,7 +165,36 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       }
 
     case 'pack/apply':
-      return { ...state, pack: action.pack }
+      // 经抽屉改包 = 脱离变体口径：标记为「未对齐」，列表里不再高亮。
+      return { ...state, pack: action.pack, activeVariantId: null }
+
+    case 'variant/save': {
+      const rest = state.variants.filter((variant) => variant.id !== action.variant.id)
+      // 新存的存到最前：最近调的口径最先看到。
+      return {
+        ...state,
+        variants: [action.variant, ...rest],
+        pack: action.variant.pack,
+        activeVariantId: action.variant.id,
+      }
+    }
+
+    case 'variant/apply': {
+      const variant = state.variants.find((item) => item.id === action.id)
+      if (!variant) return state
+      return { ...state, pack: variant.pack, activeVariantId: variant.id }
+    }
+
+    case 'variant/remove': {
+      const variants = state.variants.filter((variant) => variant.id !== action.id)
+      if (variants.length === state.variants.length) return state
+      return {
+        ...state,
+        variants,
+        // 删掉的是生效者：包保持现状（它仍是合法口径），只是不再标「来自变体」。
+        activeVariantId: state.activeVariantId === action.id ? null : state.activeVariantId,
+      }
+    }
 
     case 'annotation/add': {
       const session = state.sessions.find((item) => item.trajectory.id === action.annotation.trajectoryId)

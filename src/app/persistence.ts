@@ -5,7 +5,7 @@
  *  degrades to defaults instead of taking the app down.
  */
 
-import type { Annotation, RulePack, SessionNote } from '../core/model'
+import type { Annotation, PackVariant, RulePack, SessionNote } from '../core/model'
 import { validatePack } from '../core/rules/contract'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
 import type { Telemetry } from './telemetry'
@@ -46,6 +46,7 @@ export const STORAGE_KEYS = {
   pack: 'tqa.pack',
   annotations: 'tqa.annotations',
   sessionNotes: 'tqa.session-notes',
+  packVariants: 'tqa.pack-variants',
   /** Keys written by v0.1 (raw JSON, no envelope). Read once, then migrated. */
   legacyPack: 'tqa.pack.v1',
   legacyAnnotations: 'tqa.annotations.v1',
@@ -91,6 +92,21 @@ export interface PersistencePort {
   saveAnnotations(annotations: Annotation[]): boolean
   loadSessionNotes(): SessionNote[]
   saveSessionNotes(notes: SessionNote[]): boolean
+  loadPackVariants(): PackVariant[]
+  savePackVariants(variants: PackVariant[]): boolean
+}
+
+/** 上限是防线不是功能：变体应是少数几个精心调出来的口径，不是杂物堆。 */
+export const MAX_PACK_VARIANTS = 20
+
+function isPackVariant(value: unknown): value is PackVariant {
+  if (!value || typeof value !== 'object') return false
+  const record = value as Record<string, unknown>
+  if (typeof record.id !== 'string' || typeof record.name !== 'string') return false
+  if (typeof record.savedAt !== 'string') return false
+  if (!record.pack) return false
+  // 规则包本体走既有校验：坏包丢弃，不让一条脏数据拖垮整个列表。
+  return validatePack(record.pack).ok
 }
 
 function isSessionNote(value: unknown): value is SessionNote {
@@ -177,6 +193,23 @@ export function createPersistence(store: StorageLike | null, telemetry?: Telemet
 
     saveSessionNotes(notes) {
       return write(STORAGE_KEYS.sessionNotes, wrap(notes))
+    },
+
+    loadPackVariants() {
+      const raw = read(STORAGE_KEYS.packVariants)
+      if (!raw) return []
+      try {
+        const data = unwrap(raw)
+        if (!Array.isArray(data)) return []
+        return data.filter(isPackVariant)
+      } catch (error) {
+        telemetry?.emit('storage:variants-corrupt', { error: String(error) }, 'warn')
+        return []
+      }
+    },
+
+    savePackVariants(variants) {
+      return write(STORAGE_KEYS.packVariants, wrap(variants))
     },
   }
 }

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import type { PackVariant } from '../core/model'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
 import { STORAGE_KEYS, createMemoryStorage, createPersistence } from './persistence'
 import { createTelemetry } from './telemetry'
@@ -91,6 +92,30 @@ describe('persistence', () => {
     expect(port.loadSessionNotes()).toEqual([{ trajectoryId: 'ok', name: 'n', note: '' }])
   })
 
+  it('round-trips pack variants and drops invalid packs', () => {
+    const store = createMemoryStorage()
+    const port = createPersistence(store)
+
+    const good: PackVariant = {
+      id: 'v1',
+      name: '宽松',
+      pack: { ...DEFAULT_PACK, name: '宽松口径' },
+      savedAt: '2026-10-23T10:00:00.000Z',
+    }
+    expect(port.savePackVariants([good])).toBe(true)
+    expect(port.loadPackVariants()).toEqual([good])
+
+    // 坏包不拖垮整个列表：逐条校验，坏的那条丢掉
+    store.setItem(
+      STORAGE_KEYS.packVariants,
+      JSON.stringify({
+        schemaVersion: 1,
+        data: [good, { id: 'v2', name: '坏包', pack: { nope: true }, savedAt: 'x' }, { nope: true }],
+      }),
+    )
+    expect(port.loadPackVariants()).toEqual([good])
+  })
+
   it('works with no storage at all', () => {
     const port = createPersistence(null)
     expect(port.loadPack()).toBe(DEFAULT_PACK)
@@ -98,5 +123,7 @@ describe('persistence', () => {
     expect(port.savePack(DEFAULT_PACK)).toBe(false)
     expect(port.loadSessionNotes()).toEqual([])
     expect(port.saveSessionNotes([])).toBe(false)
+    expect(port.loadPackVariants()).toEqual([])
+    expect(port.savePackVariants([])).toBe(false)
   })
 })

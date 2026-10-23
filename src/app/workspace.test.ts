@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { analyze, type SessionAnalysis } from '../core/analysis'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
+import type { PackVariant } from '../core/model'
 import { createInitialState, labelOf, noteOf, pickStepFor, scoreCards, workspaceReducer } from './workspace'
 
 const TRACE = JSON.stringify([
@@ -253,5 +254,65 @@ describe('session notes and removal', () => {
     const state = createInitialState(DEFAULT_PACK, [], parsed.value)
     expect(workspaceReducer(state, { type: 'session/remove', ids: ['ghost'] })).toBe(state)
     expect(workspaceReducer(state, { type: 'session/remove', ids: [] })).toBe(state)
+  })
+})
+
+describe('pack variants', () => {
+  const variant = (id: string, name: string): PackVariant => ({
+    id,
+    name,
+    pack: { ...DEFAULT_PACK, name: `variant-${name}` },
+    savedAt: '2026-10-23T10:00:00.000Z',
+  })
+
+  it('saves a variant, activates it and upserts by id', () => {
+    const state = createInitialState(DEFAULT_PACK)
+    const first = variant('v1', '严格')
+    const saved = workspaceReducer(state, { type: 'variant/save', variant: first })
+    expect(saved.variants.map((item) => item.id)).toEqual(['v1'])
+    expect(saved.activeVariantId).toBe('v1')
+    expect(saved.pack.name).toBe('variant-严格')
+
+    // 同 id 再存 = 覆盖，且排到最前
+    const updated = { ...first, name: '严格 v2' }
+    const again = workspaceReducer(saved, { type: 'variant/save', variant: updated })
+    expect(again.variants).toHaveLength(1)
+    expect(again.variants[0]?.name).toBe('严格 v2')
+  })
+
+  it('unlinks the active variant when the pack is applied by hand', () => {
+    const state = createInitialState(DEFAULT_PACK, [], [], [], [variant('v1', '严格')])
+    const linked = workspaceReducer(state, { type: 'variant/apply', id: 'v1' })
+    expect(linked.activeVariantId).toBe('v1')
+
+    const edited = workspaceReducer(linked, { type: 'pack/apply', pack: DEFAULT_PACK })
+    // 手改包 = 脱离变体口径，但变体本身还在
+    expect(edited.activeVariantId).toBeNull()
+    expect(edited.variants).toHaveLength(1)
+  })
+
+  it('keeps the current pack when the active variant is removed', () => {
+    const state = createInitialState(DEFAULT_PACK, [], [], [], [variant('v1', '严格')])
+    const applied = workspaceReducer(state, { type: 'variant/apply', id: 'v1' })
+    const removed = workspaceReducer(applied, { type: 'variant/remove', id: 'v1' })
+
+    expect(removed.variants).toHaveLength(0)
+    expect(removed.activeVariantId).toBeNull()
+    // 删变体不动包：它仍是合法口径
+    expect(removed.pack.name).toBe('variant-严格')
+  })
+
+  it('survives workspace/clear — variants are a library, not scratch data', () => {
+    const state = createInitialState(DEFAULT_PACK, [], [], [], [variant('v1', '严格')])
+    const cleared = workspaceReducer(state, { type: 'workspace/clear' })
+    expect(cleared.variants).toHaveLength(1)
+    // 初始包还不是变体包：未应用前不标记生效
+    expect(cleared.activeVariantId).toBeNull()
+  })
+
+  it('ignores unknown variant ids', () => {
+    const state = createInitialState(DEFAULT_PACK, [], [], [], [variant('v1', '严格')])
+    expect(workspaceReducer(state, { type: 'variant/apply', id: 'ghost' })).toBe(state)
+    expect(workspaceReducer(state, { type: 'variant/remove', id: 'ghost' })).toBe(state)
   })
 })

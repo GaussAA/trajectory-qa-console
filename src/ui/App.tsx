@@ -325,6 +325,11 @@ export default function App({
         pack={state.pack}
         sessions={state.sessions}
         ruleIssues={card?.ruleIssues ?? []}
+        variants={state.variants}
+        activeVariantId={state.activeVariantId}
+        onSaveVariant={actions.saveVariant}
+        onApplyVariant={actions.applyVariant}
+        onRemoveVariant={actions.removeVariant}
         onClose={() => setDrawerOpen(false)}
         onApply={(next) => {
           actions.applyPack(next)

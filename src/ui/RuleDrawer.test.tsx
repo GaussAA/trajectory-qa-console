@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { analyze } from '../core/analysis'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
 import { I18nProvider } from '../i18n'
@@ -47,6 +47,83 @@ function hitCount(container: HTMLElement, ruleId: string): string {
 }
 
 afterEach(cleanup)
+
+describe('RuleDrawer variants', () => {
+  function variantProps() {
+    return {
+      variants: [
+        {
+          id: 'v1',
+          name: '宽松口径',
+          pack: DEFAULT_PACK,
+          savedAt: '2026-10-23T10:00:00.000Z',
+        },
+      ],
+      activeVariantId: null as string | null,
+    }
+  }
+
+  it('saves the current draft (including unapplied tuning) as a variant', async () => {
+    const onSaveVariant = vi.fn()
+    const { container } = setup({ ...variantProps(), onSaveVariant })
+
+    // 先调参（只改草稿，不点「校验并应用」）
+    const input = row(container, 'structure-invalid-args').querySelector('input') as HTMLInputElement
+    fireEvent.change(input, { target: { value: '5' } })
+    await waitFor(() => expect(hitCount(container, 'structure-invalid-args')).toBe('0'))
+
+    fireEvent.change(screen.getByLabelText('存为变体'), { target: { value: '宽松阈值' } })
+    fireEvent.click(screen.getByRole('button', { name: '存为变体' }))
+
+    expect(onSaveVariant).toHaveBeenCalledTimes(1)
+    const [name, savedPack] = onSaveVariant.mock.calls[0] as [string, typeof DEFAULT_PACK]
+    expect(name).toBe('宽松阈值')
+    // 草稿里的阈值进包：未应用也能存
+    const rule = savedPack.rules.find((item) => item.id === 'structure-invalid-args')
+    expect(rule?.expr).toContain('5')
+    expect(screen.getByText('已保存变体「宽松阈值」')).toBeTruthy()
+  })
+
+  it('refuses to save a draft that is not a valid pack', () => {
+    const onSaveVariant = vi.fn()
+    const { container } = setup({ ...variantProps(), onSaveVariant })
+
+    // 解析失败走另一条提示；这里用「能解析但不合法」的包，验证校验失败路径
+    fireEvent.change(container.querySelector('.pack-editor') as HTMLTextAreaElement, {
+      target: { value: '{}' },
+    })
+    fireEvent.change(screen.getByLabelText('存为变体'), { target: { value: '坏包' } })
+    fireEvent.click(screen.getByRole('button', { name: '存为变体' }))
+
+    expect(onSaveVariant).not.toHaveBeenCalled()
+    expect(screen.getByText('当前草稿不是合法规则包，先校验通过再保存')).toBeTruthy()
+  })
+
+  it('applies and removes variants through the callbacks', () => {
+    const onApplyVariant = vi.fn()
+    const onRemoveVariant = vi.fn()
+    setup({
+      ...variantProps(),
+      activeVariantId: 'v1',
+      onApplyVariant,
+      onRemoveVariant,
+    })
+
+    // 生效中的变体「应用」置灰
+    const applyButton = screen.getByRole('button', { name: '应用' }) as HTMLButtonElement
+    expect(applyButton.disabled).toBe(true)
+    expect(screen.getByText('生效中')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: '删除 宽松口径' }))
+    expect(onRemoveVariant).toHaveBeenCalledWith('v1')
+    expect(onApplyVariant).not.toHaveBeenCalled()
+  })
+
+  it('shows the empty hint when nothing is saved', () => {
+    setup()
+    expect(screen.getByText('还没有保存的变体。')).toBeTruthy()
+  })
+})
 
 describe('RuleDrawer tuning panel', () => {
   it('shows real hits for the loaded sessions', async () => {

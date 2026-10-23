@@ -265,3 +265,102 @@
 .tune-gain {
   color: #86efac;
 }
+
+/* ---------- 规则包变体 ---------- */
+
+.variant-section {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(6, 10, 18, 0.4);
+}
+
+.variant-section h4 {
+  margin: 0 0 8px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+}
+
+.variant-save-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.variant-save-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 8px;
+  border-radius: 7px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(8, 12, 20, 0.7);
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.variant-save-row input:focus {
+  outline: 1px solid rgba(94, 234, 212, 0.5);
+  border-color: rgba(94, 234, 212, 0.3);
+}
+
+.variant-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.variant-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.variant-row.active {
+  background: rgba(94, 234, 212, 0.06);
+  border: 1px solid rgba(94, 234, 212, 0.2);
+  padding: 5px 7px;
+}
+
+.variant-name {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  color: #cfd9e8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.variant-name em {
+  flex: 0 0 auto;
+  font-size: 9px;
+  font-style: normal;
+  color: #5eead4;
+  border: 1px solid rgba(94, 234, 212, 0.3);
+  border-radius: 999px;
+  padding: 0 6px;
+}
+
+.variant-meta {
+  grid-column: 1 / -1;
+  font-size: 9.5px;
+  color: var(--text-mute);
+}
+
+.variant-actions {
+  display: flex;
+  gap: 4px;
+  align-items: flex-start;
+}
