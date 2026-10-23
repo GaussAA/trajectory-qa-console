@@ -37,11 +37,65 @@ export interface TelemetryOptions {
 
 const DEFAULT_LIMIT = 500
 
+/** Events are exportable, so their payloads are treated as potentially leaving
+ *  the machine: long strings are clipped, and fields that plausibly hold trace
+ *  text, tool arguments or credentials are replaced by a length note instead of
+ *  their contents. */
+const MAX_STRING = 120
+const MAX_ARRAY_ITEMS = 20
+const MAX_DEPTH = 3
+
+/** Keys whose value is replaced rather than kept (case-insensitive). */
+const REDACTED_KEYS = new Set([
+  'text',
+  'content',
+  'source',
+  'note',
+  'args',
+  'arguments',
+  'apikey',
+  'api_key',
+  'token',
+  'secret',
+  'password',
+  'key',
+])
+
+function clip(value: string): string {
+  return value.length > MAX_STRING ? `${value.slice(0, MAX_STRING)}…(${value.length} 字符)` : value
+}
+
+function describeHidden(value: unknown): string {
+  if (typeof value === 'string') return `[已隐藏，${value.length} 字符]`
+  if (Array.isArray(value)) return `[已隐藏，${value.length} 项]`
+  return '[已隐藏]'
+}
+
+function redact(value: unknown, depth = 0): unknown {
+  if (depth > MAX_DEPTH) return '[过深，已省略]'
+  if (typeof value === 'string') return clip(value)
+  if (typeof value === 'number' || typeof value === 'boolean' || value === null) return value
+  if (Array.isArray(value)) {
+    return value.slice(0, MAX_ARRAY_ITEMS).map((item) => redact(item, depth + 1))
+  }
+  if (typeof value === 'object') {
+    const out: Record<string, unknown> = {}
+    for (const [key, item] of Object.entries(value)) {
+      out[key] = REDACTED_KEYS.has(key.toLowerCase())
+        ? describeHidden(item)
+        : redact(item, depth + 1)
+    }
+    return out
+  }
+  return undefined
+}
+
 function serializeError(error: unknown): Record<string, unknown> {
   if (error instanceof Error) {
-    return { error: error.name, message: error.message }
+    // Message only — no stack, which would carry absolute paths and code text.
+    return { error: error.name, message: clip(error.message) }
   }
-  return { error: String(error) }
+  return { error: clip(String(error)) }
 }
 
 export function createTelemetry(options: TelemetryOptions = {}): Telemetry {
@@ -58,7 +112,7 @@ export function createTelemetry(options: TelemetryOptions = {}): Telemetry {
       at: wallClock(),
       level,
       name,
-      ...(data ? { data } : {}),
+      ...(data ? { data: redact(data) as Record<string, unknown> } : {}),
     }
     events.push(event)
     if (events.length > limit) events.splice(0, events.length - limit)

@@ -30,6 +30,58 @@ describe('telemetry', () => {
     expect(failure?.data?.message).toBe('nope')
   })
 
+  it('redacts payload fields that may hold trace text or credentials', () => {
+    const telemetry = createTelemetry()
+    const secret = 'sk-' + 'A1b2C3d4E5f6G7h8'.repeat(4)
+    telemetry.emit('ingest:file', {
+      file: 'trace.json',
+      chars: 4096,
+      sessions: 2,
+      text: '患者的手机号是 13812345678，邮箱 a@b.com，病史……'.repeat(20),
+      args: '{"query":"用户的身份证号 110101199001011234"}',
+      nested: { content: '完整轨迹正文', apiKey: secret },
+    })
+
+    const data = telemetry.snapshot()[0]?.data
+    // Diagnostics stay usable: counts and file names survive.
+    expect(data?.file).toBe('trace.json')
+    expect(data?.chars).toBe(4096)
+    expect(data?.sessions).toBe(2)
+
+    // Content does not.
+    expect(data?.text).not.toContain('13812345678')
+    expect(data?.args).not.toContain('110101')
+    expect(data?.nested).toEqual({
+      content: '[已隐藏，6 字符]',
+      apiKey: '[已隐藏，67 字符]',
+    })
+  })
+
+  it('clips long strings instead of keeping them whole', () => {
+    const telemetry = createTelemetry()
+    const long = 'x'.repeat(5000)
+    telemetry.emit('ingest:file', { note: long })
+
+    const note = telemetry.snapshot()[0]?.data?.note
+    expect(typeof note).toBe('string')
+    expect((note as string).length).toBeLessThan(200)
+    expect(note).toContain('5000 字符')
+  })
+
+  it('keeps error messages but drops the stack', () => {
+    const telemetry = createTelemetry()
+    expect(() =>
+      telemetry.measure('boom', () => {
+        throw new Error(`失败于 C:\\Users\\someone\\secrets\\trace.json：${'y'.repeat(400)}`)
+      }),
+    ).toThrowError(/失败于/)
+
+    const data = telemetry.snapshot()[0]?.data
+    expect(data?.error).toBe('Error')
+    expect((data?.message as string).length).toBeLessThan(200)
+    expect(JSON.stringify(data)).not.toContain('    at ')
+  })
+
   it('prefixes child scopes without losing the parent buffer', () => {
     const telemetry = createTelemetry()
     telemetry.child('parse').emit('done', { steps: 3 })
