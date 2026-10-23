@@ -24,7 +24,7 @@
 
 ## 不变量
 
-1. 只有 `analyze()` 能把原始文本变成 `SessionAnalysis`；UI 不得直接调用 parse / metrics / rules / score。
+1. 只有 `analyze()` 能把原始文本变成 `SessionAnalysis`；UI 不得直接调用 parse / metrics / score。**例外**：规则抽屉的「试跑」与「口径对比」由界面主动求值、直接跑 rules（`tuning.ts` / `pack-compare.ts`）——它们回答的是「换一套口径会怎样」，不是这条会话的分数；大轨迹下由 `useDeferredValue` 兜着，打字不被卡。
 2. 每条 Finding 都必须指向一个已定义的维度；规则包在应用前必须通过契约校验。
 3. 评分卡永远派生，不落库；标注或规则包一变，所有分数立即重算。会话只存与规则包无关的 `trajectory + metrics`，findings 由 `buildCard` 现算——这条因此是**结构上成立**，不是靠记得重算。工作区主路径与「口径对比」共用 `buildCard`，同一份数据不可能显示两个分数。
 4. 持久化数据一律带 `schemaVersion`，读取时迁移；损坏数据降级为默认值并记录事件。版本判定在 `persistence.ts`：未来版本（`FutureSchemaVersionError`）拒绝而非误读，迁移链是 `MIGRATIONS` 表——新增版本只加一条，不逐个改 loader。

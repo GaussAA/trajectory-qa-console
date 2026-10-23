@@ -1,13 +1,14 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { formatClock, formatDuration, formatTokens } from '../core/estimate'
-import { computeMetrics } from '../core/analysis'
 import type { Annotation, Dimension, Severity, Step, Trajectory } from '../core/model'
 import { labelFor, useI18n } from '../i18n'
-import type { ScoreCard } from '../core/analysis'
+import type { ScoreCard, TrajectoryMetrics } from '../core/analysis'
 import { ROLE_COLOR, SEVERITY_COLOR, cx, prettyJson, truncate } from '../lib/format'
 
 interface Props {
   trajectory: Trajectory
+  /** 指标由 analyze 在导入时算好并随会话带过来——不在这里重算（不变量 1）。 */
+  metrics: TrajectoryMetrics
   step: Step | null
   card: ScoreCard
   dimensions: Dimension[]
@@ -29,6 +30,7 @@ function Metric({ label, value, tone }: { label: string; value: string | number;
 
 export function Inspector({
   trajectory,
+  metrics,
   step,
   card,
   dimensions,
@@ -39,7 +41,6 @@ export function Inspector({
   const [dimension, setDimension] = useState('semantic')
   const [severity, setSeverity] = useState<Severity>('warn')
   const [note, setNote] = useState('')
-  const metrics = useMemo(() => computeMetrics(trajectory), [trajectory])
   const { locale, t } = useI18n()
 
   if (!step) {

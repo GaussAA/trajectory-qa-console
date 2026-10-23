@@ -300,9 +300,10 @@ export default function App({
 
               <div className="col col-right">
                 <ErrorBoundary nameKey="panel.inspector" compact onError={reportBoundaryError('inspector')}>
-                  <Inspector
-                    trajectory={session.trajectory}
-                    step={step}
+                <Inspector
+                  trajectory={session.trajectory}
+                  metrics={session.metrics}
+                  step={step}
                     card={card}
                     dimensions={state.pack.dimensions}
                     annotations={state.annotations}
