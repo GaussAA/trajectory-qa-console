@@ -83,6 +83,17 @@ export const en: Record<MessageKey, string> = {
   'panel.inspector': 'Inspector',
   'panel.findings': 'Findings panel',
 
+
+  'common.save': 'Save',
+
+  'session.rename': 'Rename session',
+  'session.renameHint': 'Rename / add a note (or double-click the item)',
+  'session.name': 'Session name',
+  'session.note': 'Session note',
+  'session.namePlaceholder': 'Empty keeps the file name',
+  'session.notePlaceholder': 'e.g. third run after the system-prompt change',
+  'session.resetName': 'Use file name',
+
   'session.title': 'Sessions',
   'session.untitled': 'Untitled trace',
   'session.meta': '{steps} steps · {tokens} · {score} pts',

@@ -8,7 +8,7 @@
  */
 
 import { scoreSession, type ScoreCard, type SessionAnalysis } from '../core/analysis'
-import type { Annotation, AppError, RulePack } from '../core/model'
+import type { Annotation, AppError, RulePack, SessionNote, Trajectory } from '../core/model'
 import type { IngestIssue } from './ingest'
 
 export type WorkspacePhase = 'idle' | 'loading' | 'ready'
@@ -20,6 +20,8 @@ export interface WorkspaceState {
   selectedStep: number | null
   pack: RulePack
   annotations: Annotation[]
+  /** 会话重命名与备注，按 trajectory.id 索引（重新导入同一份轨迹仍生效）。 */
+  notes: SessionNote[]
   issues: IngestIssue[]
   lastError: AppError | null
 }
@@ -34,11 +36,24 @@ export type WorkspaceAction =
   | { type: 'pack/apply'; pack: RulePack }
   | { type: 'annotation/add'; annotation: Annotation }
   | { type: 'annotation/remove'; id: string }
+  | { type: 'note/set'; note: SessionNote }
+  | { type: 'note/clear'; trajectoryId: string }
+
+/** 展示名：用户起的名字优先，否则回退文件名。 */
+export function labelOf(notes: SessionNote[], trajectory: Trajectory): string {
+  const name = notes.find((note) => note.trajectoryId === trajectory.id)?.name
+  return name && name.trim() !== '' ? name : trajectory.label
+}
+
+export function noteOf(notes: SessionNote[], trajectory: Trajectory): SessionNote | undefined {
+  return notes.find((note) => note.trajectoryId === trajectory.id)
+}
 
 export function createInitialState(
   pack: RulePack,
   annotations: Annotation[] = [],
   sessions: SessionAnalysis[] = [],
+  notes: SessionNote[] = [],
 ): WorkspaceState {
   const first = sessions[0] ?? null
   return {
@@ -48,6 +63,7 @@ export function createInitialState(
     selectedStep: first ? pickStepFor(first, scoreSession(first, pack.dimensions, annotations)) : null,
     pack,
     annotations,
+    notes,
     issues: [],
     lastError: null,
   }
@@ -125,6 +141,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         selectedId: null,
         selectedStep: null,
         annotations: [],
+        notes: [],
         issues: [],
         phase: 'idle',
         lastError: null,
@@ -141,6 +158,18 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
 
     case 'annotation/remove':
       return { ...state, annotations: state.annotations.filter((item) => item.id !== action.id) }
+
+    case 'note/set': {
+      const name = action.note.name.trim()
+      const note = action.note.note.trim()
+      const rest = state.notes.filter((item) => item.trajectoryId !== action.note.trajectoryId)
+      // 两个字段都清空等于「恢复原名」，顺手把记录也删掉，避免脏数据堆积。
+      if (name === '' && note === '') return { ...state, notes: rest }
+      return { ...state, notes: [...rest, { trajectoryId: action.note.trajectoryId, name, note }] }
+    }
+
+    case 'note/clear':
+      return { ...state, notes: state.notes.filter((item) => item.trajectoryId !== action.trajectoryId) }
 
     default:
       return state

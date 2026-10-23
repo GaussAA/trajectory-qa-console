@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
 import { createSyncAnalyzer } from '../app/analyzer'
@@ -66,6 +66,47 @@ describe('App smoke', () => {
     await user.click(screen.getByRole('button', { name: /退出对比/ }))
     await waitFor(() => expect(screen.queryByText('轨迹对比')).toBeNull())
     expect(screen.getByText('时间线')).toBeTruthy()
+  })
+
+  it('renames a session and shows the new name everywhere it matters', async () => {
+    const { user } = setup()
+    await loadSamples(user)
+
+    const item = await screen.findByRole('button', { name: /demo-01/ })
+    const row = item.closest('.session-row') as HTMLElement
+    await user.click(within(row).getByRole('button', { name: '重命名会话' }))
+
+    const nameInput = within(row).getByLabelText('会话名称')
+    await user.clear(nameInput)
+    await user.type(nameInput, '第三版')
+    await user.type(within(row).getByLabelText('会话备注'), '改了 system prompt')
+    await user.click(within(row).getByRole('button', { name: '保存' }))
+
+    expect(await screen.findByRole('button', { name: /第三版/ })).toBeTruthy()
+    // 评分面板标题跟随重命名，备注出现在列表里
+    expect(screen.getByRole('heading', { name: '第三版' })).toBeTruthy()
+    expect(screen.getByText('改了 system prompt')).toBeTruthy()
+  })
+
+  it('restores the file name when both fields are cleared', async () => {
+    const { user } = setup()
+    await loadSamples(user)
+
+    const item = await screen.findByRole('button', { name: /demo-01/ })
+    let row = item.closest('.session-row') as HTMLElement
+    await user.click(within(row).getByRole('button', { name: '重命名会话' }))
+    const nameInput = within(row).getByLabelText('会话名称')
+    await user.type(nameInput, '临时名字')
+    await user.click(within(row).getByRole('button', { name: '保存' }))
+    expect(await screen.findByRole('button', { name: /临时名字/ })).toBeTruthy()
+
+    const renamed = screen.getByRole('button', { name: /临时名字/ })
+    row = renamed.closest('.session-row') as HTMLElement
+    await user.click(within(row).getByRole('button', { name: '重命名会话' }))
+    await user.click(within(row).getByRole('button', { name: '恢复原名' }))
+    await user.click(within(row).getByRole('button', { name: '保存' }))
+
+    expect(await screen.findByRole('button', { name: /demo-01/ })).toBeTruthy()
   })
 
   it('records a manual annotation and surfaces it as a finding', async () => {

@@ -36,6 +36,19 @@ describe('exporters', () => {
     expect(json.sessions[0].score).toBe(cards.get(state.sessions[0]!.id)?.overall)
   })
 
+  it('uses the user-given session name in the report', () => {
+    const { state, cards } = fixtureState()
+    const trajectoryId = state.sessions[0]!.trajectory.id
+    const named = workspaceReducer(state, {
+      type: 'note/set',
+      note: { trajectoryId, name: '第三版（改了 prompt）', note: '' },
+    })
+
+    const bundle = buildReportBundle(named, cards)
+    expect(bundle.markdown).toContain('第三版（改了 prompt）')
+    expect(bundle.markdown).not.toContain('trace.json')
+  })
+
   it('follows the requested locale in both formats', () => {
     const { state, cards } = fixtureState()
     const bundle = buildReportBundle(state, cards, { locale: 'en' })

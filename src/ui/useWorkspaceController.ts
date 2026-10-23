@@ -43,7 +43,12 @@ export interface ControllerDeps {
 export function useWorkspaceController({ analyzer, telemetry, persistence }: ControllerDeps) {
   const initialRef = useRef<WorkspaceState | null>(null)
   if (!initialRef.current) {
-    initialRef.current = createInitialState(persistence.loadPack(), persistence.loadAnnotations())
+    initialRef.current = createInitialState(
+      persistence.loadPack(),
+      persistence.loadAnnotations(),
+      [],
+      persistence.loadSessionNotes(),
+    )
   }
   const [state, dispatch] = useReducer(workspaceReducer, initialRef.current)
   const stateRef = useRef(state)
@@ -64,6 +69,10 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
   useEffect(() => {
     persistence.saveAnnotations(state.annotations)
   }, [state.annotations, persistence])
+
+  useEffect(() => {
+    persistence.saveSessionNotes(state.notes)
+  }, [state.notes, persistence])
 
   useEffect(() => {
     if (!toast) return
@@ -254,6 +263,15 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
     dispatch({ type: 'annotation/remove', id })
   }, [])
 
+  /** 空名称 + 空备注 = 恢复原始文件名（reducer 会顺手删掉记录）。 */
+  const setSessionNote = useCallback(
+    (trajectoryId: string, name: string, note: string) => {
+      dispatch({ type: 'note/set', note: { trajectoryId, name, note } })
+      telemetry.emit('session:note', { trajectoryId, renamed: name.trim() !== '', hasNote: note.trim() !== '' })
+    },
+    [telemetry],
+  )
+
   const exportMarkdown = useCallback(() => {
     if (stateRef.current.sessions.length === 0) return
     const bundle = buildReportBundle(stateRef.current, cards, { locale })
@@ -303,6 +321,7 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
       applyPack,
       addAnnotation,
       removeAnnotation,
+      setSessionNote,
       exportMarkdown,
       exportJson,
       exportDiagnostics,

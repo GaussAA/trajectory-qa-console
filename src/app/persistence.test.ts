@@ -66,10 +66,37 @@ describe('persistence', () => {
     expect(telemetry.snapshot().some((event) => event.name === 'storage:write-failed')).toBe(true)
   })
 
+  it('round-trips session notes and drops malformed records', () => {
+    const store = createMemoryStorage()
+    const port = createPersistence(store)
+
+    expect(
+      port.saveSessionNotes([{ trajectoryId: 'trace-1', name: '第三版', note: '改了 system prompt' }]),
+    ).toBe(true)
+    expect(port.loadSessionNotes()).toEqual([
+      { trajectoryId: 'trace-1', name: '第三版', note: '改了 system prompt' },
+    ])
+
+    store.setItem(
+      STORAGE_KEYS.sessionNotes,
+      JSON.stringify({
+        schemaVersion: 1,
+        data: [
+          { trajectoryId: 'ok', name: 'n', note: '' },
+          { trajectoryId: 'bad', name: 42, note: '' },
+          { nope: true },
+        ],
+      }),
+    )
+    expect(port.loadSessionNotes()).toEqual([{ trajectoryId: 'ok', name: 'n', note: '' }])
+  })
+
   it('works with no storage at all', () => {
     const port = createPersistence(null)
     expect(port.loadPack()).toBe(DEFAULT_PACK)
     expect(port.loadAnnotations()).toEqual([])
     expect(port.savePack(DEFAULT_PACK)).toBe(false)
+    expect(port.loadSessionNotes()).toEqual([])
+    expect(port.saveSessionNotes([])).toBe(false)
   })
 })

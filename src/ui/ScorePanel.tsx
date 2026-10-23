@@ -7,13 +7,15 @@ import { cx, GRADE_COLOR } from '../lib/format'
 interface Props {
   card: ScoreCard
   trajectory: Trajectory
+  /** 用户重命名后的展示名；缺省用文件名。 */
+  label?: string
   ruleIssueCount: number
 }
 
 const RING_RADIUS = 42
 const CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS
 
-export function ScorePanel({ card, trajectory, ruleIssueCount }: Props) {
+export function ScorePanel({ card, trajectory, label, ruleIssueCount }: Props) {
   const { locale, t } = useI18n()
   const gradeColor = GRADE_COLOR[card.grade] ?? '#e9eef8'
   const dash = (card.overall / 100) * CIRCUMFERENCE
@@ -66,7 +68,7 @@ export function ScorePanel({ card, trajectory, ruleIssueCount }: Props) {
 
         <div className="score-body">
           <div className="score-title-row">
-            <h2>{trajectory.label}</h2>
+            <h2>{label ?? trajectory.label}</h2>
             <span
               className="grade-chip"
               style={{ color: gradeColor, borderColor: `${gradeColor}55`, background: `${gradeColor}14` }}

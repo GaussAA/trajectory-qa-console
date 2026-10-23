@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { ScoreCard, SessionAnalysis } from '../core/analysis'
 import { alignSteps, compareCards, diffFindings, summarizeAlignment, type AlignStatus } from '../core/compare'
-import type { Finding, Step } from '../core/model'
+import type { Finding, SessionNote, Step } from '../core/model'
 import { useI18n } from '../i18n'
 import { downloadFile, nowStamp } from '../lib/format'
 import { buildComparisonReport } from '../lib/report'
@@ -12,6 +12,8 @@ import { Icon } from './Icons'
 interface Props {
   sessions: SessionAnalysis[]
   cards: Map<string, ScoreCard>
+  /** 用户自定义的名称：对比里也要用同一套称呼。 */
+  notes?: SessionNote[]
   initialBaseId: string | null
   onClose: () => void
 }
@@ -39,7 +41,7 @@ function preview(step: Step | undefined): string {
   return content ? truncate(content, 90) : '—'
 }
 
-export function ComparePanel({ sessions, cards, initialBaseId, onClose }: Props) {
+export function ComparePanel({ sessions, cards, notes = [], initialBaseId, onClose }: Props) {
   const { locale, t } = useI18n()
   const firstId = initialBaseId ?? sessions[0]?.id ?? ''
   const [baseId, setBaseId] = useState(firstId)
@@ -80,7 +82,14 @@ export function ComparePanel({ sessions, cards, initialBaseId, onClose }: Props)
   }
 
   const changedRows = alignment.rows.filter((row) => row.status !== 'same').slice(0, MAX_ROWS)
-  const labelOf = (id: string) => sessions.find((session) => session.id === id)?.trajectory.label ?? id
+  const titleOf = (session: SessionAnalysis) => {
+    const custom = notes.find((note) => note.trajectoryId === session.trajectory.id)?.name
+    return custom && custom.trim() !== '' ? custom : session.trajectory.label
+  }
+  const labelOf = (id: string) => {
+    const session = sessions.find((item) => item.id === id)
+    return session ? titleOf(session) : id
+  }
 
   const findingList = (items: Finding[], tone: string) => (
     <ul className="compare-finding-list">
@@ -137,7 +146,7 @@ export function ComparePanel({ sessions, cards, initialBaseId, onClose }: Props)
             <select value={base.id} onChange={(event) => setBaseId(event.target.value)}>
               {sessions.map((session) => (
                 <option key={session.id} value={session.id}>
-                  {session.trajectory.label}
+                  {titleOf(session)}
                 </option>
               ))}
             </select>
@@ -148,7 +157,7 @@ export function ComparePanel({ sessions, cards, initialBaseId, onClose }: Props)
             <select value={target.id} onChange={(event) => setTargetId(event.target.value)}>
               {sessions.map((session) => (
                 <option key={session.id} value={session.id}>
-                  {session.trajectory.label}
+                  {titleOf(session)}
                 </option>
               ))}
             </select>

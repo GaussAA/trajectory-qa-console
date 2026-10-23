@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { analyze, type SessionAnalysis } from '../core/analysis'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
-import { createInitialState, pickStepFor, scoreCards, workspaceReducer } from './workspace'
+import { createInitialState, labelOf, noteOf, pickStepFor, scoreCards, workspaceReducer } from './workspace'
 
 const TRACE = JSON.stringify([
   { role: 'user', content: '整理一下' },
@@ -14,6 +14,12 @@ function fixture(): SessionAnalysis {
   const analysis = result.value[0]
   if (!analysis) throw new Error('no analysis')
   return analysis
+}
+
+function firstSession() {
+  const result = analyze({ source: TRACE, label: 'trace.json', pack: DEFAULT_PACK })
+  if (!result.ok) throw new Error(result.error.message)
+  return result.value[0]!
 }
 
 describe('workspace reducer', () => {
@@ -136,5 +142,46 @@ describe('pickStepFor', () => {
     const cleanCard = scoreCards([cleanAnalysis], DEFAULT_PACK, []).get(cleanAnalysis.id)
     if (!cleanCard) throw new Error('missing card')
     expect(pickStepFor(cleanAnalysis, cleanCard)).toBe(1)
+  })
+
+  it('stores session names and trims them', () => {
+    const analysis = firstSession()
+    const state = createInitialState(DEFAULT_PACK, [], [analysis])
+
+    const named = workspaceReducer(state, {
+      type: 'note/set',
+      note: { trajectoryId: analysis.trajectory.id, name: '  第三版  ', note: '  改了 system prompt ' },
+    })
+    expect(named.notes).toEqual([
+      { trajectoryId: analysis.trajectory.id, name: '第三版', note: '改了 system prompt' },
+    ])
+    expect(labelOf(named.notes, analysis.trajectory)).toBe('第三版')
+    expect(noteOf(named.notes, analysis.trajectory)?.note).toBe('改了 system prompt')
+  })
+
+  it('falls back to the file name and drops empty notes', () => {
+    const analysis = firstSession()
+    const state = createInitialState(DEFAULT_PACK, [], [analysis])
+
+    expect(labelOf(state.notes, analysis.trajectory)).toBe('trace.json')
+
+    const named = workspaceReducer(state, {
+      type: 'note/set',
+      note: { trajectoryId: analysis.trajectory.id, name: 'x', note: 'y' },
+    })
+    const cleared = workspaceReducer(named, {
+      type: 'note/set',
+      note: { trajectoryId: analysis.trajectory.id, name: '  ', note: '' },
+    })
+    expect(cleared.notes).toHaveLength(0)
+  })
+
+  it('clears notes with the rest of the workspace', () => {
+    const analysis = firstSession()
+    const named = workspaceReducer(createInitialState(DEFAULT_PACK, [], [analysis]), {
+      type: 'note/set',
+      note: { trajectoryId: analysis.trajectory.id, name: 'x', note: '' },
+    })
+    expect(workspaceReducer(named, { type: 'workspace/clear' }).notes).toHaveLength(0)
   })
 })

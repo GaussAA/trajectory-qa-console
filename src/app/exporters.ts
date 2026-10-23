@@ -29,7 +29,12 @@ export function buildReportBundle(
 ): ReportBundle {
   const entries = state.sessions.flatMap((session) => {
     const card = cards.get(session.id)
-    return card ? [{ trajectory: session.trajectory, card }] : []
+    if (!card) return []
+    // 报告里用用户起的名字；没起名就保持文件名。
+    const custom = state.notes.find((note) => note.trajectoryId === session.trajectory.id)?.name
+    const trajectory =
+      custom && custom.trim() !== '' ? { ...session.trajectory, label: custom } : session.trajectory
+    return [{ trajectory, card }]
   })
   return {
     markdown: buildMarkdownReport({ entries, pack: state.pack, generatedAt, locale }),

@@ -25,6 +25,12 @@ const PATHS: Record<string, ReactNode> = {
       <circle cx="10" cy="17" r="2" />
     </>
   ),
+  edit: (
+    <>
+      <path d="M4 20h4l9-9a2.8 2.8 0 0 0-4-4l-9 9z" />
+      <path d="M14 6l4 4" />
+    </>
+  ),
   close: (
     <>
       <path d="M6 6l12 12" />

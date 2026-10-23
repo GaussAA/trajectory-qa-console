@@ -18,6 +18,7 @@ export const zhCN = {
   'common.emptyList': '暂无',
   'common.unknownError': '渲染时发生未知错误',
   'common.dismiss': '知道了',
+  'common.save': '保存',
 
   'role.system': '系统',
   'role.developer': '开发',
@@ -79,6 +80,15 @@ export const zhCN = {
   'panel.timeline': '时间线面板',
   'panel.inspector': '检视器',
   'panel.findings': '问题清单面板',
+
+
+  'session.rename': '重命名会话',
+  'session.renameHint': '重命名 / 备注（也可双击会话）',
+  'session.name': '会话名称',
+  'session.note': '会话备注',
+  'session.namePlaceholder': '留空则用文件名',
+  'session.notePlaceholder': '例如：改了 system prompt 的第三版',
+  'session.resetName': '恢复原名',
 
   'session.title': '会话',
   'session.untitled': '未命名轨迹',

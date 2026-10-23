@@ -125,6 +125,15 @@ node dist-cli/qa.mjs a.json b.json --compare --fail-below 80    # 只卡「对�
 - 对比模式只产出 `compare.md` / `compare.json`，不再写逐会话报告。
 - 报告不含人工标注（与 ADR-0010 一致）。
 
+### 会话命名与备注
+
+- 存 `{ trajectoryId, name, note }`（`tqa.session-notes`），**按 trajectory.id 索引**，
+  重新导入同一份轨迹名字仍在；空名称 + 空备注即删除记录（恢复原名）。
+- 只影响展示与报告，不改 `trajectory.label`：`labelOf()` / `noteOf()` 是唯一取法。
+- 生效范围：会话列表、评分面板标题、对比下拉、Markdown/JSON 报告。CLI 无工作区，
+  仍用文件名。
+- 入口：列表项右侧铅笔按钮或双击条目；`Esc` 取消，`保存` 提交。
+
 ## 质量门槛
 
 `pnpm verify` = typecheck + lint + 覆盖率测试 + 构建。覆盖率门槛：行/函数/语句 ≥85%，分支 ≥75%。

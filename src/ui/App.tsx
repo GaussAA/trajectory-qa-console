@@ -14,6 +14,7 @@ import { RuleDrawer } from './RuleDrawer'
 import { ScorePanel } from './ScorePanel'
 import { SessionList } from './SessionList'
 import { Timeline } from './Timeline'
+import { labelOf } from '../app/workspace'
 import { useWorkspaceController } from './useWorkspaceController'
 import { LOCALES, useI18n } from '../i18n'
 import { cx } from '../lib/format'
@@ -242,8 +243,10 @@ export default function App({
               <SessionList
                 sessions={state.sessions}
                 cards={cards}
+                notes={state.notes}
                 selectedId={session.id}
                 onSelect={actions.chooseSession}
+                onRename={actions.setSessionNote}
                 onAdd={() => fileRef.current?.click()}
                 onClear={actions.clear}
               />
@@ -255,6 +258,7 @@ export default function App({
               <ComparePanel
                 sessions={state.sessions}
                 cards={cards}
+                notes={state.notes}
                 initialBaseId={session.id}
                 onClose={() => setCompareOpen(false)}
               />
@@ -266,6 +270,7 @@ export default function App({
                   <ScorePanel
                     card={card}
                     trajectory={session.trajectory}
+                    label={labelOf(state.notes, session.trajectory)}
                     ruleIssueCount={card.ruleIssues.length}
                   />
                 </ErrorBoundary>

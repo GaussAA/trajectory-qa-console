@@ -149,6 +149,13 @@ export interface RuleIssue {
   message: string
 }
 
+/** 用户给会话起的名字与备注；按 trajectory.id 存，重新导入同一份轨迹仍能认出来。 */
+export interface SessionNote {
+  trajectoryId: string
+  name: string
+  note: string
+}
+
 export interface Annotation {
   id: string
   trajectoryId: string

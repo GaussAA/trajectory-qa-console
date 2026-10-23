@@ -5,7 +5,7 @@
  *  degrades to defaults instead of taking the app down.
  */
 
-import type { Annotation, RulePack } from '../core/model'
+import type { Annotation, RulePack, SessionNote } from '../core/model'
 import { validatePack } from '../core/rules/contract'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
 import type { Telemetry } from './telemetry'
@@ -45,6 +45,7 @@ export function createBrowserStorage(): StorageLike | null {
 export const STORAGE_KEYS = {
   pack: 'tqa.pack',
   annotations: 'tqa.annotations',
+  sessionNotes: 'tqa.session-notes',
   /** Keys written by v0.1 (raw JSON, no envelope). Read once, then migrated. */
   legacyPack: 'tqa.pack.v1',
   legacyAnnotations: 'tqa.annotations.v1',
@@ -88,6 +89,18 @@ export interface PersistencePort {
   savePack(pack: RulePack): boolean
   loadAnnotations(): Annotation[]
   saveAnnotations(annotations: Annotation[]): boolean
+  loadSessionNotes(): SessionNote[]
+  saveSessionNotes(notes: SessionNote[]): boolean
+}
+
+function isSessionNote(value: unknown): value is SessionNote {
+  if (!value || typeof value !== 'object') return false
+  const record = value as Record<string, unknown>
+  return (
+    typeof record.trajectoryId === 'string' &&
+    typeof record.name === 'string' &&
+    typeof record.note === 'string'
+  )
 }
 
 export function createPersistence(store: StorageLike | null, telemetry?: Telemetry): PersistencePort {
@@ -147,6 +160,23 @@ export function createPersistence(store: StorageLike | null, telemetry?: Telemet
 
     saveAnnotations(annotations) {
       return write(STORAGE_KEYS.annotations, wrap(annotations))
+    },
+
+    loadSessionNotes() {
+      const raw = read(STORAGE_KEYS.sessionNotes)
+      if (!raw) return []
+      try {
+        const data = unwrap(raw)
+        if (!Array.isArray(data)) return []
+        return data.filter(isSessionNote)
+      } catch (error) {
+        telemetry?.emit('storage:notes-corrupt', { error: String(error) }, 'warn')
+        return []
+      }
+    },
+
+    saveSessionNotes(notes) {
+      return write(STORAGE_KEYS.sessionNotes, wrap(notes))
     },
   }
 }
