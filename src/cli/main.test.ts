@@ -123,7 +123,9 @@ describe('main', () => {
   it('writes the reports with --out and honours --format', async () => {
     const dir = tempDir()
     trace(dir, 'clean.json', CLEAN)
-    const out = join(dir, 'out')
+    // 产物目录放在被扫描目录之外：否则上一轮的 report.json 会被当成轨迹
+    // 再解析一遍（扩展名相同），这正是「部分失败」要防的自污染。
+    const out = tempDir()
 
     const both = capture()
     expect(await main([dir, '--out', out, '--quiet'], both.io)).toBe(EXIT.ok)
@@ -131,7 +133,7 @@ describe('main', () => {
     expect(existsSync(join(out, 'report.json'))).toBe(true)
     expect(both.chunks.out).toContain('已写出')
 
-    const mdOnly = join(dir, 'md-only')
+    const mdOnly = tempDir()
     expect(await main([dir, '--out', mdOnly, '--format', 'md', '--quiet'], capture().io)).toBe(EXIT.ok)
     expect(existsSync(join(mdOnly, 'report.md'))).toBe(true)
     expect(existsSync(join(mdOnly, 'report.json'))).toBe(false)
@@ -216,8 +218,9 @@ describe('main', () => {
   it('exits 2 when the output directory cannot be created', async () => {
     const dir = tempDir()
     trace(dir, 'clean.json', CLEAN)
-    // 把 --out 指向一个已存在的文件，mkdir 必然失败。
-    const blocker = trace(dir, 'blocker.txt', 'x')
+    // 把 --out 指向一个已存在的文件，mkdir 必然失败。放在扫描目录之外，
+    // 免得它自己先被当成轨迹解析失败，把写入错误盖掉。
+    const blocker = trace(tempDir(), 'blocker.txt', 'x')
     const { io, chunks } = capture()
 
     expect(await main([dir, '--out', blocker, '--quiet'], io)).toBe(EXIT.error)
@@ -234,15 +237,28 @@ describe('main', () => {
     expect(chunks.err).toContain('未产出报告')
   })
 
+  it('refuses to pass the gate when only some files could be analysed', async () => {
+    const dir = tempDir()
+    trace(dir, 'clean.json', CLEAN)
+    trace(dir, 'broken.json', '{not json')
+    const { io, chunks } = capture()
+
+    // 有一条成功也不算通过：没检查过的那部分不能被算进「通过」。
+    // 这是「空跑必须是 2」的另一半——此前只堵住了全空，漏掉了部分失败。
+    expect(await main([dir, '--quiet'], io)).toBe(EXIT.error)
+    expect(chunks.err).toContain('未能分析')
+  })
+
   it('accepts a valid pack and rejects a broken one', async () => {
     const dir = tempDir()
     trace(dir, 'clean.json', CLEAN)
 
-    const goodPack = join(dir, 'pack.json')
+    // 规则包放在扫描目录之外：它同样是 .json，留在里面会被当轨迹解析。
+    const goodPack = join(tempDir(), 'pack.json')
     writeFileSync(goodPack, JSON.stringify(DEFAULT_PACK))
     expect(await main([dir, '--pack', goodPack, '--quiet'], capture().io)).toBe(EXIT.ok)
 
-    const badPack = join(dir, 'bad-pack.json')
+    const badPack = join(tempDir(), 'bad-pack.json')
     writeFileSync(badPack, JSON.stringify({ ...DEFAULT_PACK, rules: [{ id: 'x' }] }))
     const broken = capture()
     expect(await main([dir, '--pack', badPack, '--quiet'], broken.io)).toBe(EXIT.error)

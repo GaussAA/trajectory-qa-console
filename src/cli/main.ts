@@ -310,6 +310,17 @@ export async function main(
     return EXIT.error
   }
 
+  /** 部分失败必须让门禁变红。读不出来的文件、扫不进去的目录，等于「没检查
+   *  过却说通过了」——和空跑返回 0 是同一类谎报，只是更隐蔽。
+   *
+   *  放在各分支的 IO 之后：写盘失败要先报写盘失败。 */
+  const incomplete = (): boolean => {
+    const unreadable = collected.value.skipped.length
+    if (result.failedFiles === 0 && unreadable === 0) return false
+    stderr(`✗ ${t('cli.err.partialFailure', { files: result.failedFiles, dirs: unreadable })}\n`)
+    return true
+  }
+
   // 口径对比与轨迹对比互斥：两者都改写「报告是什么」的语义，混用只会误读。
   if (options.packCompare && options.compare) {
     stderr(`✗ ${t('cli.err.packCompareConflict')}\n`)
@@ -358,6 +369,7 @@ export async function main(
       for (const path of written) stdout(`${t('cli.wrote', { path })}\n`)
     }
 
+    if (incomplete()) return EXIT.error
     return result.gate && !result.gate.passed ? EXIT.gate : EXIT.ok
   }
 
@@ -393,6 +405,7 @@ export async function main(
     }
 
     // 门禁只卡「对照」那一份：基准是旧版本，不该被要求达标。
+    if (incomplete()) return EXIT.error
     return options.failBelow !== null && target.card.overall < options.failBelow ? EXIT.gate : EXIT.ok
   }
 
@@ -416,5 +429,6 @@ export async function main(
     for (const path of written) stdout(`${t('cli.wrote', { path })}\n`)
   }
 
+  if (incomplete()) return EXIT.error
   return result.gate && !result.gate.passed ? EXIT.gate : EXIT.ok
 }

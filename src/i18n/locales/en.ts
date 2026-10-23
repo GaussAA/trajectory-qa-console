@@ -353,6 +353,7 @@ export const en: Record<MessageKey, string> = {
   'cli.err.path-missing': 'Path not found: {path}',
   'cli.err.too-many-files': 'Too many files: {count}, limit {limit}; split the run or raise --max-files',
   'cli.err.no-files': 'No trace files found (.json / .jsonl / .txt)',
+  'cli.err.partialFailure': '{files} file(s) failed to analyse, {dirs} path(s) unreadable — unread is not a pass',
   'cli.err.pack-invalid': 'Rule pack validation failed: {detail}',
   'cli.err.write-failed': 'Failed to write {path}: {message}',
   'cli.err.run-failed': 'Analysis failed: {message}',
