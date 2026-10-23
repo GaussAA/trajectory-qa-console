@@ -23,7 +23,7 @@ import {
   fetchTransport,
   type LlmTransport,
 } from '../core/semantic'
-import { parseArgs, type CliOptions, type UsageError } from './args'
+import { parseArgs, type CliOptions, type ReportFormat, type UsageError } from './args'
 import { displayPath, runBatch } from './batch'
 import { collectFiles } from './collect'
 import { renderHelp, renderSummary } from './summary'
@@ -124,18 +124,41 @@ export function loadPack(path: string): PackLoad {
   return { ok: true, pack: validation.pack }
 }
 
-function writeReports(options: CliOptions, markdown: string, json: string): string[] {
-  const dir = resolve(options.out as string)
+export type ArtifactKind = 'md' | 'json' | 'html'
+
+/** 格式 → 产物清单。`both` 沿用既有语义（md + json），`all` 三种都出；
+ *  这样加 html 不会悄悄改变老脚本的行为。 */
+export function artifactsFor(format: ReportFormat): ArtifactKind[] {
+  switch (format) {
+    case 'md':
+      return ['md']
+    case 'json':
+      return ['json']
+    case 'html':
+      return ['html']
+    case 'both':
+      return ['md', 'json']
+    case 'all':
+      return ['md', 'json', 'html']
+  }
+}
+
+const ARTIFACT_EXT: Record<ArtifactKind, string> = { md: 'md', json: 'json', html: 'html' }
+
+/** 写盘按「产物清单」而非嵌套 if：加一种格式只需改 `artifactsFor`。 */
+function writeArtifacts(
+  dir: string,
+  base: string,
+  kinds: ArtifactKind[],
+  contents: Partial<Record<ArtifactKind, string>>,
+): string[] {
   mkdirSync(dir, { recursive: true })
   const written: string[] = []
-  if (options.format !== 'json') {
-    const path = join(dir, 'report.md')
-    writeFileSync(path, markdown, 'utf8')
-    written.push(path)
-  }
-  if (options.format !== 'md') {
-    const path = join(dir, 'report.json')
-    writeFileSync(path, json, 'utf8')
+  for (const kind of kinds) {
+    const content = contents[kind]
+    if (content === undefined) continue
+    const path = join(dir, `${base}.${ARTIFACT_EXT[kind]}`)
+    writeFileSync(path, content, 'utf8')
     written.push(path)
   }
   return written
@@ -289,6 +312,11 @@ export async function main(
       stderr(`✗ ${t('cli.err.compareNeedsTwo', { count: result.entries.length })}\n`)
       return EXIT.error
     }
+    // 对比报告只有 md / json 两种形态：宁可明确拒绝，也不写一个残缺的 HTML。
+    if (artifactsFor(options.format).includes('html')) {
+      stderr(`✗ ${t('cli.err.compareNoHtml')}\n`)
+      return EXIT.error
+    }
     const [base, target] = result.entries as [(typeof result.entries)[0], (typeof result.entries)[0]]
     const generatedAt = new Date()
     const markdown = buildComparisonReport({ base, target, generatedAt, locale })
@@ -305,19 +333,10 @@ export async function main(
     )
 
     if (options.out) {
-      const dir = resolve(options.out)
-      mkdirSync(dir, { recursive: true })
-      const written: string[] = []
-      if (options.format !== 'json') {
-        const path = join(dir, 'compare.md')
-        writeFileSync(path, markdown, 'utf8')
-        written.push(path)
-      }
-      if (options.format !== 'md') {
-        const path = join(dir, 'compare.json')
-        writeFileSync(path, json, 'utf8')
-        written.push(path)
-      }
+      const written = writeArtifacts(resolve(options.out), 'compare', artifactsFor(options.format), {
+        md: markdown,
+        json,
+      })
       for (const path of written) stdout(`${t('cli.wrote', { path })}\n`)
     }
 
@@ -328,7 +347,11 @@ export async function main(
   if (options.out) {
     let written: string[]
     try {
-      written = writeReports(options, result.markdown, result.json)
+      written = writeArtifacts(resolve(options.out), 'report', artifactsFor(options.format), {
+        md: result.markdown,
+        json: result.json,
+        html: result.html,
+      })
     } catch (error) {
       stderr(
         `✗ ${t('cli.err.write-failed', {

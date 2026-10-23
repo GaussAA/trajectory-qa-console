@@ -137,6 +137,51 @@ describe('main', () => {
     expect(existsSync(join(mdOnly, 'report.json'))).toBe(false)
   })
 
+  it('writes a single self-contained HTML report with --format html', async () => {
+    const dir = tempDir()
+    trace(dir, 'clean.json', CLEAN)
+    trace(dir, 'broken.json', BROKEN)
+    const out = join(dir, 'html-only')
+    const { io, chunks } = capture()
+
+    expect(await main([dir, '--out', out, '--format', 'html', '--quiet'], io)).toBe(EXIT.ok)
+
+    expect(existsSync(join(out, 'report.html'))).toBe(true)
+    // html 是「只出这一份」，不该顺手再写 md/json
+    expect(existsSync(join(out, 'report.md'))).toBe(false)
+    expect(existsSync(join(out, 'report.json'))).toBe(false)
+
+    const html = readFileSync(join(out, 'report.html'), 'utf8')
+    expect(html.startsWith('<!doctype html>')).toBe(true)
+    expect(html).toContain('轨迹质检报告')
+    expect(html).not.toMatch(/<script/i)
+    expect(html).not.toMatch(/src=["']https?:/i)
+    expect(chunks.out).toContain('report.html')
+  })
+
+  it('writes all three artifacts with --format all', async () => {
+    const dir = tempDir()
+    trace(dir, 'clean.json', CLEAN)
+    const out = join(dir, 'all')
+
+    expect(await main([dir, '--out', out, '--format', 'all', '--quiet'], capture().io)).toBe(EXIT.ok)
+    for (const name of ['report.md', 'report.json', 'report.html']) {
+      expect(existsSync(join(out, name))).toBe(true)
+    }
+  })
+
+  it('refuses an HTML comparison instead of writing a half report', async () => {
+    const dir = tempDir()
+    trace(dir, 'a.json', CLEAN)
+    trace(dir, 'b.json', BROKEN)
+    const out = join(dir, 'cmp-html')
+    const { io, chunks } = capture()
+
+    expect(await main([dir, '--compare', '--format', 'html', '--out', out], io)).toBe(EXIT.error)
+    expect(chunks.err).toContain('只支持 md / json')
+    expect(existsSync(join(out, 'compare.html'))).toBe(false)
+  })
+
   it('exits 2 when the output directory cannot be created', async () => {
     const dir = tempDir()
     trace(dir, 'clean.json', CLEAN)

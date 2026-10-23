@@ -8,12 +8,15 @@ import { scoreSession, type ScoreCard } from '../core/analysis'
 import type { RulePack } from '../core/model'
 import type { Locale } from '../i18n/core'
 import { buildJsonReport, buildMarkdownReport } from '../lib/report'
+import { buildHtmlReport } from '../lib/report-html'
 import type { WorkspaceState } from './workspace'
 import type { Telemetry, TelemetryEvent } from './telemetry'
 
 export interface ReportBundle {
   markdown: string
   json: string
+  /** 单文件 HTML：给人看、给不懂命令行的同事看。 */
+  html: string
 }
 
 export interface ReportOptions {
@@ -36,9 +39,11 @@ export function buildReportBundle(
       custom && custom.trim() !== '' ? { ...session.trajectory, label: custom } : session.trajectory
     return [{ trajectory, card }]
   })
+  const input = { entries, pack: state.pack, generatedAt, locale }
   return {
-    markdown: buildMarkdownReport({ entries, pack: state.pack, generatedAt, locale }),
-    json: buildJsonReport({ entries, pack: state.pack, generatedAt, locale }),
+    markdown: buildMarkdownReport(input),
+    json: buildJsonReport(input),
+    html: buildHtmlReport(input),
   }
 }
 

@@ -81,7 +81,6 @@ export const zhCN = {
   'panel.inspector': '检视器',
   'panel.findings': '问题清单面板',
 
-
   'session.rename': '重命名会话',
   'session.renameHint': '重命名 / 备注（也可双击会话）',
   'session.name': '会话名称',
@@ -89,7 +88,6 @@ export const zhCN = {
   'session.namePlaceholder': '留空则用文件名',
   'session.notePlaceholder': '例如：改了 system prompt 的第三版',
   'session.resetName': '恢复原名',
-
 
   'common.delete': '删除',
   'session.select': '选择',
@@ -274,7 +272,7 @@ export const zhCN = {
   'cli.sectionOptions': '选项',
   'cli.sectionExit': '退出码',
   'cli.sectionExamples': '示例',
-  'cli.optFormat': '--format <md|json|both>  报告格式，默认 both',
+  'cli.optFormat': '--format <md|json|html|both|all>  报告格式，默认 both（html 为单文件）',
   'cli.optOut': '--out <目录>             写出 report.md / report.json',
   'cli.optLocale': '--locale <zh-CN|en>      报告语言，默认 zh-CN',
   'cli.optPack': '--pack <文件|en|zh>      自定义规则包，或内置语言包',
@@ -305,7 +303,7 @@ export const zhCN = {
 
   'cli.err.unknown-flag': '未知选项：{flag}',
   'cli.err.missing-value': '选项 {flag} 缺少取值',
-  'cli.err.invalid-format': '--format 只接受 md / json / both，收到 {value}',
+  'cli.err.invalid-format': '--format 只接受 md / json / html / both / all，收到 {value}',
   'cli.err.invalid-locale': '--locale 只接受 zh-CN / en，收到 {value}',
   'cli.err.invalid-number': '{flag} 需要 {min}–{max} 的整数，收到 {value}',
   'cli.err.no-paths': '至少给一个文件或目录',
@@ -315,6 +313,11 @@ export const zhCN = {
   'cli.err.pack-invalid': '规则包校验失败：{detail}',
   'cli.err.write-failed': '写入 {path} 失败：{message}',
   'cli.err.run-failed': '分析过程出错：{message}',
+
+  'action.html': 'HTML 报告',
+  'action.htmlHint': '导出单文件 HTML（双击即看，可打印为 PDF）',
+  'toast.htmlExported': 'HTML 报告已导出',
+
   'action.compare': '对比',
 
   'compare.title': '轨迹对比',
@@ -379,6 +382,7 @@ export const zhCN = {
   'report.compare.noDifferences': '两条轨迹没有差异。',
   'cli.optCompare': '--compare                对比两份轨迹（第一份为基准）',
   'cli.compareLine': '对比：{base} {baseScore} → {target} {targetScore}（{delta}）',
+  'cli.err.compareNoHtml': '--compare 只支持 md / json，HTML 目前仅用于逐会话报告',
   'cli.err.compareNeedsTwo': '对比需要恰好两条可分析轨迹，当前 {count} 条',
   'report.advice': '建议',
   'report.adviceCount': '{count} 处',

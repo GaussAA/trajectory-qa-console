@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createSyncAnalyzer } from '../app/analyzer'
 import { createMemoryStorage, createPersistence } from '../app/persistence'
 import { createTelemetry } from '../app/telemetry'
@@ -66,6 +66,42 @@ describe('App smoke', () => {
     await user.click(screen.getByRole('button', { name: /退出对比/ }))
     await waitFor(() => expect(screen.queryByText('轨迹对比')).toBeNull())
     expect(screen.getByText('时间线')).toBeTruthy()
+  })
+
+  it('exports a self-contained HTML report', async () => {
+    const bodies: string[] = []
+    const originalUrl = URL.createObjectURL
+    const originalRevoke = URL.revokeObjectURL
+    URL.createObjectURL = ((blob: Blob) => {
+      void blob.text().then((text) => bodies.push(text))
+      return 'blob:html'
+    }) as typeof URL.createObjectURL
+    URL.revokeObjectURL = (() => undefined) as typeof URL.revokeObjectURL
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
+
+    try {
+      const { user } = setup()
+      const button = screen.getByRole('button', { name: 'HTML 报告' }) as HTMLButtonElement
+      expect(button.disabled).toBe(true)
+
+      await loadSamples(user)
+      await waitFor(() =>
+        expect((screen.getByRole('button', { name: 'HTML 报告' }) as HTMLButtonElement).disabled).toBe(false),
+      )
+      await user.click(screen.getByRole('button', { name: 'HTML 报告' }))
+
+      await waitFor(() => expect(bodies).toHaveLength(1))
+      expect(bodies[0]?.startsWith('<!doctype html>')).toBe(true)
+      expect(bodies[0]).toContain('轨迹质检报告')
+      expect(click).toHaveBeenCalled()
+      expect(await screen.findByText('HTML 报告已导出')).toBeTruthy()
+    } finally {
+      URL.createObjectURL = originalUrl
+      // jsdom 没有 revokeObjectURL：若还原成 undefined，downloadFile 里 2s 后的
+      // 定时器会抛未捕获异常，把整轮覆盖率判成失败。留一个 no-op 更安全。
+      URL.revokeObjectURL = originalRevoke ?? (() => undefined)
+      click.mockRestore()
+    }
   })
 
   it('renames a session and shows the new name everywhere it matters', async () => {

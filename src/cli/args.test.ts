@@ -27,6 +27,8 @@ describe('parseArgs', () => {
   it('accepts both --flag value and --flag=value', () => {
     expect(ok(['a', '--format', 'md']).format).toBe('md')
     expect(ok(['a', '--format=json']).format).toBe('json')
+    expect(ok(['a', '--format', 'html']).format).toBe('html')
+    expect(ok(['a', '--format', 'all']).format).toBe('all')
     expect(ok(['a', '--fail-below=85']).failBelow).toBe(85)
   })
 

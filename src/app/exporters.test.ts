@@ -36,6 +36,16 @@ describe('exporters', () => {
     expect(json.sessions[0].score).toBe(cards.get(state.sessions[0]!.id)?.overall)
   })
 
+  it('bundles a self-contained html report alongside markdown and json', () => {
+    const { state, cards } = fixtureState()
+    const bundle = buildReportBundle(state, cards, { locale: 'en' })
+
+    expect(bundle.html.startsWith('<!doctype html>')).toBe(true)
+    expect(bundle.html).toContain('<html lang="en">')
+    expect(bundle.html).toContain('Trajectory QA Report')
+    expect(bundle.html).not.toMatch(/<script/i)
+  })
+
   it('uses the user-given session name in the report', () => {
     const { state, cards } = fixtureState()
     const trajectoryId = state.sessions[0]!.trajectory.id

@@ -11,7 +11,7 @@ import { isLocale, type Locale } from '../i18n/core'
 
 export const CLI_NAME = 'trajectory-qa'
 
-export type ReportFormat = 'md' | 'json' | 'both'
+export type ReportFormat = 'md' | 'json' | 'html' | 'both' | 'all'
 
 export interface CliOptions {
   paths: string[]
@@ -69,7 +69,7 @@ export interface UsageError {
 
 export type ParseResult = { ok: true; options: CliOptions } | { ok: false; error: UsageError }
 
-const FORMATS: ReportFormat[] = ['md', 'json', 'both']
+const FORMATS: ReportFormat[] = ['md', 'json', 'html', 'both', 'all']
 
 function parseInteger(raw: string | undefined, flag: string, min: number, max: number): number | UsageError {
   if (raw === undefined) return { code: 'missing-value', flag }

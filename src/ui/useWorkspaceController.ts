@@ -283,7 +283,11 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
   const setSessionNote = useCallback(
     (trajectoryId: string, name: string, note: string) => {
       dispatch({ type: 'note/set', note: { trajectoryId, name, note } })
-      telemetry.emit('session:note', { trajectoryId, renamed: name.trim() !== '', hasNote: note.trim() !== '' })
+      telemetry.emit('session:note', {
+        trajectoryId,
+        renamed: name.trim() !== '',
+        hasNote: note.trim() !== '',
+      })
     },
     [telemetry],
   )
@@ -302,6 +306,14 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
     downloadFile(`trajectory-qa-${nowStamp()}.json`, bundle.json, 'application/json')
     telemetry.emit('export:json', { sessions: stateRef.current.sessions.length, locale })
     setToast({ key: 'toast.jsonExported' })
+  }, [cards, locale, telemetry])
+
+  const exportHtml = useCallback(() => {
+    if (stateRef.current.sessions.length === 0) return
+    const bundle = buildReportBundle(stateRef.current, cards, { locale })
+    downloadFile(`trajectory-qa-${nowStamp()}.html`, bundle.html, 'text/html')
+    telemetry.emit('export:html', { sessions: stateRef.current.sessions.length, locale })
+    setToast({ key: 'toast.htmlExported' })
   }, [cards, locale, telemetry])
 
   const exportDiagnostics = useCallback(() => {
@@ -342,6 +354,7 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
       removeSessions,
       exportMarkdown,
       exportJson,
+      exportHtml,
       exportDiagnostics,
       clearTelemetry,
     },

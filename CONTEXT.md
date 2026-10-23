@@ -155,6 +155,18 @@ node dist-cli/qa.mjs a.json b.json --compare --fail-below 80    # 只卡「对�
 - 逐会话报告在「问题清单」后出 `### 建议`；对比报告只对「对照新增」的问题出建议。
 - 建议文案走 i18n 而非规则包：它表达「工具的判断」，不是「规则的数据」。
 
+### HTML 报告
+
+第三种产物：`lib/report-html.ts` 的 `buildHtmlReport`，单文件、自包含、**零脚本**
+（折叠用 `<details>`），所有外部文本 `escapeHtml`。视觉沿用应用令牌，
+`@media print` 翻成浅色（打印 / 存 PDF 可用）。
+
+- 出口：顶栏「HTML 报告」按钮；CLI `--format html`（只写 `report.html`）、
+  `--format all`（md + json + html）。
+- 与 Markdown / JSON 同源（同一 `ReportInput`），三份数字不会分叉。
+- 对比报告暂无 HTML：`--compare --format html` 明确报错，不写残缺产物（ADR-0016）。
+- `ReportBundle.html` 随会话数线性增长；三条约 20 KB。
+
 ## 质量门槛
 
 `pnpm verify` = typecheck + lint + 覆盖率测试 + 构建。覆盖率门槛：行/函数/语句 ≥85%，分支 ≥75%。

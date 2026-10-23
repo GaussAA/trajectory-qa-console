@@ -25,6 +25,7 @@ export default defineConfig({
         'src/ui/windowing.ts',
         'src/i18n/**/*.{ts,tsx}',
         'src/cli/**/*.ts',
+        'src/lib/**/*.ts',
       ],
       exclude: ['**/*.test.ts', 'src/core/sample.ts', 'src/core/__golden__/**', 'src/cli/bin.ts'],
       reporter: ['text', 'json-summary'],

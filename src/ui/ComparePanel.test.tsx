@@ -111,7 +111,9 @@ describe('ComparePanel', () => {
       expect(click).toHaveBeenCalled()
     } finally {
       URL.createObjectURL = originalUrl
-      URL.revokeObjectURL = originalRevoke
+      // jsdom 没有 revokeObjectURL：若还原成 undefined，downloadFile 里 2s 后的
+      // 定时器会抛未捕获异常，把整轮覆盖率判成失败。留一个 no-op 更安全。
+      URL.revokeObjectURL = originalRevoke ?? (() => undefined)
       click.mockRestore()
     }
   })

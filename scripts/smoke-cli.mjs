@@ -87,6 +87,22 @@ try {
   const cmpBad = run(['examples/healthy.json', '--compare', '--quiet'])
   check('单文件对比退出码 2', cmpBad.code === 2, `实际 ${cmpBad.code}`)
 
+  const htmlDir = join(outDir, 'html')
+  const htmlRun = run(['examples', '--out', htmlDir, '--format', 'html', '--quiet'])
+  check('--format html 退出码 0', htmlRun.code === 0, `实际 ${htmlRun.code}：${htmlRun.stderr.trim()}`)
+  const htmlPath = join(htmlDir, 'report.html')
+  check('写出 report.html', existsSync(htmlPath))
+  check(
+    'html 是唯一产物',
+    !existsSync(join(htmlDir, 'report.md')) && !existsSync(join(htmlDir, 'report.json')),
+  )
+  const html = readFileSync(htmlPath, 'utf8')
+  check('html 以 doctype 开头', html.startsWith('<!doctype html>'))
+  check(
+    'html 自包含（无外链、无脚本）',
+    !/<script/i.test(html) && !/<link\b/i.test(html) && !/src=["']https?:/i.test(html),
+  )
+
   const enDir = join(outDir, 'en')
   const englishPack = run(['examples', '--pack', 'en', '--locale', 'en', '--out', enDir, '--quiet'])
   check('--pack en 退出码 0', englishPack.code === 0, `实际 ${englishPack.code}`)
@@ -102,4 +118,4 @@ if (problems.length > 0) {
   process.exit(1)
 }
 
-console.log('✓ CLI 冒烟通过：help / 通过 / 门禁 / 用法错误 / 英文 / 英文包 / 语义试跑 / 对比 / 落盘')
+console.log('✓ CLI 冒烟通过：help / 通过 / 门禁 / 用法错误 / 英文 / 英文包 / 语义试跑 / 对比 / HTML / 落盘')

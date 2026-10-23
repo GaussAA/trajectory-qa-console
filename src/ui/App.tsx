@@ -200,7 +200,16 @@ export default function App({
             {t('action.diagnostics')}
           </button>
           <button type="button" className="btn ghost sm" onClick={actions.exportJson} disabled={!hasData}>
-            JSON
+            {t('action.json')}
+          </button>
+          <button
+            type="button"
+            className="btn ghost sm"
+            onClick={actions.exportHtml}
+            disabled={!hasData}
+            title={t('action.htmlHint')}
+          >
+            {t('action.html')}
           </button>
           <button
             type="button"

@@ -11,6 +11,7 @@ import { analyze, gradeOf, scoreSession, type ScoreCard, type SessionAnalysis } 
 import type { AppError, Finding, RulePack } from '../core/model'
 import { translate, type Locale } from '../i18n/core'
 import { buildJsonReport, buildMarkdownReport, type ReportEntry } from '../lib/report'
+import { buildHtmlReport } from '../lib/report-html'
 
 export interface FileOutcome {
   /** 大写后的展示路径，报告与表格共用。 */
@@ -57,6 +58,7 @@ export interface BatchResult {
   entries: ReportEntry[]
   markdown: string
   json: string
+  html: string
   average: number
   worst: { file: string; label: string; score: number; grade: string } | null
   gate: GateResult | null
@@ -207,6 +209,7 @@ export async function runBatch(files: string[], options: BatchOptions): Promise<
     entries,
     markdown: buildMarkdownReport(report),
     json: buildJsonReport(report),
+    html: buildHtmlReport(report),
     average,
     worst,
     gate,

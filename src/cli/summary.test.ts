@@ -15,6 +15,7 @@ function result(overrides: Partial<BatchResult> = {}): BatchResult {
     ] as unknown as BatchResult['entries'],
     markdown: '# md',
     json: '{}',
+    html: '<!doctype html>',
     average: 69,
     worst: { file: 'examples/b.json', label: 'b', score: 54, grade: 'D' },
     gate: null,

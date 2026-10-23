@@ -83,7 +83,6 @@ export const en: Record<MessageKey, string> = {
   'panel.inspector': 'Inspector',
   'panel.findings': 'Findings panel',
 
-
   'common.save': 'Save',
 
   'session.rename': 'Rename session',
@@ -93,7 +92,6 @@ export const en: Record<MessageKey, string> = {
   'session.namePlaceholder': 'Empty keeps the file name',
   'session.notePlaceholder': 'e.g. third run after the system-prompt change',
   'session.resetName': 'Use file name',
-
 
   'common.delete': 'Delete',
   'session.select': 'Select',
@@ -280,7 +278,7 @@ export const en: Record<MessageKey, string> = {
   'cli.sectionOptions': 'Options',
   'cli.sectionExit': 'Exit codes',
   'cli.sectionExamples': 'Examples',
-  'cli.optFormat': '--format <md|json|both>  report format (default: both)',
+  'cli.optFormat': '--format <md|json|html|both|all>  report format (default: both; html is one file)',
   'cli.optOut': '--out <dir>              write report.md / report.json',
   'cli.optLocale': '--locale <zh-CN|en>      report language (default: zh-CN)',
   'cli.optPack': '--pack <file|en|zh>      custom pack, or a builtin language pack',
@@ -311,7 +309,7 @@ export const en: Record<MessageKey, string> = {
 
   'cli.err.unknown-flag': 'Unknown option: {flag}',
   'cli.err.missing-value': 'Option {flag} needs a value',
-  'cli.err.invalid-format': '--format accepts md / json / both, got {value}',
+  'cli.err.invalid-format': '--format accepts md / json / html / both / all, got {value}',
   'cli.err.invalid-locale': '--locale accepts zh-CN / en, got {value}',
   'cli.err.invalid-number': '{flag} needs an integer in {min}–{max}, got {value}',
   'cli.err.no-paths': 'Provide at least one file or directory',
@@ -321,6 +319,10 @@ export const en: Record<MessageKey, string> = {
   'cli.err.pack-invalid': 'Rule pack validation failed: {detail}',
   'cli.err.write-failed': 'Failed to write {path}: {message}',
   'cli.err.run-failed': 'Analysis failed: {message}',
+
+  'action.html': 'HTML report',
+  'action.htmlHint': 'Export a single HTML file (opens anywhere, prints to PDF)',
+  'toast.htmlExported': 'HTML report exported',
 
   'action.compare': 'Compare',
 
@@ -388,6 +390,7 @@ export const en: Record<MessageKey, string> = {
   'report.compare.noDifferences': 'The two traces are identical.',
   'cli.optCompare': '--compare                compare two traces (first one is the baseline)',
   'cli.compareLine': 'Compare: {base} {baseScore} → {target} {targetScore} ({delta})',
+  'cli.err.compareNoHtml': '--compare supports md / json only; HTML is for per-session reports',
   'cli.err.compareNeedsTwo': 'Comparison needs exactly two analyzable traces, got {count}',
   'report.advice': 'Recommendations',
   'report.adviceCount': '{count}×',
@@ -395,23 +398,32 @@ export const en: Record<MessageKey, string> = {
   'report.adviceEmpty': 'Nothing actionable surfaced in this pass.',
 
   'advice.structure-unpaired-call': 'Check for truncated exports: every tool_call needs a paired result',
-  'advice.structure-orphan-result': 'Verify tool_call_id: orphan results usually mean the export dropped the id',
-  'advice.structure-invalid-args': 'Validate arguments against a schema before calling; regenerate instead of sending raw',
-  'advice.structure-empty-assistant': 'Filter empty turns, or require "text or a tool call" in the system prompt',
-  'advice.structure-double-user': 'Merge consecutive user messages, or add an assistant acknowledgement between them',
+  'advice.structure-orphan-result':
+    'Verify tool_call_id: orphan results usually mean the export dropped the id',
+  'advice.structure-invalid-args':
+    'Validate arguments against a schema before calling; regenerate instead of sending raw',
+  'advice.structure-empty-assistant':
+    'Filter empty turns, or require "text or a tool call" in the system prompt',
+  'advice.structure-double-user':
+    'Merge consecutive user messages, or add an assistant acknowledgement between them',
   'advice.structure-no-system': 'Add a system prompt stating role, boundaries and output format',
-  'advice.structure-empty-tool-result': 'Return a structured error (code + message) on failure instead of an empty string',
+  'advice.structure-empty-tool-result':
+    'Return a structured error (code + message) on failure instead of an empty string',
   'advice.structure-unknown-role': 'Normalise role names on export (human/ai → user/assistant)',
   'advice.exec-tool-error': 'Find the failing tool and add timeouts, retries and readable errors',
   'advice.exec-error-rate': 'Fix the most-failing tool first; above a 30% failure rate the chain is unusable',
-  'advice.exec-unfinished': 'Give the loop a termination condition and always end with an answer or an explicit "unfinished"',
+  'advice.exec-unfinished':
+    'Give the loop a termination condition and always end with an answer or an explicit "unfinished"',
   'advice.exec-retry-storm': 'Identical calls should hit a cache or short-circuit',
   'advice.exec-dead-loop': 'Add a max-turns and repeat guard: abort and report after N identical calls',
   'advice.exec-slow-step': 'Check the tool timeout and query scope for this step',
   'advice.eff-long-trace': 'Look for detours; merge tool calls that could run in parallel',
-  'advice.eff-marathon-trace': 'Decide whether this is batching or runaway; use a dedicated pack for batching',
-  'advice.eff-runaway-trace': 'Treat as runaway: fix the loop first, then re-check batching with a dedicated pack',
-  'advice.eff-token-budget': 'Compress context: summarise history, truncate tool output, keep only what matters',
+  'advice.eff-marathon-trace':
+    'Decide whether this is batching or runaway; use a dedicated pack for batching',
+  'advice.eff-runaway-trace':
+    'Treat as runaway: fix the loop first, then re-check batching with a dedicated pack',
+  'advice.eff-token-budget':
+    'Compress context: summarise history, truncate tool output, keep only what matters',
   'advice.eff-duplicate-calls': 'Call once per distinct argument: add dedupe or result caching',
   'advice.eff-context-bloat': 'Oversized message: page the input or summarise before injecting it',
   'advice.eff-no-tools': 'For a task agent, first confirm tool injection did not fail',
@@ -422,5 +434,4 @@ export const en: Record<MessageKey, string> = {
   'advice.semantic.llm.overreach': 'Tighten agent permissions; privileged actions need confirmation',
   'advice.semantic.llm.incoherent': 'Check for truncated context; contradictions usually start there',
   'advice.semantic.llm.unsafe': 'Add output review and compliance checks; block and log on hit',
-
 }
