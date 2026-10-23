@@ -24,6 +24,11 @@ export interface AnalyzeRequest {
 }
 
 export interface AnalyzerPort {
+  /** Cancellation semantics are part of this interface, and they differ by
+   *  adapter in one respect only: the worker adapter can also abandon an
+   *  analysis already in flight, whereas the sync adapter — being synchronous —
+   *  can only honour a signal that was already aborted when it was called.
+   *  Both report it the same way: `{ code: 'aborted' }`. */
   analyze(request: AnalyzeRequest, signal?: AbortSignal): Promise<Result<SessionAnalysis[]>>
 }
 
@@ -31,7 +36,10 @@ export const WORKER_THRESHOLD_CHARS = 256 * 1024
 
 export function createSyncAnalyzer(): AnalyzerPort {
   return {
-    async analyze(request) {
+    async analyze(request, signal) {
+      // Synchronous by nature, so this is the only point at which a signal can
+      // still be honoured — but it must be, or the two adapters disagree.
+      if (signal?.aborted) return fail('aborted', '已取消分析')
       try {
         return analyzeCore({
           source: request.text,

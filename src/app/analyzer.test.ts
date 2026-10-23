@@ -6,7 +6,6 @@ import {
   createWorkerAnalyzer,
   type AnalyzerPort,
 } from './analyzer'
-import { DEFAULT_PACK } from '../core/rules/builtin-pack'
 import type { WorkerRequest } from '../workers/protocol'
 
 class FakeWorker {
@@ -43,7 +42,6 @@ const VALID = JSON.stringify([
 const request = {
   text: VALID,
   label: 'demo.json',
-  pack: DEFAULT_PACK,
   idPrefix: 'test',
 }
 
