@@ -10,6 +10,7 @@
 import { formatTokens } from '../core/estimate'
 import type { ScoreCard } from '../core/analysis'
 import { alignSteps, compareCards, diffFindings, summarizeAlignment, type AlignStatus } from '../core/compare'
+import { buildAdvice } from '../core/rules/advice'
 import type { RulePack, Severity, Trajectory } from '../core/model'
 import {
   formatDateTime,
@@ -142,6 +143,18 @@ export function buildMarkdownReport({ entries, pack, generatedAt, locale }: Repo
       if (finding.evidence) lines.push(`   - ${t('report.evidence', { text: escapeCell(finding.evidence) })}`)
     })
     lines.push('')
+
+    const advice = buildAdvice(card.findings, locale)
+    if (advice.length > 0) {
+      lines.push(`### ${t('report.advice')}`)
+      lines.push('')
+      advice.forEach((item, adviceIndex) => {
+        // 只出现一次就不必标「1 处」——那是噪音。
+        const suffix = item.count > 1 ? `（${t('report.adviceCount', { count: item.count })}）` : ''
+        lines.push(`${adviceIndex + 1}. ${item.text}${suffix}`)
+      })
+      lines.push('')
+    }
   })
 
   if (entries.some((entry) => entry.card.ruleIssues.length > 0)) {
@@ -325,6 +338,18 @@ export function buildComparisonReport(input: ComparisonInput): string {
 
   writeFindings(t('report.compare.addedSection'), findingDiff.added)
   writeFindings(t('report.compare.resolvedSection'), findingDiff.resolved)
+
+  // 建议只针对「对照」新增的问题：基准已经修过的东西不必再提。
+  const advice = buildAdvice(findingDiff.added, input.locale)
+  if (advice.length > 0) {
+    lines.push(`### ${t('report.compare.advice')}`)
+    lines.push('')
+    advice.forEach((item, adviceIndex) => {
+      const suffix = item.count > 1 ? `（${t('report.adviceCount', { count: item.count })}）` : ''
+      lines.push(`${adviceIndex + 1}. ${item.text}${suffix}`)
+    })
+    lines.push('')
+  }
 
   lines.push(`## ${t('report.compare.stepsSection')}`)
   lines.push('')

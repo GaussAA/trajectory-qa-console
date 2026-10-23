@@ -145,6 +145,16 @@ node dist-cli/qa.mjs a.json b.json --compare --fail-below 80    # 只卡「对�
 - `session/remove` 重新落点：保留原选中项，被删则落到剩余第一条，全删回 `idle`。
 - 选择态是临时 UI 状态，不进 reducer、不持久化、不影响评分与导出。
 
+### 报告建议
+
+`core/rules/advice.ts`：`buildAdvice(findings, locale, limit = 6)`，把命中的规则翻成
+可执行动作（`advice.<ruleId>`，共 28 条）。
+
+- **只给能说清「怎么改」的规则写**；没有映射就不出条目，不用「请注意优化」兜底。
+- 同一规则只出一次，按严重度 → 次数排序，最多 6 条；≥2 次才标「N 处」。
+- 逐会话报告在「问题清单」后出 `### 建议`；对比报告只对「对照新增」的问题出建议。
+- 建议文案走 i18n 而非规则包：它表达「工具的判断」，不是「规则的数据」。
+
 ## 质量门槛
 
 `pnpm verify` = typecheck + lint + 覆盖率测试 + 构建。覆盖率门槛：行/函数/语句 ≥85%，分支 ≥75%。

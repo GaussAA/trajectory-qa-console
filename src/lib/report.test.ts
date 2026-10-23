@@ -36,6 +36,10 @@ describe('report builders', () => {
     expect(markdown).toContain('### 问题清单')
     expect(markdown).toContain('工具参数非法 JSON')
     expect(markdown).toContain('评分口径')
+    // 有映射的规则才出建议，且不标「1 处」
+    expect(markdown).toContain('### 建议')
+    expect(markdown).toContain('调用前做参数 schema 校验')
+    expect(markdown).not.toContain('（1 处）')
   })
 
   it('writes a machine-readable json report', () => {
