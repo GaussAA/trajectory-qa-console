@@ -1,8 +1,16 @@
 # Trajectory QA Console
 
+[![ci](https://github.com/GaussAA/trajectory-qa-console/actions/workflows/ci.yml/badge.svg)](https://github.com/GaussAA/trajectory-qa-console/actions/workflows/ci.yml)
+[![release](https://github.com/GaussAA/trajectory-qa-console/actions/workflows/release.yml/badge.svg)](https://github.com/GaussAA/trajectory-qa-console/releases)
+![Node](https://img.shields.io/badge/node-%E2%89%A522-339933)
+![pnpm](https://img.shields.io/badge/pnpm-12-F69220)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 **智能体轨迹数据的四维质检台**：拖入 Agent 轨迹（OpenAI messages / tool_calls 格式），本地完成解析、评分与问题定位——零后端、零上传、双击即用。
 
 A single-file, offline QA console for agent trajectory data. Drop a trace, get a four-axis checkup.
+
+![界面总览](docs/screenshots/console.png)
 
 ## 它解决什么问题
 
@@ -17,8 +25,23 @@ Agent 上线前后的轨迹（system / user / assistant / tool 结果交错）�
 - **试跑与调参**：在抽屉里改阈值，命中数与「禁用后能涨几分」即时重算；满意后存成**命名变体**，一键切回。
 - **轨迹对比**：按结构（角色 + 工具序列）LCS 对齐、按内容指纹判变——改 prompt 后「同一回合换了说法」显示为内容变化，而非全删全增。
 - **报告三形态**：Markdown（贴 PR / 周报）、JSON（键名稳定，给 CI）、单文件 HTML（双击即看、零脚本、可打印为 PDF）。
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/compare.png" alt="轨迹对比：双栏差异与问题变化" /></td>
+    <td width="50%"><img src="docs/screenshots/html-report.png" alt="单文件 HTML 报告" /></td>
+  </tr>
+  <tr>
+    <td align="center">轨迹对比 · 结构对齐 + 内容判变</td>
+    <td align="center">单文件 HTML 报告 · 打印即 PDF</td>
+  </tr>
+</table>
+
 - **双语界面**：中文 / EN 一键切换，`<html lang>` 同步、持久化；报告跟随界面语言。
 - **命令行**：整目录批量、`--fail-below` 质量门禁、`--semantic` 可选 LLM 语义复核（密钥只从环境变量读取、失败自动降级）。产物为自包含单文件，拷到任何 Node 22 机器即可运行。
+
+![调参与变体](docs/screenshots/tuning-variants.png)
+<p align="center"><sub>试跑与调参 · 改阈值即刻重算命中；存成命名变体一键切回</sub></p>
 
 ## 快速开始
 
