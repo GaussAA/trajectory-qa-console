@@ -223,6 +223,13 @@ export async function main(
     return EXIT.ok
   }
 
+  // 互斥参数先校验再干活。此前这段检查排在 runBatch（内含 LLM 调用）之后，
+  // 用法错误会先把 API 额度烧完才告诉你参数错了。
+  if (options.packCompare && options.compare) {
+    stderr(`✗ ${t('cli.err.packCompareConflict')}\n`)
+    return EXIT.error
+  }
+
   const collected = collectFiles(options.paths, { maxFiles: options.maxFiles })
   if (!collected.ok) {
     const error = collected.error
@@ -319,12 +326,6 @@ export async function main(
     if (result.failedFiles === 0 && unreadable === 0) return false
     stderr(`✗ ${t('cli.err.partialFailure', { files: result.failedFiles, dirs: unreadable })}\n`)
     return true
-  }
-
-  // 口径对比与轨迹对比互斥：两者都改写「报告是什么」的语义，混用只会误读。
-  if (options.packCompare && options.compare) {
-    stderr(`✗ ${t('cli.err.packCompareConflict')}\n`)
-    return EXIT.error
   }
 
   if (options.packCompare) {

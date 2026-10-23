@@ -197,6 +197,42 @@ describe('main', () => {
     expect(chunks.err).toContain('不能同时使用')
   })
 
+  it('rejects conflicting modes before spending any LLM budget', async () => {
+    const dir = tempDir()
+    trace(dir, 'clean.json', CLEAN)
+    const calls: unknown[] = []
+    const { io, chunks } = capture()
+
+    // The conflict used to be reported only after runBatch had already called
+    // the model — the user paid for their own usage error.
+    const code = await main(
+      [
+        dir,
+        '--compare',
+        '--pack-compare',
+        'en',
+        '--semantic',
+        '--llm-url',
+        'https://llm.example/v1',
+        '--llm-model',
+        'm',
+      ],
+      io,
+      {
+        env: { TQA_LLM_API_KEY: 'k-123' },
+        transport: async (request) => {
+          calls.push(request)
+          // 内容无关紧要：这个用例断言的是它根本不该被调用。
+          return { ok: true, status: 200, text: '{}' }
+        },
+      },
+    )
+
+    expect(code).toBe(EXIT.error)
+    expect(chunks.err).toContain('不能同时使用')
+    expect(calls).toHaveLength(0)
+  })
+
   it('writes an HTML comparison with --compare --format html', async () => {
     const dir = tempDir()
     trace(dir, 'a.json', CLEAN)
