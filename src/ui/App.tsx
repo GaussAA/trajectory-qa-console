@@ -90,7 +90,9 @@ export default function App({
     dragDepth.current = 0
     setDragging(false)
     const files = Array.from(event.dataTransfer.files)
-    if (files.length > 0) void actions.ingestFiles(files)
+    // 载入中的遮罩不拦 drag 事件，所以这里必须自己挡：否则第二次投放会与
+    // 第一批交错 dispatch，先到的旧结果反而覆盖新的。
+    if (files.length > 0 && state.phase !== 'loading') void actions.ingestFiles(files)
   }
 
   const onDragEnter = (event: DragEvent) => {
@@ -321,35 +323,41 @@ export default function App({
         </main>
       )}
 
-      <RuleDrawer
-        open={drawerOpen}
-        pack={state.pack}
-        sessions={state.sessions}
-        ruleIssues={card?.ruleIssues ?? []}
-        variants={state.variants}
-        activeVariantId={state.activeVariantId}
-        onSaveVariant={actions.saveVariant}
-        onApplyVariant={actions.applyVariant}
-        onRenameVariant={actions.renameVariant}
-        onRemoveVariant={actions.removeVariant}
-        onExportVariants={actions.exportVariants}
-        onImportVariants={actions.importVariants}
-        onClose={() => setDrawerOpen(false)}
-        onApply={(next) => {
-          actions.applyPack(next)
-          setDrawerOpen(false)
-        }}
-      />
+      {/* Both drawers are large enough to be worth containing: a crash here
+          used to take the whole document down with it. */}
+      <ErrorBoundary nameKey="rules.title" onError={reportBoundaryError('rules')}>
+        <RuleDrawer
+          open={drawerOpen}
+          pack={state.pack}
+          sessions={state.sessions}
+          ruleIssues={card?.ruleIssues ?? []}
+          variants={state.variants}
+          activeVariantId={state.activeVariantId}
+          onSaveVariant={actions.saveVariant}
+          onApplyVariant={actions.applyVariant}
+          onRenameVariant={actions.renameVariant}
+          onRemoveVariant={actions.removeVariant}
+          onExportVariants={actions.exportVariants}
+          onImportVariants={actions.importVariants}
+          onClose={() => setDrawerOpen(false)}
+          onApply={(next) => {
+            actions.applyPack(next)
+            setDrawerOpen(false)
+          }}
+        />
+      </ErrorBoundary>
 
-      <DiagnosticsDrawer
-        open={diagnosticsOpen}
-        events={events}
-        sessions={state.sessions}
-        cards={cards}
-        onClose={() => setDiagnosticsOpen(false)}
-        onExport={actions.exportDiagnostics}
-        onClear={actions.clearTelemetry}
-      />
+      <ErrorBoundary nameKey="diag.title" onError={reportBoundaryError('diagnostics')}>
+        <DiagnosticsDrawer
+          open={diagnosticsOpen}
+          events={events}
+          sessions={state.sessions}
+          cards={cards}
+          onClose={() => setDiagnosticsOpen(false)}
+          onExport={actions.exportDiagnostics}
+          onClear={actions.clearTelemetry}
+        />
+      </ErrorBoundary>
 
       {state.phase === 'loading' && (
         <div className="loading-overlay" role="status" aria-live="polite">

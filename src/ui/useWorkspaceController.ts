@@ -57,6 +57,8 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
 
   const port = useMemo(() => analyzer ?? createAnalyzer(), [analyzer])
   const abortRef = useRef<AbortController | null>(null)
+  /** 批次序号：后发起的一批接管，先前那批的迟到结果一律丢弃。 */
+  const generationRef = useRef(0)
   const [toast, setToast] = useState<ToastMessage | null>(null)
   const { locale } = useI18n()
   const [events, setEvents] = useState<TelemetryEvent[]>(() => telemetry.snapshot())
@@ -125,19 +127,30 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
       const collected: SessionAnalysis[] = []
       const issues: IngestIssue[] = []
 
+      // One controller for the whole batch: cancelling has to stop every file
+      // still in flight, not merely the one being awaited.
+      const controller = new AbortController()
+      abortRef.current = controller
+      // A newer batch supersedes an older one. Without this, two overlapping
+      // ingests interleave their dispatches and the stale one wins.
+      const generation = (generationRef.current += 1)
+      const superseded = () => generationRef.current !== generation
+      const release = () => {
+        if (abortRef.current === controller) abortRef.current = null
+      }
+
       for (const input of inputs) {
-        const controller = new AbortController()
-        abortRef.current = controller
         const result = await port.analyze(
           { text: input.text, label: input.name, idPrefix: batch },
           controller.signal,
         )
-        abortRef.current = null
+        if (superseded()) return
 
         if (!result.ok) {
           if (result.error.code === 'aborted') {
             telemetry.emit('ingest:aborted', { file: input.name }, 'warn')
             dispatch({ type: 'ingest/failure', error: result.error })
+            release()
             return
           }
           issues.push({ file: input.name, message: result.error.message, code: 'analysis-failed' })
@@ -168,6 +181,7 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
         return
       }
 
+      release()
       dispatch({ type: 'ingest/success', sessions: collected, issues })
       setToast(
         issues.length > 0
