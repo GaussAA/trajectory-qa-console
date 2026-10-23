@@ -455,3 +455,9 @@
 .packcmp-row .flat {
   color: var(--text-mute);
 }
+
+.packcmp-export-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}

@@ -211,6 +211,7 @@ export const en: Record<MessageKey, string> = {
   'packcmp.average': 'Average',
   'packcmp.same': 'The two packs are identical.',
   'packcmp.needSessions': 'Load a trace first to compare packs.',
+  'packcmp.export': 'Export',
 
   'variants.title': 'Variants',
   'variants.save': 'Save variant',
@@ -389,6 +390,11 @@ export const en: Record<MessageKey, string> = {
   'cli.optLlmUrl': '--llm-url <url>          OpenAI-compatible chat/completions URL',
   'cli.optLlmModel': '--llm-model <model>      model name',
   'cli.optSemanticLimit': '--semantic-limit <n>     max sessions to review per run (default: 20)',
+
+  'report.packCompare.title': 'Pack Comparison Report',
+  'report.packCompare.base': 'Baseline pack: {name}',
+  'report.packCompare.target': 'Candidate pack: {name}',
+
   'report.compare.title': 'Trajectory Comparison',
   'report.compare.base': 'Baseline: {label}',
   'report.compare.target': 'Candidate: {label}',
@@ -414,6 +420,11 @@ export const en: Record<MessageKey, string> = {
   'report.compare.targetText': 'Candidate content',
   'report.compare.truncated': 'Showing the first {count} differences.',
   'report.compare.noDifferences': 'The two traces are identical.',
+
+  'cli.optPackCompare': '--pack-compare <pack|en|zh>  compare against another pack, writes pack-compare.md/json',
+  'cli.packCompareLine': 'Pack compare: {base} {baseScore} → {target} {targetScore} ({delta})',
+  'cli.err.packCompareConflict': '--pack-compare cannot be combined with --compare',
+
   'cli.optCompare': '--compare                compare two traces (first one is the baseline)',
   'cli.compareLine': 'Compare: {base} {baseScore} → {target} {targetScore} ({delta})',
   'cli.err.compareNeedsTwo': 'Comparison needs exactly two analyzable traces, got {count}',

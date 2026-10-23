@@ -186,6 +186,9 @@ node dist-cli/qa.mjs a.json b.json --compare --fail-below 80    # 只卡「对�
 - 与调参/CLI 同一边界：不含人工标注。
 - 注意：存变体即生效，因此「当前包 vs 刚存的变体」恒等——比较变体与原版的正确姿势是
   基准选「内置中文包」（或另一变体）。identical 时界面如实说明，不出空表。
+- 报告出口：`lib/pack-compare-report.ts` 生成 Markdown/JSON（键名稳定，含 `average.delta`）；
+  抽屉「导出对比」按钮；CLI `--pack-compare <包|en|zh>` 写 `pack-compare.md/json`
+  并打印均值行，与 `--compare` 互斥。
 
 ## 质量门槛
 

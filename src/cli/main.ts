@@ -11,6 +11,8 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { analyze } from '../core/analysis'
 import { buildComparisonJson, buildComparisonReport } from '../lib/report'
+import { buildPackCompareJson, buildPackCompareMarkdown } from '../lib/pack-compare-report'
+import { comparePacks } from '../core/pack-compare'
 import { buildComparisonHtml } from '../lib/comparison-html'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
 import { BUILTIN_PACK_EN } from '../core/rules/builtin-pack-en'
@@ -306,6 +308,57 @@ export async function main(
   if (result.entries.length === 0) {
     stderr(`✗ ${t('cli.nothingAnalyzable')}\n`)
     return EXIT.error
+  }
+
+  // 口径对比与轨迹对比互斥：两者都改写「报告是什么」的语义，混用只会误读。
+  if (options.packCompare && options.compare) {
+    stderr(`✗ ${t('cli.err.packCompareConflict')}\n`)
+    return EXIT.error
+  }
+
+  if (options.packCompare) {
+    const alias = resolvePackAlias(options.packCompare)
+    const loaded = alias ? { ok: true as const, pack: alias } : loadPack(options.packCompare)
+    if (!loaded.ok) {
+      stderr(`✗ ${t('cli.err.pack-invalid', { detail: loaded.message })}\n`)
+      return EXIT.error
+    }
+
+    const comparison = comparePacks(
+      result.entries.map((entry) => ({ id: entry.trajectory.id, trajectory: entry.trajectory })),
+      pack,
+      loaded.pack,
+    )
+    const input = {
+      sessions: result.entries.map((entry) => ({ id: entry.trajectory.id, trajectory: entry.trajectory })),
+      base: { name: pack.name, pack },
+      target: { name: loaded.pack.name, pack: loaded.pack },
+      generatedAt: new Date(),
+      locale,
+    }
+    const markdown = buildPackCompareMarkdown(input)
+    const json = buildPackCompareJson(input)
+
+    stdout(
+      `${t('cli.packCompareLine', {
+        base: pack.name,
+        baseScore: comparison.baseAverage,
+        target: loaded.pack.name,
+        targetScore: comparison.targetAverage,
+        delta: comparison.targetAverage - comparison.baseAverage,
+      })}\n`,
+    )
+
+    if (options.out) {
+      // 口径对比固定 md + json 两种形态：--format 管的是逐会话报告，不越权。
+      const written = writeArtifacts(resolve(options.out), 'pack-compare', ['md', 'json'], {
+        md: markdown,
+        json,
+      })
+      for (const path of written) stdout(`${t('cli.wrote', { path })}\n`)
+    }
+
+    return result.gate && !result.gate.passed ? EXIT.gate : EXIT.ok
   }
 
   if (options.compare) {

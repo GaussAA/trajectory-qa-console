@@ -85,12 +85,27 @@ try {
   check('对比报告含标题', readFileSync(join(cmpDir, 'compare.md'), 'utf8').startsWith('# '))
 
   const cmpHtmlDir = join(outDir, 'cmp-html')
-  const cmpHtml = run(['examples/healthy.json', 'examples/tool-failure.json', '--compare', '--format', 'html', '--out', cmpHtmlDir, '--quiet'])
-  check('--compare --format html 退出码 0', cmpHtml.code === 0, `实际 ${cmpHtml.code}：${cmpHtml.stderr.trim()}`)
+  const cmpHtml = run([
+    'examples/healthy.json',
+    'examples/tool-failure.json',
+    '--compare',
+    '--format',
+    'html',
+    '--out',
+    cmpHtmlDir,
+    '--quiet',
+  ])
+  check(
+    '--compare --format html 退出码 0',
+    cmpHtml.code === 0,
+    `实际 ${cmpHtml.code}：${cmpHtml.stderr.trim()}`,
+  )
   const cmpHtmlText = readFileSync(join(cmpHtmlDir, 'compare.html'), 'utf8')
   check(
     '对比 HTML 自包含（无外链、无脚本）',
-    cmpHtmlText.startsWith('<!doctype html>') && !/<script/i.test(cmpHtmlText) && !/<link\b/i.test(cmpHtmlText),
+    cmpHtmlText.startsWith('<!doctype html>') &&
+      !/<script/i.test(cmpHtmlText) &&
+      !/<link\b/i.test(cmpHtmlText),
   )
 
   const cmpBad = run(['examples/healthy.json', '--compare', '--quiet'])
@@ -110,6 +125,14 @@ try {
   check(
     'html 自包含（无外链、无脚本）',
     !/<script/i.test(html) && !/<link\b/i.test(html) && !/src=["']https?:/i.test(html),
+  )
+
+  const pkDir = join(outDir, 'pk')
+  const pk = run(['examples', '--pack-compare', 'en', '--out', pkDir, '--quiet'])
+  check('--pack-compare 退出码 0', pk.code === 0, `实际 ${pk.code}：${pk.stderr.trim()}`)
+  check(
+    '口径对比双产物',
+    existsSync(join(pkDir, 'pack-compare.md')) && existsSync(join(pkDir, 'pack-compare.json')),
   )
 
   const enDir = join(outDir, 'en')

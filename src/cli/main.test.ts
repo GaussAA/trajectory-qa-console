@@ -170,6 +170,31 @@ describe('main', () => {
     }
   })
 
+  it('compares the active pack against another with --pack-compare', async () => {
+    const dir = tempDir()
+    trace(dir, 'single.json', CLEAN)
+    const out = join(dir, 'pk')
+    const { io, chunks } = capture()
+
+    expect(await main([dir, '--pack-compare', 'en', '--out', out, '--quiet'], io)).toBe(EXIT.ok)
+
+    expect(existsSync(join(out, 'pack-compare.md'))).toBe(true)
+    expect(existsSync(join(out, 'pack-compare.json'))).toBe(true)
+    const markdown = readFileSync(join(out, 'pack-compare.md'), 'utf8')
+    expect(markdown).toContain('# 口径对比报告')
+    expect(markdown).toContain('| 会话 | 基准 | 对照 | 变化 |')
+    expect(chunks.out).toContain('口径对比：')
+  })
+
+  it('rejects combining --pack-compare with --compare', async () => {
+    const dir = tempDir()
+    trace(dir, 'a.json', CLEAN)
+    const { io, chunks } = capture()
+
+    expect(await main([dir, '--compare', '--pack-compare', 'en'], io)).toBe(EXIT.error)
+    expect(chunks.err).toContain('不能同时使用')
+  })
+
   it('writes an HTML comparison with --compare --format html', async () => {
     const dir = tempDir()
     trace(dir, 'a.json', CLEAN)

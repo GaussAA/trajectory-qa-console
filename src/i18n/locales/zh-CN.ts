@@ -206,6 +206,7 @@ export const zhCN = {
   'packcmp.average': '平均',
   'packcmp.same': '两份口径相同，没有可比的差异。',
   'packcmp.needSessions': '载入轨迹后才能对比口径。',
+  'packcmp.export': '导出对比',
 
   'variants.title': '变体',
   'variants.save': '存为变体',
@@ -381,6 +382,11 @@ export const zhCN = {
   'cli.optLlmUrl': '--llm-url <url>          OpenAI 兼容的 chat/completions 地址',
   'cli.optLlmModel': '--llm-model <model>      模型名',
   'cli.optSemanticLimit': '--semantic-limit <n>     单次最多复核多少会话，默认 20',
+
+  'report.packCompare.title': '口径对比报告',
+  'report.packCompare.base': '基准口径：{name}',
+  'report.packCompare.target': '对照口径：{name}',
+
   'report.compare.title': '轨迹对比报告',
   'report.compare.base': '基准：{label}',
   'report.compare.target': '对照：{label}',
@@ -406,6 +412,11 @@ export const zhCN = {
   'report.compare.targetText': '对照内容',
   'report.compare.truncated': '仅显示前 {count} 处差异。',
   'report.compare.noDifferences': '两条轨迹没有差异。',
+
+  'cli.optPackCompare': '--pack-compare <包|en|zh>  与另一套口径对比，写 pack-compare.md/json',
+  'cli.packCompareLine': '口径对比：{base} {baseScore} → {target} {targetScore}（{delta}）',
+  'cli.err.packCompareConflict': '--pack-compare 与 --compare 不能同时使用',
+
   'cli.optCompare': '--compare                对比两份轨迹（第一份为基准）',
   'cli.compareLine': '对比：{base} {baseScore} → {target} {targetScore}（{delta}）',
   'cli.err.compareNeedsTwo': '对比需要恰好两条可分析轨迹，当前 {count} 条',

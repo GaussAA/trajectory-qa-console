@@ -5,6 +5,7 @@ import { fieldsForScope, formatPackErrors, validatePack } from '../core/rules/co
 import { buildTuningReport, numericLiterals, replaceLiteral, type TuningSession } from '../core/rules/tuning'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
 import { comparePacks, type PackOption } from '../core/pack-compare'
+import { buildPackCompareMarkdown } from '../lib/pack-compare-report'
 import { formatDateTime } from '../i18n/core'
 import { useI18n } from '../i18n'
 import { downloadFile, nowStamp } from '../lib/format'
@@ -102,6 +103,10 @@ export function RuleDrawer({
       packOptions.find((option) => option.id === id) ?? (packOptions[0] as PackOption)
     return comparePacks(sessions, resolve(baseId).pack, resolve(targetId).pack)
   }, [sessions, baseId, targetId, packOptions])
+  const resolveOption = (id: string): PackOption =>
+    packOptions.find((option) => option.id === id) ?? (packOptions[0] as PackOption)
+  const resolveName = (id: string) => resolveOption(id).name
+  const packFor = (id: string) => resolveOption(id).pack
 
   if (!open) return null
 
@@ -327,6 +332,28 @@ export function RuleDrawer({
               <p className="hint">{t('packcmp.needSessions')}</p>
             ) : (
               <>
+                <div className="packcmp-export-row">
+                  <button
+                    type="button"
+                    className="btn ghost sm"
+                    onClick={() =>
+                      downloadFile(
+                        `pack-compare-${nowStamp()}.md`,
+                        buildPackCompareMarkdown({
+                          sessions,
+                          base: { name: resolveName(baseId), pack: packFor(baseId) },
+                          target: { name: resolveName(targetId), pack: packFor(targetId) },
+                          generatedAt: new Date(),
+                          locale,
+                        }),
+                        'text/markdown',
+                      )
+                    }
+                  >
+                    <Icon name="download" size={12} />
+                    {t('packcmp.export')}
+                  </button>
+                </div>
                 <div className="packcmp-pickers">
                   <label>
                     <span>{t('packcmp.base')}</span>

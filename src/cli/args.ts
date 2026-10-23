@@ -35,6 +35,8 @@ export interface CliOptions {
   semanticDryRun: boolean
   /** 对比模式：把两份轨迹对照成一份报告（第一份为基准）。 */
   compare: boolean
+  /** 口径对比：与另一套规则包（别名或文件）在本次轨迹上对跑。 */
+  packCompare: string | null
   quiet: boolean
   help: boolean
   version: boolean
@@ -103,6 +105,7 @@ export function parseArgs(argv: string[]): ParseResult {
     semanticLimit: 20,
     semanticDryRun: false,
     compare: false,
+    packCompare: null,
     quiet: false,
     help: false,
     version: false,
@@ -207,6 +210,13 @@ export function parseArgs(argv: string[]): ParseResult {
         options.compare = true
         index += 1
         break
+      case '--pack-compare': {
+        const value = takeValue(inline, flag)
+        if (typeof value !== 'string') return { ok: false, error: value }
+        options.packCompare = value
+        index += 1
+        break
+      }
       case '--semantic':
         options.semantic = true
         index += 1
