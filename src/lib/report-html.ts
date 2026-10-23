@@ -21,7 +21,7 @@ import {
   type MessageKey,
   type Translate,
 } from '../i18n/core'
-import type { ReportEntry, ReportInput } from './report'
+import { reportTotals, type ReportEntry, type ReportInput } from './report'
 import { STYLE, clampPercent, escapeHtml, toneOf } from './report-style'
 
 const SEVERITY_KEY: Record<Severity, MessageKey> = {
@@ -151,13 +151,8 @@ function renderRuleIssues(entries: ReportEntry[], t: Translate): string {
 export function buildHtmlReport({ entries, pack, generatedAt, locale }: ReportInput): string {
   const t: Translate = (key, params) => translate(locale, key, params)
 
-  const totalSteps = entries.reduce((sum, entry) => sum + entry.trajectory.steps.length, 0)
-  const totalTokens = entries.reduce((sum, entry) => sum + entry.trajectory.meta.totalTokens, 0)
-  const average =
-    entries.length > 0
-      ? Math.round(entries.reduce((sum, entry) => sum + entry.card.overall, 0) / entries.length)
-      : 100
-  const ruleCount = pack.rules.filter((rule) => rule.enabled !== false).length
+  const totals = reportTotals(entries, pack)
+  const { steps: totalSteps, tokens: totalTokens, average, enabledRules: ruleCount } = totals
 
   const overviewRows = entries
     .map(({ trajectory, card }) => {

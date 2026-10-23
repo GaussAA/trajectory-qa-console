@@ -35,6 +35,34 @@ export interface ReportInput {
   locale: Locale
 }
 
+/** Every number the three artifacts show in their summary, computed once.
+ *
+ *  Markdown, JSON and HTML used to each run their own reduce over `entries`.
+ *  They agreed only by discipline; this makes it structural. */
+export interface ReportTotals {
+  sessions: number
+  steps: number
+  tokens: number
+  average: number
+  /** Rules that actually ran — disabled ones are not part of the verdict. */
+  enabledRules: number
+}
+
+export function reportTotals(entries: ReportEntry[], pack: RulePack): ReportTotals {
+  const steps = entries.reduce((sum, entry) => sum + entry.trajectory.steps.length, 0)
+  const tokens = entries.reduce((sum, entry) => sum + entry.trajectory.meta.totalTokens, 0)
+  return {
+    sessions: entries.length,
+    steps,
+    tokens,
+    average:
+      entries.length > 0
+        ? Math.round(entries.reduce((sum, entry) => sum + entry.card.overall, 0) / entries.length)
+        : 100,
+    enabledRules: pack.rules.filter((rule) => rule.enabled !== false).length,
+  }
+}
+
 const SEVERITY_KEY: Record<Severity, MessageKey> = {
   error: 'severity.error',
   warn: 'severity.warn',
@@ -57,24 +85,13 @@ export function buildMarkdownReport({ entries, pack, generatedAt, locale }: Repo
   lines.push(`# ${t('report.title')}`)
   lines.push('')
   lines.push(`- ${t('report.generatedAt', { time: formatDateTime(locale, generatedAt) })}`)
-  lines.push(
-    `- ${t('report.rulePack', {
-      name: pack.name,
-      count: pack.rules.filter((rule) => rule.enabled !== false).length,
-    })}`,
-  )
-  lines.push(`- ${t('report.sessionCount', { count: entries.length })}`)
+  const totals = reportTotals(entries, pack)
 
-  const totalSteps = entries.reduce((sum, entry) => sum + entry.trajectory.steps.length, 0)
-  const totalTokens = entries.reduce((sum, entry) => sum + entry.trajectory.meta.totalTokens, 0)
-  const average =
-    entries.length > 0
-      ? Math.round(entries.reduce((sum, entry) => sum + entry.card.overall, 0) / entries.length)
-      : 100
-
-  lines.push(`- ${t('report.totalSteps', { count: totalSteps })}`)
-  lines.push(`- ${t('report.estimatedTokens', { tokens: formatTokens(totalTokens) })}`)
-  lines.push(`- ${t('report.average', { score: average })}`)
+  lines.push(`- ${t('report.rulePack', { name: pack.name, count: totals.enabledRules })}`)
+  lines.push(`- ${t('report.sessionCount', { count: totals.sessions })}`)
+  lines.push(`- ${t('report.totalSteps', { count: totals.steps })}`)
+  lines.push(`- ${t('report.estimatedTokens', { tokens: formatTokens(totals.tokens) })}`)
+  lines.push(`- ${t('report.average', { score: totals.average })}`)
   lines.push('')
 
   lines.push(`## ${t('report.overview')}`)
@@ -248,11 +265,11 @@ function stepPreview(step: { text: string; toolCalls: { name: string }[] } | und
   return '—'
 }
 
-function comparisonDiff(input: ComparisonInput) {
-  const cardDiff = compareCards(
-    { card: input.base.card, trajectory: input.base.trajectory },
-    { card: input.target.card, trajectory: input.target.trajectory },
-  )
+/** The comparison, computed once and shared by the Markdown/JSON and the HTML
+ *  artifact. Step alignment is an LCS over both trajectories; running it twice
+ *  per export was pure waste. */
+export function buildComparisonModel(input: ComparisonInput) {
+  const cardDiff = compareCards(input.base, input.target)
   const findingDiff = diffFindings(input.base.card.findings, input.target.card.findings)
   const rows = alignSteps(input.base.trajectory.steps, input.target.trajectory.steps)
   return { cardDiff, findingDiff, rows, summary: summarizeAlignment(rows) }
@@ -260,7 +277,7 @@ function comparisonDiff(input: ComparisonInput) {
 
 export function buildComparisonReport(input: ComparisonInput): string {
   const t: Translate = (key, params) => translate(input.locale, key, params)
-  const { cardDiff, findingDiff, rows, summary } = comparisonDiff(input)
+  const { cardDiff, findingDiff, rows, summary } = buildComparisonModel(input)
   const lines: string[] = []
 
   lines.push(`# ${t('report.compare.title')}`)
@@ -398,7 +415,7 @@ export function buildComparisonReport(input: ComparisonInput): string {
 }
 
 export function buildComparisonJson(input: ComparisonInput): string {
-  const { cardDiff, findingDiff, rows, summary } = comparisonDiff(input)
+  const { cardDiff, findingDiff, rows, summary } = buildComparisonModel(input)
   return JSON.stringify(
     {
       generatedAt: input.generatedAt.toISOString(),

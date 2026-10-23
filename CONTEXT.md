@@ -169,6 +169,8 @@ node dist-cli/qa.mjs a.json b.json --compare --fail-below 80    # 只卡「对�
 - 出口：顶栏「HTML 报告」按钮；CLI `--format html`（只写 `report.html`）、
   `--format all`（md + json + html）。
 - 与 Markdown / JSON 同源（同一 `ReportInput`），三份数字不会分叉。
+- 汇总数字只算一次：`reportTotals(entries, pack)`（会话数/步数/token/均分/启用规则数），
+  三份产物共用；对比的 diff 也只算一次：`buildComparisonModel`（内含 LCS 对齐，跑两遍纯属浪费）。
 - 对比报告同样有 HTML：`buildComparisonHtml`（`comparison-html.ts`），
   界面对比面板「HTML」按钮 / CLI `--compare --format html` 写 `compare.html`；
   共享样式在 `report-style.ts`，两份报告同一副面孔（ADR-0016）。

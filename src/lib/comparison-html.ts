@@ -4,12 +4,12 @@
  *  这里只负责把它画出来——数字不会出现第二个版本。
  */
 
-import { alignSteps, compareCards, diffFindings, summarizeAlignment, type AlignedStep } from '../core/compare'
+import type { AlignedStep } from '../core/compare'
 import { formatTokens } from '../core/estimate'
 import { buildAdvice } from '../core/rules/advice'
 import type { Severity } from '../core/model'
 import { formatDateTime, labelFor, translate, type MessageKey, type Translate } from '../i18n/core'
-import type { ComparisonInput } from './report'
+import { buildComparisonModel, type ComparisonInput } from './report'
 import { STYLE, clampPercent, escapeHtml, toneOf } from './report-style'
 
 const SEVERITY_KEY: Record<Severity, MessageKey> = {
@@ -165,10 +165,7 @@ export function buildComparisonHtml(input: ComparisonInput): string {
   const t: Translate = (key, params) => translate(input.locale, key, params)
   const { base, target, generatedAt, locale } = input
 
-  const cardDiff = compareCards(base, target)
-  const findingDiff = diffFindings(base.card.findings, target.card.findings)
-  const rows = alignSteps(base.trajectory.steps, target.trajectory.steps)
-  const summary = summarizeAlignment(rows)
+  const { cardDiff, findingDiff, rows, summary } = buildComparisonModel(input)
 
   const dimensionRows = cardDiff.dimensions
     .map((dimension) => {

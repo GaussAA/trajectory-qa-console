@@ -3,7 +3,14 @@ import { parseTrajectory } from '../core/parsing'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
 import { runRules } from '../core/rules/engine'
 import { scoreTrajectory } from '../core/analysis/score'
-import { buildComparisonJson, buildComparisonReport, buildJsonReport, buildMarkdownReport } from './report'
+import { buildHtmlReport } from './report-html'
+import {
+  buildComparisonJson,
+  buildComparisonReport,
+  buildJsonReport,
+  buildMarkdownReport,
+  reportTotals,
+} from './report'
 
 const TRACE = JSON.stringify([
   { role: 'system', content: '你是助手' },
@@ -22,6 +29,26 @@ describe('report builders', () => {
   const { findings, ruleIssues } = runRules(trajectory, DEFAULT_PACK)
   const card = scoreTrajectory(findings, DEFAULT_PACK.dimensions, ruleIssues)
   const entries = [{ trajectory, card }]
+
+  it('gives the markdown and html artifacts the very same totals', () => {
+    const input = {
+      entries,
+      pack: DEFAULT_PACK,
+      generatedAt: new Date('2026-10-22T12:00:00Z'),
+      locale: 'zh-CN' as const,
+    }
+    const totals = reportTotals(entries, DEFAULT_PACK)
+    const markdown = buildMarkdownReport(input)
+    const html = buildHtmlReport(input)
+
+    // Both artifacts must print the numbers produced by reportTotals — they
+    // used to run their own reduce, agreeing only by luck.
+    for (const value of [totals.sessions, totals.steps, totals.average]) {
+      expect(markdown).toContain(String(value))
+      expect(html).toContain(String(value))
+    }
+    expect(totals.enabledRules).toBe(DEFAULT_PACK.rules.filter((rule) => rule.enabled !== false).length)
+  })
 
   it('writes a markdown report with overview, scores and findings', () => {
     const markdown = buildMarkdownReport({
