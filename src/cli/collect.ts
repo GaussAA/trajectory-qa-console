@@ -8,7 +8,7 @@
  */
 
 import { readdirSync, realpathSync, statSync } from 'node:fs'
-import { extname, join, resolve } from 'node:path'
+import { extname, join, resolve, sep } from 'node:path'
 
 export const TRACE_EXTENSIONS = ['.json', '.jsonl', '.txt'] as const
 
@@ -26,7 +26,7 @@ export const SKIP_DIRS = new Set([
   '.vscode',
 ])
 
-export type SkipReason = 'extension' | 'hidden' | 'unreadable'
+export type SkipReason = 'extension' | 'hidden' | 'unreadable' | 'outside-root'
 
 export interface SkippedEntry {
   path: string
@@ -56,6 +56,15 @@ function isTraceFile(path: string): boolean {
   return (TRACE_EXTENSIONS as readonly string[]).includes(extname(path).toLowerCase())
 }
 
+/** True when `path` resolves (following symlinks) to somewhere outside `root`.
+ *
+ *  A symlink planted inside a scanned tree can otherwise drag in files the user
+ *  never pointed at — and, with `--semantic` enabled, send them somewhere. */
+function escapesRoot(path: string, root: string): boolean {
+  const real = safeRealpath(path)
+  return real !== root && !real.startsWith(root + sep)
+}
+
 function safeRealpath(path: string): string {
   try {
     return realpathSync(path)
@@ -78,7 +87,7 @@ export function collectFiles(inputs: string[], options: CollectOptions): Collect
     files.push(absolute)
   }
 
-  const walk = (dir: string) => {
+  const walk = (dir: string, root: string) => {
     const key = safeRealpath(dir)
     if (seenDirs.has(key)) return
     seenDirs.add(key)
@@ -104,11 +113,18 @@ export function collectFiles(inputs: string[], options: CollectOptions): Collect
       }
       if (stats.isDirectory()) {
         if (SKIP_DIRS.has(name)) continue
-        walk(child)
+        walk(child, root)
         continue
       }
       // 目录扫描时，非轨迹扩展名不算「问题」，直接忽略，不写进 skipped。
-      if (stats.isFile() && isTraceFile(child)) pushFile(child)
+      if (stats.isFile() && isTraceFile(child)) {
+        // 符号链接只去重、不跟随到根外：链到别处的轨迹不属于本次扫描。
+        if (escapesRoot(child, root)) {
+          skipped.push({ path: child, reason: 'outside-root' })
+          continue
+        }
+        pushFile(child)
+      }
     }
   }
 
@@ -122,7 +138,8 @@ export function collectFiles(inputs: string[], options: CollectOptions): Collect
       continue
     }
     if (stats.isDirectory()) {
-      walk(absolute)
+      // The root is what the user pointed at; its own realpath is the boundary.
+      walk(absolute, safeRealpath(absolute))
       continue
     }
     if (isTraceFile(absolute)) pushFile(absolute)

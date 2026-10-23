@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -50,6 +50,36 @@ describe('collectFiles', () => {
     if (!result.ok) throw new Error(result.error.code)
     expect(result.value.files).toHaveLength(1)
     expect(result.value.files[0]).toContain('keep.json')
+  })
+
+  it('refuses to follow a symlink out of the scanned root', (ctx) => {
+    const root = tempRoot()
+    const outside = tempRoot()
+    touch(root, 'keep.json')
+    touch(outside, 'secret.json', '{"role":"user"}')
+    const linked = join(root, 'linked.json')
+    try {
+      symlinkSync(join(outside, 'secret.json'), linked)
+    } catch {
+      // 显式跳过而不是静默通过：否则无权限的环境会让这个用例假装绿。
+      ctx.skip()
+      return
+    }
+
+    const result = collectFiles([root], { maxFiles: 10 })
+    if (!result.ok) throw new Error(result.error.code)
+
+    expect(result.value.files.map((file) => file.split(/[\\/]/).pop())).toEqual(['keep.json'])
+    expect(result.value.skipped).toContainEqual({ path: linked, reason: 'outside-root' })
+  })
+
+  it('still accepts a file the user named explicitly', () => {
+    const root = tempRoot()
+    const path = touch(root, 'explicit.json', '[]')
+    const result = collectFiles([path], { maxFiles: 10 })
+    if (!result.ok) throw new Error(result.error.code)
+    // 显式指定即意图：即使它是符号链接，也不按越界处理。
+    expect(result.value.files).toEqual([path])
   })
 
   it('explains why an explicit non-trace file produced nothing', () => {
