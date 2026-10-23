@@ -58,8 +58,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # gh 的 file#label 语法只改展示名不改文件名，下载后仍是 index.html；
+          # 直接拷成带版本与用途的名字，拿下来就能分辨。
+          VERSION="${GITHUB_REF_NAME#v}"
+          cp dist/index.html "trajectory-qa-console-${VERSION}.html"
+          cp dist-cli/qa.mjs "trajectory-qa-cli-${VERSION}.mjs"
           gh release create "$GITHUB_REF_NAME" \
             --title "$GITHUB_REF_NAME" \
             --generate-notes \
-            dist/index.html#trajectory-qa-console.html \
-            dist-cli/qa.mjs#trajectory-qa-cli.mjs
+            "trajectory-qa-console-${VERSION}.html" \
+            "trajectory-qa-cli-${VERSION}.mjs"
