@@ -100,6 +100,29 @@ describe('buildCard derives from the pack, not from import time', () => {
   })
 })
 
+describe('a finding outside the pack does not decide the grade', () => {
+  it('keeps a ghost annotation visible but out of the counts and the gate', () => {
+    const session = sessionFor()
+    const clean = scoreSession(session, DEFAULT_PACK)
+    const ghost = scoreSession(session, DEFAULT_PACK, [
+      {
+        id: 'a1',
+        trajectoryId: session.trajectory.id,
+        // The dimension was dropped from the pack after the annotation was made.
+        dimension: 'no-such-dimension',
+        severity: 'error',
+        note: '这条标注指向一个已经不存在的维度',
+      },
+    ])
+
+    expect(ghost.counts.error).toBe(clean.counts.error)
+    expect(ghost.capped).toBe(clean.capped)
+    expect(ghost.overall).toBe(clean.overall)
+    // Still listed, so the user can see it stopped counting.
+    expect(ghost.findings.some((finding) => finding.ruleId === 'manual')).toBe(true)
+  })
+})
+
 describe('the two scoring entry points cannot disagree', () => {
   it('scoreSession and scoreUnderPack agree for every sample and pack', () => {
     for (let index = 0; index < SAMPLE_FILES.length; index += 1) {

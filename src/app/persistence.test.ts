@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { PackVariant } from '../core/model'
+import type { Annotation, PackVariant } from '../core/model'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
 import {
   STORAGE_KEYS,
@@ -40,6 +40,30 @@ describe('persistence', () => {
     const port = createPersistence(store)
     expect(port.loadPack().rules).toHaveLength(DEFAULT_PACK.rules.length)
     expect(port.loadAnnotations()).toHaveLength(1)
+  })
+
+  it('drops annotations whose step index cannot point at a step', () => {
+    const store = createMemoryStorage()
+    const port = createPersistence(store)
+
+    const base: Omit<Annotation, 'id' | 'stepIndex'> = {
+      trajectoryId: 't1',
+      dimension: 'semantic',
+      severity: 'warn',
+      note: 'n',
+    }
+    const saved = port.saveAnnotations([
+      { ...base, id: 'ok', stepIndex: 3 },
+      { ...base, id: 'negative', stepIndex: -1 },
+      { ...base, id: 'fractional', stepIndex: 1.5 },
+      { ...base, id: 'nan', stepIndex: Number.NaN },
+    ])
+    expect(saved).toBe(true)
+
+    // Only the one that can actually address a step survives. A negative or
+    // fractional index used to slip through and gate the score anyway.
+    const loaded = port.loadAnnotations()
+    expect(loaded.map((item) => item.id)).toEqual(['ok'])
   })
 
   it('falls back to defaults on corrupt or invalid data and records why', () => {

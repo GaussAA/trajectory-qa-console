@@ -130,11 +130,18 @@ export function scoreTrajectory(
         )
       : 100
 
+  // Counts and the error gate only look at findings that land on a defined
+  // dimension. A manual annotation whose dimension was dropped from the pack
+  // must not keep gating the score — it stays visible in the findings list,
+  // but it no longer decides the grade.
+  const knownDimensions = new Set(dimensions.map((dimension) => dimension.id))
+  const inScope = findings.filter((finding) => knownDimensions.has(finding.dimension))
+
   const counts: SeverityCounts = { error: 0, warn: 0, info: 0 }
-  for (const finding of findings) counts[finding.severity] += 1
+  for (const finding of inScope) counts[finding.severity] += 1
 
   const distinctErrorRules = new Set(
-    findings.filter((finding) => finding.severity === 'error').map((finding) => finding.ruleId),
+    inScope.filter((finding) => finding.severity === 'error').map((finding) => finding.ruleId),
   ).size
   const overall = Math.min(mean, capForErrors(distinctErrorRules))
   const graded = gradeOf(overall)

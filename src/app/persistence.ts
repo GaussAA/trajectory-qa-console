@@ -81,7 +81,12 @@ function isAnnotation(value: unknown): value is Annotation {
     typeof record.note === 'string' &&
     typeof record.dimension === 'string' &&
     (record.severity === 'error' || record.severity === 'warn' || record.severity === 'info') &&
-    (record.stepIndex === undefined || typeof record.stepIndex === 'number')
+    // 步号必须是非负整数：NaN、负数与小数都会造出指不到任何步的幽灵标注，
+    // 而它照样会算进错误封顶。
+    (record.stepIndex === undefined ||
+      (typeof record.stepIndex === 'number' &&
+        Number.isInteger(record.stepIndex) &&
+        record.stepIndex >= 0))
   )
 }
 
