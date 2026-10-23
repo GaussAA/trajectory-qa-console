@@ -51,6 +51,33 @@ function setup(locale: 'zh-CN' | 'en' = 'zh-CN') {
 afterEach(cleanup)
 
 describe('ComparePanel', () => {
+  it('never offers the base trajectory in the target picker', () => {
+    setup()
+    const [baseSelect, targetSelect] = screen.getAllByRole('combobox') as [
+      HTMLSelectElement,
+      HTMLSelectElement,
+    ]
+
+    // A trace compared against itself yields a confident "zero difference" —
+    // worse than no comparison at all.
+    const targetOptions = Array.from(targetSelect.querySelectorAll('option')).map(
+      (option) => (option as HTMLOptionElement).value,
+    )
+    expect(targetOptions).toHaveLength(1)
+    expect(targetOptions).not.toContain(baseSelect.value)
+
+    // Switching the base must swap which option is offered, not duplicate it.
+    fireEvent.change(baseSelect, { target: { value: targetOptions[0] as string } })
+    const [nextBase, nextTarget] = screen.getAllByRole('combobox') as [
+      HTMLSelectElement,
+      HTMLSelectElement,
+    ]
+    expect(nextBase.value).toBe(targetOptions[0])
+    expect(Array.from(nextTarget.querySelectorAll('option')).map((o) => (o as HTMLOptionElement).value)).toEqual([
+      targetSelect.value,
+    ])
+  })
+
   it('shows the score, dimension and step deltas', () => {
     setup()
     // 基准是 100 分的健康轨迹，对照是缺工具结果的轨迹：分数必然下降。

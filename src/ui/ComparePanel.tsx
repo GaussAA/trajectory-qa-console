@@ -49,7 +49,12 @@ export function ComparePanel({ sessions, cards, notes = [], initialBaseId, onClo
   const [targetId, setTargetId] = useState(sessions.find((session) => session.id !== firstId)?.id ?? firstId)
 
   const base = sessions.find((session) => session.id === baseId) ?? sessions[0]
-  const target = sessions.find((session) => session.id === targetId) ?? sessions[1] ?? sessions[0]
+  // The target must never be the base: comparing a trace with itself produces a
+  // confident-looking "zero difference", which is worse than no comparison.
+  const target =
+    sessions.find((session) => session.id === targetId && session.id !== base?.id) ??
+    sessions.find((session) => session.id !== base?.id) ??
+    null
 
   const diff = useMemo(() => {
     if (!base || !target) return null
@@ -188,11 +193,13 @@ export function ComparePanel({ sessions, cards, notes = [], initialBaseId, onClo
           <label className="compare-select">
             <span>{t('compare.target')}</span>
             <select value={target.id} onChange={(event) => setTargetId(event.target.value)}>
-              {sessions.map((session) => (
-                <option key={session.id} value={session.id}>
-                  {titleOf(session)}
-                </option>
-              ))}
+              {sessions
+                .filter((session) => session.id !== base?.id)
+                .map((session) => (
+                  <option key={session.id} value={session.id}>
+                    {titleOf(session)}
+                  </option>
+                ))}
             </select>
           </label>
           <span className="grow" />
