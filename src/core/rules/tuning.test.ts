@@ -20,6 +20,42 @@ function sessionFrom(source: string, label = 'trace.json') {
   return { id: analysis.id, trajectory: analysis.trajectory }
 }
 
+/** 调参面板的性能护栏：ADR-0009 说超过 50ms 就得挪出主线程，而这里此前
+ *  一条护栏都没有。合成轨迹的比例与 perf.test.ts 一致，便于横向比较。 */
+function bigSource(steps: number): string {
+  const messages: unknown[] = [{ role: 'system', content: '你是助手，回答必须引用检索结果。' }]
+  let turn = 0
+  while (messages.length + 2 < steps) {
+    messages.push({ role: 'user', content: `第 ${turn} 轮问题：帮我查一下政策条款。` })
+    messages.push({
+      role: 'assistant',
+      tool_calls: [{ id: `c${turn}`, function: { name: 'search', arguments: `{"q":"q${turn}"}` } }],
+    })
+    messages.push({ role: 'tool', tool_call_id: `c${turn}`, content: 'x'.repeat(200) })
+    turn += 1
+  }
+  messages.push({ role: 'assistant', content: '已完成。' })
+  return JSON.stringify(messages)
+}
+
+describe('buildTuningReport performance', () => {
+  it('re-runs a realistic workspace without freezing the drawer', () => {
+    const sessions = Array.from({ length: 20 }, (_, index) =>
+      sessionFrom(bigSource(1_000), `big-${index}.json`),
+    )
+
+    const started = performance.now()
+    const report = buildTuningReport(sessions, DEFAULT_PACK)
+    const ms = performance.now() - started
+
+    expect(report.rules.length).toBe(DEFAULT_PACK.rules.length)
+    expect(report.scores).toHaveLength(20)
+    // 一次改包就是一次全量重算：这是用户在抽屉里每次改数字都会付的代价。
+    // 预算给到 ADR-0009 警戒线的 10 倍，只防数量级退化，不绑硬件。
+    expect(ms).toBeLessThan(500)
+  }, 60_000)
+})
+
 describe('numericLiterals', () => {
   it('finds plain and decimal numbers', () => {
     expect(numericLiterals('stepCount > 40').map((item) => item.value)).toEqual([40])

@@ -49,7 +49,10 @@ describe('analysis performance budget', () => {
     const small = measure(500).ms
     const large = measure(5_000).ms
     // Pairing used to be O(n²) in the number of unpaired calls. A 10x input
-    // should not cost more than ~40x time.
-    expect(large).toBeLessThan(Math.max(small * 40, 3000))
+    // should not cost more than ~40x time. The floor is a CI-noise allowance:
+    // measured here it is ~3ms → ~25ms, so 40x already binds at 120ms; 500ms
+    // only absorbs a bad run. A floor of 3000ms would have made this test
+    // unfalsifiable — which is exactly what it was.
+    expect(large).toBeLessThan(Math.max(small * 40, 500))
   }, 30_000)
 })
