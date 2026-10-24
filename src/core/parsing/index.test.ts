@@ -117,6 +117,72 @@ describe('parseTrajectory', () => {
     expect(trajectory?.steps[1]?.forCallId).toBe('fc-1')
   })
 
+  it('pairs Responses function_call by call_id, not by the item id', () => {
+    const input = JSON.stringify([
+      { type: 'function_call', id: 'fc_item_1', call_id: 'call_1', name: 'weather', arguments: '{}' },
+      { type: 'function_call_output', call_id: 'call_1', output: 'sunny' },
+    ])
+
+    const [trajectory] = mustParse(input)
+    expect(trajectory?.steps[0]?.toolCalls[0]?.id).toBe('call_1')
+    expect(trajectory?.steps[0]?.toolCalls[0]?.result?.content).toBe('sunny')
+    expect(trajectory?.parseNotes).toEqual([])
+  })
+
+  it('splits parallel Anthropic tool_result parts into one step each and pairs every one', () => {
+    const input = JSON.stringify([
+      {
+        role: 'assistant',
+        content: [
+          { type: 'tool_use', id: 'a1', name: 'search', input: { q: 'x' } },
+          { type: 'tool_use', id: 'a2', name: 'read', input: { p: 'y' } },
+        ],
+      },
+      {
+        role: 'user',
+        content: [
+          { type: 'tool_result', tool_use_id: 'a1', content: 'R1' },
+          { type: 'tool_result', tool_use_id: 'a2', content: 'boom', is_error: true },
+        ],
+      },
+      { role: 'assistant', content: 'done' },
+    ])
+
+    const [trajectory] = mustParse(input)
+    const steps = trajectory?.steps ?? []
+    expect(steps.map((step) => step.role)).toEqual(['assistant', 'tool', 'tool', 'assistant'])
+    expect(steps.map((step) => step.index)).toEqual([0, 1, 2, 3])
+    expect(steps[0]?.toolCalls[0]?.result).toMatchObject({ callId: 'a1', content: 'R1', isError: false })
+    expect(steps[0]?.toolCalls[1]?.result).toMatchObject({ callId: 'a2', content: 'boom', isError: true })
+    expect(steps[1]?.forCallId).toBe('a1')
+    expect(steps[2]?.forCallId).toBe('a2')
+    expect(trajectory?.parseNotes).toEqual([])
+  })
+
+  it('keeps the text of a message that also holds parallel tool_result parts', () => {
+    const input = JSON.stringify([
+      {
+        role: 'assistant',
+        content: [
+          { type: 'tool_use', id: 'a1', name: 's', input: {} },
+          { type: 'tool_use', id: 'a2', name: 's', input: {} },
+        ],
+      },
+      {
+        role: 'user',
+        content: [
+          { type: 'tool_result', tool_use_id: 'a1', content: 'R1' },
+          { type: 'text', text: '请继续' },
+          { type: 'tool_result', tool_use_id: 'a2', content: 'R2' },
+        ],
+      },
+    ])
+
+    const steps = mustParse(input)[0]?.steps ?? []
+    expect(steps.map((step) => step.role)).toEqual(['assistant', 'user', 'tool', 'tool'])
+    expect(steps[1]?.text).toBe('请继续')
+  })
+
   it('returns a Result instead of throwing on unusable input', () => {
     const notJson = parseTrajectory('这不是 JSON', 'x')
     expect(notJson.ok).toBe(false)

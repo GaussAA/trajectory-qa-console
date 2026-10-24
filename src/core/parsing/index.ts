@@ -13,7 +13,7 @@
  */
 
 import { fail, ok, type Result, type Trajectory } from '../model'
-import { isRecord, looksLikeMessage, pairToolResults, pick, toStep } from './normalize'
+import { isRecord, looksLikeMessage, pairToolResults, pick, toSteps } from './normalize'
 
 const CONTAINER_KEYS = [
   'messages',
@@ -135,7 +135,7 @@ export function parseTrajectory(
     }
 
     const notes: string[] = []
-    const steps = draft.messages.map(toStep)
+    const steps = draft.messages.flatMap(toSteps)
     steps.forEach((step, index) => {
       step.index = index
     })
