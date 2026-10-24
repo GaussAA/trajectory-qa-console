@@ -378,6 +378,7 @@ export default function App({
           sessions={state.sessions}
           pack={state.pack}
           onClose={() => setAgentOpen(false)}
+          onApplyProposal={actions.adoptProposal}
           onFinish={(info) =>
             telemetry.emit(
               'ui:agent',

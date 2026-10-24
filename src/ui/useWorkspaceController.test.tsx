@@ -120,3 +120,27 @@ describe('import reports every problem it had', () => {
     expect(result.current.state.sessions).toHaveLength(0)
   })
 })
+
+describe('adoptProposal', () => {
+  it('applies the pack and keeps the previous one as a variant', async () => {
+    const { result } = setup()
+    await act(async () => {
+      void result.current.actions.ingestFiles([ok])
+      await Promise.resolve()
+    })
+    await waitFor(() => expect(result.current.state.sessions).toHaveLength(1))
+
+    const before = result.current.state.pack
+    const candidate = { ...before, name: '提案包' }
+
+    act(() => {
+      result.current.actions.adoptProposal(candidate, 'p1')
+    })
+
+    expect(result.current.state.pack.name).toBe('提案包')
+    // 后悔药：旧口径必须留得下来，否则一键改全局口径太危险。
+    expect(result.current.state.variants).toHaveLength(1)
+    expect(result.current.state.variants[0]?.pack.name).toBe(before.name)
+    expect(result.current.toast).toMatchObject({ key: 'toast.proposalApplied' })
+  })
+})

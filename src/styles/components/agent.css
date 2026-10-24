@@ -141,6 +141,37 @@
   margin-bottom: 10px;
 }
 
+.agent-diff {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  width: 100%;
+}
+
+.agent-diff li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(6, 8, 15, 0.45);
+}
+
+.agent-diff code {
+  font-family: var(--mono);
+  color: var(--teal);
+}
+
+.agent-proposal-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .agent-partial {
   margin: 0;
   padding: 8px 12px;

@@ -404,6 +404,13 @@ export const en: Record<MessageKey, string> = {
   'agent.ui.downloadProposal': 'Download candidate pack',
   'agent.ui.notConverged': 'Did not converge ({reason}); the conclusion is incomplete.',
   'agent.ui.stats': '{rounds} round(s) · {tools} tool call(s) · {tokens} tokens',
+  'agent.ui.applyProposal': 'Apply to workspace',
+  'agent.ui.applyHint':
+    'Your current rule pack is saved as a variant first, so you can switch back from the rules drawer.',
+  'agent.ui.backupVariant': 'before adopting {id}',
+  'agent.ui.diffEmpty': 'This edit matches the current pack; nothing to change',
+  'toast.proposalApplied': 'Applied proposal {id}; the previous pack is saved as variant "{name}"',
+  'toast.proposalAppliedNoBackup': 'Applied proposal {id}; variant limit reached, previous pack not saved',
 
   'compare.title': 'Trace comparison',
   'compare.base': 'Baseline',

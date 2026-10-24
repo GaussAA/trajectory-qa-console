@@ -394,6 +394,12 @@ export const zhCN = {
   'agent.ui.downloadProposal': '下载候选规则包',
   'agent.ui.notConverged': '未收敛（{reason}），结论不完整。',
   'agent.ui.stats': '{rounds} 轮 · {tools} 次工具调用 · {tokens} token',
+  'agent.ui.applyProposal': '应用到工作区',
+  'agent.ui.applyHint': '会先把当前规则包存成一个变体，随时可以在规则抽屉里切回。',
+  'agent.ui.backupVariant': '采纳 {id} 前',
+  'agent.ui.diffEmpty': '这项改动与当前口径一致，没有差异',
+  'toast.proposalApplied': '已应用提案 {id}，原口径存为变体「{name}」',
+  'toast.proposalAppliedNoBackup': '已应用提案 {id}；变体已满，原口径未另存',
 
   'compare.title': '轨迹对比',
   'compare.base': '基准',

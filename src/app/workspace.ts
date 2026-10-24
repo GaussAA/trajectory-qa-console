@@ -37,6 +37,9 @@ export type WorkspaceAction =
   | { type: 'step/select'; index: number | null }
   | { type: 'workspace/clear' }
   | { type: 'pack/apply'; pack: RulePack }
+  /** 采纳提案：一步完成「旧口径存成变体 + 换上候选包」。
+   *  分成两个 action 会有中间态（变体已存、包还没换），且两次 dispatch 之间可能插入别的更新。 */
+  | { type: 'pack/adopt'; pack: RulePack; variant: PackVariant }
   | { type: 'variant/save'; variant: PackVariant }
   | { type: 'variant/apply'; id: string }
   | { type: 'variant/rename'; id: string; name: string }
@@ -177,6 +180,17 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
     case 'pack/apply':
       // 经抽屉改包 = 脱离变体口径：标记为「未对齐」，列表里不再高亮。
       return { ...state, pack: action.pack, activeVariantId: null }
+
+    case 'pack/adopt': {
+      const rest = state.variants.filter((variant) => variant.id !== action.variant.id)
+      return {
+        ...state,
+        variants: [action.variant, ...rest],
+        pack: action.pack,
+        // 采纳提案也是「换了一套口径」，不是某个变体的口径。
+        activeVariantId: null,
+      }
+    }
 
     case 'variant/save': {
       const rest = state.variants.filter((variant) => variant.id !== action.variant.id)

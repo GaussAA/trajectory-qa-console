@@ -36,7 +36,10 @@ const RUN = {
   usage: { prompt: 10, completion: 5 },
 }
 
-function setup(target: Parameters<typeof AgentPanel>[0]['target']) {
+function setup(
+  target: Parameters<typeof AgentPanel>[0]['target'],
+  extra: Partial<Parameters<typeof AgentPanel>[0]> = {},
+) {
   return render(
     <I18nProvider initialLocale="zh-CN">
       <AgentPanel
@@ -45,8 +48,38 @@ function setup(target: Parameters<typeof AgentPanel>[0]['target']) {
         sessions={sessions()}
         pack={DEFAULT_PACK}
         onClose={() => undefined}
+        {...extra}
       />
     </I18nProvider>,
+  )
+}
+
+const RUN_WITH_PROPOSAL = {
+  ...RUN,
+  proposals: [
+    {
+      id: 'p1',
+      rationale: '死循环的扣分偏轻',
+      edits: [{ ruleId: 'exec-dead-loop', scoreImpact: 40 }],
+      applied: [{ ruleId: 'exec-dead-loop', severity: 'error', scoreImpact: 40, effectiveImpact: 40 }],
+      pack: { ...DEFAULT_PACK, name: '提案包' },
+      averageBefore: 76,
+      averageAfter: 70,
+      delta: -6,
+      rows: [],
+    },
+  ],
+}
+
+function replyWithProposal() {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () =>
+      streamOf([
+        { type: 'start', sessions: 1 },
+        { type: 'done', run: RUN_WITH_PROPOSAL },
+      ]),
+    ),
   )
 }
 
@@ -87,6 +120,40 @@ describe('AgentPanel', () => {
     expect(screen.getByText('提高扣分')).toBeTruthy()
     // 模型归纳与工具事实必须分开呈现，否则读者会以为结论里的数字是核验过的。
     expect(screen.getByText(/未经核验/)).toBeTruthy()
+  })
+
+  it('shows the field-level diff before offering to apply a proposal', async () => {
+    const user = userEvent.setup()
+    replyWithProposal()
+    const applied: { id: string; name: string }[] = []
+
+    const { container } = setup(
+      { endpoint: 'http://127.0.0.1:7788', token: null },
+      {
+        onApplyProposal: (pack, id) => applied.push({ id, name: pack.name }),
+      },
+    )
+
+    await user.click(screen.getByRole('button', { name: /开始诊断/ }))
+    expect(await screen.findByText(/exec-dead-loop/)).toBeTruthy()
+    // 只说「改成什么」不够：改前值必须同时可见，否则一键应用等于盲改。
+    const row = container.querySelector('.agent-diff li')
+    expect(row?.textContent).toContain('→')
+    expect(row?.textContent).toContain('40')
+
+    await user.click(screen.getByRole('button', { name: /应用到工作区/ }))
+    expect(applied).toEqual([{ id: 'p1', name: '提案包' }])
+  })
+
+  it('hides the apply button when the caller provides no handler', async () => {
+    const user = userEvent.setup()
+    replyWithProposal()
+
+    setup({ endpoint: 'http://127.0.0.1:7788', token: null })
+    await user.click(screen.getByRole('button', { name: /开始诊断/ }))
+
+    expect(await screen.findByText(/exec-dead-loop/)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /应用到工作区/ })).toBeNull()
   })
 
   it('cancels an in-flight request and returns to idle', async () => {

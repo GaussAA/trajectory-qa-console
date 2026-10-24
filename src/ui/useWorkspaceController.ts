@@ -303,6 +303,31 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
     [telemetry],
   )
 
+  /** 采纳诊断提案：先把当前口径存成变体（后悔药），再换上候选包。
+   *  变体已满时不阻断主流程，但要如实说「旧口径没存下来」——静默丢弃才叫坑。 */
+  const adoptProposal = useCallback(
+    (pack: RulePack, proposalId: string) => {
+      const current = stateRef.current.pack
+      if (stateRef.current.variants.length >= MAX_PACK_VARIANTS) {
+        dispatch({ type: 'pack/apply', pack })
+        telemetry.emit('pack:adopt', { proposalId, saved: false })
+        setToast({ key: 'toast.proposalAppliedNoBackup', params: { id: proposalId } })
+        return
+      }
+      const variant: PackVariant = {
+        id: uid(),
+        name: t('agent.ui.backupVariant', { id: proposalId }),
+        // 深拷贝：之后手改包不该悄悄改掉这份备份。
+        pack: JSON.parse(JSON.stringify(current)) as RulePack,
+        savedAt: new Date().toISOString(),
+      }
+      dispatch({ type: 'pack/adopt', pack, variant })
+      telemetry.emit('pack:adopt', { proposalId, saved: true })
+      setToast({ key: 'toast.proposalApplied', params: { id: proposalId, name: variant.name } })
+    },
+    [t, telemetry],
+  )
+
   const addAnnotation = useCallback(
     (stepIndex: number, dimension: string, severity: Severity, note: string) => {
       const current = findSessionById(stateRef.current.sessions, stateRef.current.selectedId)
@@ -505,6 +530,7 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
       chooseSession,
       chooseStep,
       applyPack,
+      adoptProposal,
       addAnnotation,
       removeAnnotation,
       setSessionNote,

@@ -150,6 +150,10 @@ node dist-cli/qa.mjs traces --agent --agent-rounds 4 --agent-trace ./trace.json
   （`reasoning_effort` / `thinking` / `enable_thinking` 全无效），so 提示词里压思考
   （实测 10.5s → 3.4s）；`max_tokens` 给小了会让 reasoning 吃光额度、`content` 空串。
 - **提案（P3）只提不生效**：`propose_pack` 交出「草稿包 + 试跑数字」，**永不自动生效**。
+  界面侧「应用到工作区」是唯一的采纳入口，走 `pack/adopt`：**先把当前包存成变体再换包**，
+  一步完成（拆成两次 dispatch 会留下「变体存了、包没换」的半截状态）。变体已满时不阻断采纳，
+  但 toast 明说「原口径未另存」。采纳前必须把改动摊成「字段 改前 → 改后」——
+  只说「改成什么」不够，一键应用等于盲改。
   CLI 把第一份写成 `proposal.pack.json`，它就是一份完整规则包，可直接 `--pack` 复跑；
   多份提案只在 `agent.json` 里。`propose_pack` 与 `simulate_pack` 共用 `draftPack` +
   `simulateOn`，所以「模拟能过、提案过不了」这种自相矛盾在结构上不存在。

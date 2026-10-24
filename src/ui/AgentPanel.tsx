@@ -9,6 +9,7 @@ import type { SessionAnalysis } from '../core/analysis'
 import type { RulePack } from '../core/model'
 import type { AgentEvent, AgentRun } from '../core/agent/types'
 import { diagnose, type AgentTarget } from '../app/agent-client'
+import { diffEdits } from '../app/proposal-diff'
 import { useI18n, type MessageKey } from '../i18n'
 import { cx, downloadFile } from '../lib/format'
 import { Icon } from './Icons'
@@ -21,6 +22,8 @@ interface Props {
   sessions: SessionAnalysis[]
   pack: RulePack
   onClose: () => void
+  /** 提供时，提案区会出现「应用到工作区」；应用前由调用方负责备份当前口径。 */
+  onApplyProposal?: (pack: RulePack, proposalId: string) => void
   /** 提供时，界面会把一次请求记为一条遥测事件（失败、耗时、轮次）。 */
   onFinish?: (info: { ok: boolean; code?: string; rounds: number; toolCalls: number; ms: number }) => void
 }
@@ -32,7 +35,15 @@ interface Failure {
   message: string
 }
 
-export function AgentPanel({ open, target, sessions, pack, onClose, onFinish }: Props) {
+export function AgentPanel({
+  open,
+  target,
+  sessions,
+  pack,
+  onClose,
+  onApplyProposal,
+  onFinish,
+}: Props) {
   const { t } = useI18n()
   const panelRef = useRef<HTMLDivElement>(null)
   useFocusTrap(panelRef, open)
@@ -252,24 +263,59 @@ export function AgentPanel({ open, target, sessions, pack, onClose, onFinish }: 
                 <section>
                   <h4>{t('agent.ui.proposals')}</h4>
                   <p className="agent-mute agent-note">{t('agent.ui.proposalNote')}</p>
-                  {run.proposals.map((proposal, index) => (
-                    <div className="agent-proposal" key={proposal.id}>
-                      <div>
-                        <b>{proposal.id}</b> {proposal.rationale}
+                  {run.proposals.map((proposal, index) => {
+                    // 差异先摆出来：一键应用一个没看清的改动，和盲改没区别。
+                    const diffs = diffEdits(pack, proposal.edits)
+                    return (
+                      <div className="agent-proposal" key={proposal.id}>
+                        <div>
+                          <b>{proposal.id}</b> {proposal.rationale}
+                        </div>
+                        <ul className="agent-diff">
+                          {diffs.length === 0 ? (
+                            <li className="agent-mute">{t('agent.ui.diffEmpty')}</li>
+                          ) : (
+                            diffs.map((diff) => (
+                              <li key={`${diff.ruleId}-${diff.field}`}>
+                                <code>{diff.ruleId}</code>
+                                <span className="agent-mute">{diff.field}</span>
+                                <span>
+                                  {diff.before} → <b>{diff.after}</b>
+                                </span>
+                              </li>
+                            ))
+                          )}
+                        </ul>
+                        <div className="agent-mute">
+                          {t('agent.ui.proposalDelta', {
+                            before: proposal.averageBefore,
+                            after: proposal.averageAfter,
+                            delta: proposal.delta > 0 ? `+${proposal.delta}` : String(proposal.delta),
+                          })}
+                        </div>
+                        <div className="agent-proposal-actions">
+                          {onApplyProposal && (
+                            <button
+                              type="button"
+                              className="btn primary sm"
+                              onClick={() => onApplyProposal(proposal.pack, proposal.id)}
+                            >
+                              {t('agent.ui.applyProposal')}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="btn ghost sm"
+                            onClick={() => downloadProposal(index)}
+                          >
+                            <Icon name="download" size={12} />
+                            {t('agent.ui.downloadProposal')}
+                          </button>
+                        </div>
+                        {onApplyProposal && <p className="agent-mute">{t('agent.ui.applyHint')}</p>}
                       </div>
-                      <div className="agent-mute">
-                        {t('agent.ui.proposalDelta', {
-                          before: proposal.averageBefore,
-                          after: proposal.averageAfter,
-                          delta: proposal.delta > 0 ? `+${proposal.delta}` : String(proposal.delta),
-                        })}
-                      </div>
-                      <button type="button" className="btn ghost sm" onClick={() => downloadProposal(index)}>
-                        <Icon name="download" size={12} />
-                        {t('agent.ui.downloadProposal')}
-                      </button>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </section>
               )}
 
