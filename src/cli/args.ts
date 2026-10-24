@@ -41,6 +41,8 @@ export interface CliOptions {
   agentRounds: number | null
   /** 把完整调用轨迹写成 JSON 文件；null 表示不写。 */
   agentTrace: string | null
+  /** 定向诊断：想让模型专门看什么；null 表示用默认任务。 */
+  agentTask: string | null
   /** 对比模式：把两份轨迹对照成一份报告（第一份为基准）。 */
   compare: boolean
   /** 口径对比：与另一套规则包（别名或文件）在本次轨迹上对跑。 */
@@ -116,6 +118,7 @@ export function parseArgs(argv: string[]): ParseResult {
     agentDryRun: false,
     agentRounds: null,
     agentTrace: null,
+    agentTask: null,
     compare: false,
     packCompare: null,
     quiet: false,
@@ -294,6 +297,14 @@ export function parseArgs(argv: string[]): ParseResult {
         if (typeof value !== 'string') return { ok: false, error: value }
         options.agent = true
         options.agentTrace = value
+        index += 1
+        break
+      }
+      case '--agent-task': {
+        const value = takeValue(inline, flag)
+        if (typeof value !== 'string') return { ok: false, error: value }
+        options.agent = true
+        options.agentTask = value
         index += 1
         break
       }

@@ -602,6 +602,41 @@ describe('agent diagnosis', () => {
     usage: { prompt_tokens: 12, completion_tokens: 6 },
   })
 
+  const PROPOSED = JSON.stringify({
+    choices: [
+      {
+        message: {
+          content: '',
+          tool_calls: [
+            {
+              id: 'c0',
+              type: 'function',
+              function: {
+                name: 'propose_pack',
+                arguments: JSON.stringify({
+                  rationale: '执行维扣分偏轻',
+                  edits: [{ ruleId: 'exec-dead-loop', scoreImpact: 30 }],
+                }),
+              },
+            },
+          ],
+        },
+        finish_reason: 'tool_calls',
+      },
+    ],
+    usage: { prompt_tokens: 12, completion_tokens: 6 },
+  })
+
+  /** 按序回放若干回合：CLI 测试只关心「接得上」，不需要完整循环行为。 */
+  function sequence(replies: string[]) {
+    let index = 0
+    return async () => {
+      const text = replies[Math.min(index, replies.length - 1)] ?? ''
+      index += 1
+      return { ok: true, status: 200, text }
+    }
+  }
+
   const LLM_ENV = { TQA_LLM_BASE_URL: 'https://llm.test/v1', TQA_LLM_MODEL: 'm', TQA_LLM_API_KEY: 'k' }
 
   it('refuses to run without configuration', async () => {
@@ -663,6 +698,17 @@ describe('agent diagnosis', () => {
     expect(chunks.out).toContain('数字只能来自工具')
   })
 
+  it('puts --agent-task into the prompt so the model can be pointed at one question', async () => {
+    const dir = tempDir()
+    trace(dir, 'clean.json', CLEAN)
+    const { io, chunks } = capture()
+
+    const code = await main([dir, '--agent-dry-run', '--agent-task', '只看工具报错后有没有重试'], io, { env: {} })
+
+    expect(code).toBe(EXIT.ok)
+    expect(chunks.out).toContain('只看工具报错后有没有重试')
+  })
+
   it('writes agent.md and agent.json next to the report', async () => {
     const dir = tempDir()
     trace(dir, 'clean.json', CLEAN)
@@ -698,6 +744,48 @@ describe('agent diagnosis', () => {
 
     expect(code).toBe(EXIT.ok)
     expect(existsSync(tracePath)).toBe(true)
+  })
+
+  it('writes a candidate pack that --pack can load as-is', async () => {
+    const dir = tempDir()
+    trace(dir, 'clean.json', CLEAN)
+    const out = join(dir, 'out')
+    const { io, chunks } = capture()
+
+    const code = await main([dir, '--agent', '--out', out, '--quiet'], io, {
+      env: LLM_ENV,
+      transport: sequence([PROPOSED, SUBMITTED]),
+    })
+
+    expect(code).toBe(EXIT.ok)
+    const packPath = join(out, 'proposal.pack.json')
+    expect(existsSync(packPath)).toBe(true)
+
+    // 端到端的关键一条：静态检查不等于「能当 --pack 用」，真的加载一遍。
+    const loaded = loadPack(packPath)
+    expect(loaded.ok).toBe(true)
+    if (!loaded.ok) return
+    expect(loaded.pack.name).toContain('提案 1')
+    expect(loaded.pack.rules.find((rule) => rule.id === 'exec-dead-loop')?.scoreImpact).toBe(30)
+
+    const markdown = readFileSync(join(out, 'agent.md'), 'utf8')
+    expect(markdown).toContain('规则包提案')
+    expect(chunks.out).toContain('proposal.pack.json')
+  })
+
+  it('says how to save proposals when there is no --out', async () => {
+    const dir = tempDir()
+    trace(dir, 'clean.json', CLEAN)
+    const { io, chunks } = capture()
+
+    const code = await main([dir, '--agent', '--quiet'], io, {
+      env: LLM_ENV,
+      transport: sequence([PROPOSED, SUBMITTED]),
+    })
+
+    expect(code).toBe(EXIT.ok)
+    expect(chunks.err).toContain('--out')
+    expect(chunks.err).toContain('规则包提案')
   })
 
   it('exits 2 when the endpoint fails, after still writing the report', async () => {

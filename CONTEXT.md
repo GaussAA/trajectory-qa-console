@@ -149,8 +149,14 @@ node dist-cli/qa.mjs traces --agent --agent-rounds 4 --agent-trace ./trace.json
 - **端点实测（2026-10-24）**：支持 function calling；推理型模型的思考**关不掉**
   （`reasoning_effort` / `thinking` / `enable_thinking` 全无效），so 提示词里压思考
   （实测 10.5s → 3.4s）；`max_tokens` 给小了会让 reasoning 吃光额度、`content` 空串。
-- **P1 只开「读」**：`propose_pack` 留到 P3。`simulate_pack` 只算不改——草稿包只存在于那次调用，
-  且必须过 `validatePack`。
+- **提案（P3）只提不生效**：`propose_pack` 交出「草稿包 + 试跑数字」，**永不自动生效**。
+  CLI 把第一份写成 `proposal.pack.json`，它就是一份完整规则包，可直接 `--pack` 复跑；
+  多份提案只在 `agent.json` 里。`propose_pack` 与 `simulate_pack` 共用 `draftPack` +
+  `simulateOn`，所以「模拟能过、提案过不了」这种自相矛盾在结构上不存在。
+- **提案里没有完整包**（`agent.json` 只给 `packName` + `edits` + `applied` + `rows`）：
+  完整包只在 `proposal.pack.json` 一处，免得同一份数据两处漂移。
+- **定向诊断**：`--agent-task <文本>` 把用户的问题塞进 user 消息；试跑会把两条消息原样打出来，
+  所以「定向指令到底传没传」不用猜。
 
 ### 对比报告
 

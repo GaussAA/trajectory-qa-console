@@ -46,9 +46,16 @@
   SDK 的请求/响应形状仍是事实标准，所以 wire 类型照抄（`tool_calls` / `finish_reason` / `role: tool`）。
 - **为什么不做多轮自检**（让模型复核自己的结论）：成本翻倍、收益不确定，
   与 ADR-0011 对「同一输入同一结论」的判断一致。
-- **为什么 P1 不给 `propose_pack`。** 先让它学会看（读 + 纯计算模拟），
-  再让它提议。`simulate_pack` 已经能回答「改这条会怎样」，而它**只算不改**：
-  草稿包只存在于那次调用里，且必须过 `validatePack`。
+- **提案只提不生效。** `propose_pack` 交出的是一份「草稿包 + 试跑数字」，落不落地由人决定：
+  CLI 写成 `proposal.pack.json`（可直接 `--pack` 复跑），界面将来走规则抽屉导入。
+  它复用 `simulate_pack` 的 `draftPack` + `simulateOn`，因此「模拟说能过、提案却过不了」
+  在结构上不可能发生。工具返回里显式带 `appliedToWorkspace: false`，
+  是为了让模型别在结论里写「已修复」。
+- **`delta = 0` 的提案仍然允许提。** 试过真机：模型三次调 `simulate_pack` 得出 delta 全为 0，
+  于是明确说「规则包不必改」——这是正确输出，比硬凑一条提案有价值。
+  但反过来也放过：扣分力度是否符合「严重度」并不总和平均分变化等价
+  （封顶会把差异吃掉），此时模型给的理由（相对权重）仍有价值。
+  工具的职责是算准并把数字交出去，不是替人判断值不值得——与「agent 不参与打分」同一条界限。
 - **为什么报告分「结论」与「调用记录」两节。** 模型可以编数字，工具不会。
   分成两节，读者一眼能看出哪句是判断、哪个数字是事实——这比事后校验模型文本里的数字现实得多。
 - **已知代价**：输入 token 随轮次线性增长（实测 3 条会话、4 轮、6 次工具调用 = 16k token，
@@ -71,11 +78,13 @@
 - 新增 `src/core/agent/`（`types` / `chat` / `prompt` / `tools` / `loop`）、
   `src/lib/agent-report.ts`。
 - `batch.ts` 的 `BatchResult` 增加 `sessions`（智能体要 id 与 metrics，报告层只要 trajectory + card）。
-- CLI 新增 `--agent` / `--agent-dry-run` / `--agent-rounds` / `--agent-trace`；
-  产物 `agent.md` / `agent.json`，与 `report.*` 分开写。
+- CLI 新增 `--agent` / `--agent-dry-run` / `--agent-rounds` / `--agent-trace` / `--agent-task`；
+  产物 `agent.md` / `agent.json`，与 `report.*` 分开写；有提案时另出 `proposal.pack.json`
+  （完整规则包，可直接 `--pack`）。
 - 语义复核三处修正：显式 `max_tokens=4096`、超时 20s → 60s、提示词压思考；
   `TQA_LLM_BASE_URL` 可直接写 base（自动补 `/chat/completions`，且只对 `/v1` 这类版本尾巴生效，
   免得把本地代理的 `/api/chat` 拼坏）。
-- 测试：智能体 32 项（全部用假模型，不联网）、报告 8 项、语义 +4 项、CLI +9 项；
-  总数 376 → 429。
+- 测试：智能体 39 项（全部用假模型，不联网）、报告 11 项、语义 +4 项、CLI +12 项；
+  总数 376 → 442。其中一条是**端到端**的：CLI 写出的 `proposal.pack.json` 必须能被
+  `loadPack` 接受并复跑——静态检查不等于「能当 --pack 用」。
 - 界面零改动——与 ADR-0011 一样，这是刻意的边界。

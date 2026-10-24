@@ -28,7 +28,7 @@ import {
   renderAgentMarkdown,
 } from '../lib/agent-report'
 import { runAgent } from '../core/agent'
-import { buildSystemPrompt } from '../core/agent/prompt'
+import { buildAgentMessages } from '../core/agent/prompt'
 import { toolSpecs } from '../core/agent/tools'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
 import { BUILTIN_PACK_EN } from '../core/rules/builtin-pack-en'
@@ -478,9 +478,17 @@ export async function main(
   // 智能体诊断：只解释分数，不改分数。产物与 report.* 分开写。
   if (options.agent) {
     if (options.agentDryRun) {
-      // 试跑零成本：审计提示词与工具清单，确认要发什么给外部端点。
+      // 试跑零成本：把将发送的两条消息与工具清单原样打出来。
+      // 打印 messages 而不只是 system prompt，是因为 --agent-task 落在 user 消息里，
+      // 只看 system 会让人以为定向指令没生效。
+      const messages = buildAgentMessages({
+        locale,
+        packName: pack.name,
+        sessionCount: result.sessions.length,
+        task: options.agentTask ?? undefined,
+      })
       stdout(`${t('cli.agentDryRun')}\n\n`)
-      stdout(`${buildSystemPrompt(locale)}\n\n`)
+      stdout(`${JSON.stringify(messages, null, 2)}\n\n`)
       stdout(`${JSON.stringify(toolSpecs(), null, 2)}\n`)
       return EXIT.ok
     }
@@ -510,6 +518,7 @@ export async function main(
         model: config.model,
         apiKey: config.apiKey,
         locale,
+        task: options.agentTask ?? undefined,
         budget: options.agentRounds === null ? undefined : { maxRounds: options.agentRounds },
       },
     )
@@ -540,6 +549,20 @@ export async function main(
       const path = resolve(options.agentTrace)
       writeFileSync(path, json, 'utf8')
       stdout(`${t('cli.wrote', { path })}\n`)
+    }
+
+    // 候选规则包单独落一个文件：它是**可直接当 --pack 用**的完整包，
+    // 混在 agent.json 里就得让人自己拆，而拆错一个字段就是白跑一轮。
+    if (run.proposals.length > 0) {
+      const first = run.proposals[0]
+      if (options.out && first) {
+        const written = writeArtifacts(resolve(options.out), 'proposal.pack', ['json'], {
+          json: `${JSON.stringify(first.pack, null, 2)}\n`,
+        })
+        for (const path of written) stdout(`${t('cli.agentProposal', { path })}\n`)
+      } else {
+        stderr(`${t('cli.agentProposalNoOut', { count: run.proposals.length })}\n`)
+      }
     }
 
     stdout(

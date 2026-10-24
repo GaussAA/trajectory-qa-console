@@ -162,6 +162,7 @@ export function renderHelp(locale: Locale, { version }: HelpOptions): string {
     `  ${t('cli.optAgentDryRun')}`,
     `  ${t('cli.optAgentRounds')}`,
     `  ${t('cli.optAgentTrace')}`,
+    `  ${t('cli.optAgentTask')}`,
     `  ${t('cli.optQuiet')}`,
     `  ${t('cli.optHelp')}`,
     '',
