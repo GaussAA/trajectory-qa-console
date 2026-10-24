@@ -267,6 +267,10 @@ export const en: Record<MessageKey, string> = {
   'rules.templateHint':
     'Message templates interpolate context with {field}, e.g. "step {step} has {unpairedCalls} unpaired calls".',
   'rules.imported': 'Loaded {file} — not applied yet',
+  'rules.builtin': 'Load a built-in pack',
+  'rules.builtinZh': 'Chinese pack',
+  'rules.builtinEn': 'English pack',
+  'rules.builtinLoaded': 'Loaded the built-in {name} — not applied yet',
   'rules.applied': 'Applied: {rules} rules / {dimensions} dimensions',
   'rules.jsonError': 'JSON parse failed: {message}',
   'rules.closeHint': 'Close (Esc)',

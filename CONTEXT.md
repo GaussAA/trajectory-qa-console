@@ -108,7 +108,7 @@ src/lib/      格式化与报告文本
 | `bin.ts`     | 进程边界：argv、`process.exitCode`、未捕获异常                |
 
 规则包：内置中文包为默认；`packs/builtin-en.json` 是结构完全等价的英文包，
-`--pack en` 直接选用（界面可从规则抽屉导入同一份文件）。翻译只改文案，
+`--pack en` 直接选用（界面在规则抽屉顶部「载入内置规则包」一键载入草稿，仍需「校验并应用」才生效）。翻译只改文案，
 `id / expr / severity / scoreImpact` 与中文包逐条一致，由 `packs.test.ts` 按住。
 
 ```bash

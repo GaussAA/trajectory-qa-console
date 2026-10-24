@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { analyze } from '../core/analysis'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
+import { BUILTIN_PACK_EN } from '../core/rules/builtin-pack-en'
 import { I18nProvider } from '../i18n'
 import { RuleDrawer } from './RuleDrawer'
 
@@ -321,5 +322,51 @@ describe('RuleDrawer tuning panel', () => {
   it('explains that there is nothing to dry-run without traces', () => {
     setup({ sessions: [] })
     expect(screen.getByText(/先载入轨迹/)).toBeTruthy()
+  })
+})
+
+describe('RuleDrawer built-in packs', () => {
+  const editorOf = (container: HTMLElement) =>
+    container.querySelector('textarea.pack-editor') as HTMLTextAreaElement
+
+  it('loads the English pack into the draft without applying it', () => {
+    const onApply = vi.fn()
+    const { container } = setup({ onApply })
+    fireEvent.click(screen.getByRole('button', { name: '英文包' }))
+    expect(JSON.parse(editorOf(container).value)).toEqual(JSON.parse(JSON.stringify(BUILTIN_PACK_EN)))
+    expect(screen.getByText(/已载入内置英文包，尚未应用/)).toBeTruthy()
+    expect(onApply).not.toHaveBeenCalled()
+  })
+
+  it('applies the loaded English pack only through the apply button', () => {
+    const onApply = vi.fn()
+    setup({ onApply })
+    fireEvent.click(screen.getByRole('button', { name: '英文包' }))
+    fireEvent.click(screen.getByRole('button', { name: '校验并应用' }))
+    expect(onApply).toHaveBeenCalledTimes(1)
+    expect(onApply.mock.calls[0]?.[0]).toMatchObject({ name: BUILTIN_PACK_EN.name })
+  })
+
+  it('switches back to the Chinese pack from an English draft', () => {
+    const { container } = setup({ pack: BUILTIN_PACK_EN })
+    fireEvent.click(screen.getByRole('button', { name: '中文包' }))
+    expect(JSON.parse(editorOf(container).value)).toEqual(JSON.parse(JSON.stringify(DEFAULT_PACK)))
+  })
+
+  it('labels the buttons in English', () => {
+    render(
+      <I18nProvider initialLocale="en">
+        <RuleDrawer
+          open
+          pack={DEFAULT_PACK}
+          sessions={[]}
+          ruleIssues={[]}
+          onClose={() => undefined}
+          onApply={() => undefined}
+        />
+      </I18nProvider>,
+    )
+    expect(screen.getByRole('button', { name: 'English pack' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Chinese pack' })).toBeTruthy()
   })
 })
