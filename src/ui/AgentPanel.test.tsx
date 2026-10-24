@@ -145,6 +145,23 @@ describe('AgentPanel', () => {
     expect(applied).toEqual([{ id: 'p1', name: '提案包' }])
   })
 
+  it('offers to export the diagnosis report on its own', async () => {
+    const user = userEvent.setup()
+    replyWithProposal()
+    const exported: string[] = []
+
+    setup(
+      { endpoint: 'http://127.0.0.1:7788', token: null },
+      { onExport: (format) => exported.push(format) },
+    )
+
+    await user.click(screen.getByRole('button', { name: /开始诊断/ }))
+    await user.click(await screen.findByRole('button', { name: /导出诊断报告/ }))
+    await user.click(screen.getByRole('button', { name: /导出 JSON/ }))
+
+    expect(exported).toEqual(['md', 'json'])
+  })
+
   it('hides the apply button when the caller provides no handler', async () => {
     const user = userEvent.setup()
     replyWithProposal()

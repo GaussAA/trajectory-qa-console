@@ -44,8 +44,9 @@ export interface DiagnoseRequest {
 export type DiagnoseFailureCode = 'offline' | 'http' | 'stream' | 'aborted' | 'rejected'
 
 export type DiagnoseOutcome =
-  /** `partial` 非空表示服务端跳过了几条会话（不变量 5 的会话级隔离），界面要如实显示。 */
-  | { ok: true; run: AgentRun; partial?: string }
+  /** `partial` 非空表示服务端跳过了几条会话（不变量 5 的会话级隔离），界面要如实显示。
+   *  `model` 来自 start 事件：导出的报告要写清真用了哪个模型。 */
+  | { ok: true; run: AgentRun; model: string; partial?: string }
   | { ok: false; code: DiagnoseFailureCode; message: string }
 
 interface StreamLine {
@@ -110,6 +111,7 @@ export async function diagnose(request: DiagnoseRequest): Promise<DiagnoseOutcom
   let run: AgentRun | null = null
   let partial: string | null = null
   let streamError: string | null = null
+  let model = ''
 
   const handle = (line: string): void => {
     let parsed: StreamLine
@@ -119,7 +121,8 @@ export async function diagnose(request: DiagnoseRequest): Promise<DiagnoseOutcom
       // 半行或坏行：跳过，不要让一行脏数据毁掉整次诊断
       return
     }
-    if (parsed.type === 'progress' && parsed.event) request.onEvent?.(parsed.event)
+    if (parsed.type === 'start') model = (parsed as { model?: string }).model ?? ''
+    else if (parsed.type === 'progress' && parsed.event) request.onEvent?.(parsed.event)
     else if (parsed.type === 'done' && parsed.run) run = parsed.run
     else if (parsed.type === 'error') {
       // 服务端用 error 事件报「部分会话被跳过」，那不等于整次失败，所以分开记。
@@ -150,5 +153,5 @@ export async function diagnose(request: DiagnoseRequest): Promise<DiagnoseOutcom
     return { ok: false, code: streamError ? 'rejected' : 'stream', message: streamError ?? 'stream ended early' }
   }
   // 部分会话被跳过时如实交代：静默少诊断几条，等于让人以为都看过了。
-  return partial === null ? { ok: true, run } : { ok: true, run, partial }
+  return partial === null ? { ok: true, run, model } : { ok: true, run, model, partial }
 }

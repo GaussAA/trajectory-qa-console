@@ -83,7 +83,7 @@ describe('diagnose', () => {
   it('forwards progress events and returns the finished run', async () => {
     stubFetch(() =>
       streamOf([
-        { type: 'start', sessions: 1 },
+        { type: 'start', sessions: 1, model: 'sensenova-test' },
         { type: 'progress', event: { kind: 'round', round: 1, toolCalls: 1 } },
         { type: 'progress', event: { kind: 'tool', round: 1, name: 'list_sessions', ok: true, ms: 3 } },
         { type: 'done', run: SUBMITTED },
@@ -99,6 +99,8 @@ describe('diagnose', () => {
 
     expect(seen).toEqual(['round', 'tool'])
     expect(result.ok && result.run.diagnosis?.verdict).toBe('还行')
+    // 报告头部要写清真用了哪个模型，所以这条信息得从 start 事件带出来。
+    expect(result.ok && result.model).toBe('sensenova-test')
   })
 
   it('reports a stopped service as offline rather than a generic failure', async () => {

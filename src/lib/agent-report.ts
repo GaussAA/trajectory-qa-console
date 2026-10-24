@@ -142,7 +142,9 @@ export function renderAgentMarkdown(input: AgentReportInput, model?: AgentReport
       const where = sessionLabel(sessions, item.session)
       const prefix = where ? `**${where}** · ` : ''
       lines.push(`- ${prefix}${item.cause}`)
-      if (item.evidence.trim() !== '') {
+      // 模型给的字段不可全信（也可能是旧版本存档）：缺一个字段就让整份报告崩掉，
+      // 与「单条坏数据不得影响其余部分」相悖。
+      if ((item.evidence ?? '').trim() !== '') {
         lines.push(`  - ${t(locale, 'agent.report.evidence')}：${item.evidence}`)
       }
     }
@@ -155,7 +157,7 @@ export function renderAgentMarkdown(input: AgentReportInput, model?: AgentReport
     for (const item of actions) {
       const rule = item.ruleId ? ` \`${item.ruleId}\`` : ''
       lines.push(`- ${item.action}${rule}`)
-      if (item.rationale.trim() !== '') {
+      if ((item.rationale ?? '').trim() !== '') {
         lines.push(`  - ${t(locale, 'agent.report.rationale')}：${item.rationale}`)
       }
     }

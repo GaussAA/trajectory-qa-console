@@ -144,3 +144,64 @@ describe('adoptProposal', () => {
     expect(result.current.toast).toMatchObject({ key: 'toast.proposalApplied' })
   })
 })
+
+describe('exportAgentReport', () => {
+  const RUN = {
+    ok: true,
+    diagnosis: {
+      verdict: '短板在工具错误恢复。',
+      rootCauses: [{ cause: '报错后放弃', evidence: '第 2 步' }],
+      actions: [{ action: '提高扣分', rationale: '试跑后均值下降' }],
+    },
+    answer: '',
+    proposals: [],
+    trace: {
+      entries: [
+        { kind: 'tool' as const, round: 1, name: 'list_sessions', args: '{}', ok: true, result: '{}', ms: 2 },
+      ],
+      rounds: 1,
+      toolCalls: 1,
+      truncated: false,
+      stopReason: 'submitted' as const,
+    },
+    usage: { prompt: 10, completion: 5 },
+  }
+
+  it('writes a standalone diagnosis report, not the score report', async () => {
+    const { result } = setup()
+    const blobs: Blob[] = []
+    const originalCreate = URL.createObjectURL
+    const originalRevoke = URL.revokeObjectURL
+    // jsdom 没有这两个：不 mock 的话 downloadFile 里 2s 后的 revoke 会炸。
+    URL.createObjectURL = ((blob: Blob) => {
+      blobs.push(blob)
+      return 'blob:mock'
+    }) as typeof URL.createObjectURL
+    URL.revokeObjectURL = () => undefined
+
+    try {
+      act(() => {
+        result.current.actions.receiveAgentRun({
+          run: RUN,
+          model: 'sensenova-test',
+          endpoint: 'http://127.0.0.1:7788',
+        })
+      })
+      await act(async () => {
+        result.current.actions.exportAgentReport('md')
+        await Promise.resolve()
+      })
+
+      const text = await blobs[0]!.text()
+      expect(text).toContain('# 轨迹诊断报告')
+      expect(text).toContain('sensenova-test')
+      expect(text).toContain('短板在工具错误恢复')
+      // 诊断报告的免责声明必须在，否则模型的话会被当成核验过的结论。
+      expect(text).toContain('未经核验')
+      expect(result.current.toast).toMatchObject({ key: 'toast.agentReportExported' })
+    } finally {
+      URL.createObjectURL = originalCreate
+      URL.revokeObjectURL = originalRevoke
+    }
+  })
+})

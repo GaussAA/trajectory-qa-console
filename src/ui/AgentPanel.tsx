@@ -24,6 +24,10 @@ interface Props {
   onClose: () => void
   /** 提供时，提案区会出现「应用到工作区」；应用前由调用方负责备份当前口径。 */
   onApplyProposal?: (pack: RulePack, proposalId: string) => void
+  /** 诊断成功时给出结果：调用方负责保存与导出（面板自己不落任何东西）。 */
+  onRun?: (payload: { run: AgentRun; model: string; endpoint: string }) => void
+  /** 导出诊断报告。与评分报告分开：模型的话会漂移，混进去就分不清谁说的。 */
+  onExport?: (format: 'md' | 'json') => void
   /** 提供时，界面会把一次请求记为一条遥测事件（失败、耗时、轮次）。 */
   onFinish?: (info: { ok: boolean; code?: string; rounds: number; toolCalls: number; ms: number }) => void
 }
@@ -42,6 +46,8 @@ export function AgentPanel({
   pack,
   onClose,
   onApplyProposal,
+  onRun,
+  onExport,
   onFinish,
 }: Props) {
   const { t } = useI18n()
@@ -108,6 +114,7 @@ export function AgentPanel({
     setRun(result.run)
     setPartial(result.partial ?? null)
     setPhase('done')
+    if (target) onRun?.({ run: result.run, model: result.model, endpoint: target.endpoint })
     onFinish?.({
       ok: result.run.ok,
       code: result.run.error?.code,
@@ -115,7 +122,7 @@ export function AgentPanel({
       toolCalls: result.run.trace.toolCalls,
       ms: Date.now() - startedAt,
     })
-  }, [target, phase, sessions, pack, onFinish])
+  }, [target, phase, sessions, pack, onFinish, onRun])
 
   if (!open) return null
 
@@ -319,13 +326,26 @@ export function AgentPanel({
                 </section>
               )}
 
-              <p className="agent-mute">
-                {t('agent.ui.stats', {
-                  rounds: run.trace.rounds,
-                  tools: run.trace.toolCalls,
-                  tokens: run.usage.prompt + run.usage.completion,
-                })}
-              </p>
+              <div className="agent-result-foot">
+                <p className="agent-mute">
+                  {t('agent.ui.stats', {
+                    rounds: run.trace.rounds,
+                    tools: run.trace.toolCalls,
+                    tokens: run.usage.prompt + run.usage.completion,
+                  })}
+                </p>
+                {onExport && (
+                  <div className="agent-proposal-actions">
+                    <button type="button" className="btn ghost sm" onClick={() => onExport('md')}>
+                      <Icon name="download" size={12} />
+                      {t('agent.ui.exportReport')}
+                    </button>
+                    <button type="button" className="btn ghost sm" onClick={() => onExport('json')}>
+                      {t('agent.ui.exportJson')}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

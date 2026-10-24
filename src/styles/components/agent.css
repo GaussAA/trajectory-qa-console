@@ -181,6 +181,16 @@
   background: rgba(251, 191, 36, 0.08);
 }
 
+.agent-result-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+}
+
 .agent-spacer {
   flex: 1;
 }

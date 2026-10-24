@@ -379,6 +379,8 @@ export default function App({
           pack={state.pack}
           onClose={() => setAgentOpen(false)}
           onApplyProposal={actions.adoptProposal}
+          onRun={actions.receiveAgentRun}
+          onExport={actions.exportAgentReport}
           onFinish={(info) =>
             telemetry.emit(
               'ui:agent',

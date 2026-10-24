@@ -108,6 +108,23 @@ describe('renderAgentMarkdown', () => {
     expect(markdown).not.toContain(id)
   })
 
+  it('survives a diagnosis with missing optional text', () => {
+    // 模型输出不可全信：缺 rationale / evidence 时只省略那一行，不该整份崩掉。
+    const markdown = renderAgentMarkdown(
+      input({
+        run: run({
+          diagnosis: {
+            verdict: 'v',
+            rootCauses: [{ cause: '原因' }],
+            actions: [{ action: '动作' }],
+          } as never,
+        }),
+      }),
+    )
+    expect(markdown).toContain('原因')
+    expect(markdown).toContain('动作')
+  })
+
   it('says plainly that the diagnosis did not converge', () => {
     const markdown = renderAgentMarkdown(
       input({

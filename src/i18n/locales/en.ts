@@ -411,6 +411,9 @@ export const en: Record<MessageKey, string> = {
   'agent.ui.diffEmpty': 'This edit matches the current pack; nothing to change',
   'toast.proposalApplied': 'Applied proposal {id}; the previous pack is saved as variant "{name}"',
   'toast.proposalAppliedNoBackup': 'Applied proposal {id}; variant limit reached, previous pack not saved',
+  'toast.agentReportExported': 'Diagnosis report exported',
+  'agent.ui.exportReport': 'Export diagnosis report',
+  'agent.ui.exportJson': 'Export JSON',
 
   'compare.title': 'Trace comparison',
   'compare.base': 'Baseline',

@@ -32,6 +32,12 @@ import {
   type WorkspaceState,
 } from '../app/workspace'
 import { downloadFile, nowStamp } from '../lib/format'
+import {
+  buildAgentReportModel,
+  renderAgentJson,
+  renderAgentMarkdown,
+} from '../lib/agent-report'
+import type { AgentRun } from '../core/agent/types'
 
 export type ToastMessage = { key: MessageKey; params?: TranslateParams } | { text: string }
 
@@ -70,6 +76,15 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
   const { locale } = useI18n()
   const t = useT()
   const [events, setEvents] = useState<TelemetryEvent[]>(() => telemetry.snapshot())
+  /** 最近一次诊断结果。**不进 reducer、不持久化**：诊断是解释，关掉即忘（不变量 7）。
+   *  但导出要能复现当时那份结论，所以连会话与规则包一起快照，而不是导出时再取最新的。 */
+  const [agentResult, setAgentResult] = useState<{
+    run: AgentRun
+    model: string
+    endpoint: string
+    sessions: SessionAnalysis[]
+    pack: RulePack
+  } | null>(null)
 
   useEffect(() => telemetry.subscribe(() => setEvents(telemetry.snapshot())), [telemetry])
 
@@ -475,6 +490,44 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
     [telemetry],
   )
 
+  const receiveAgentRun = useCallback((payload: { run: AgentRun; model: string; endpoint: string }) => {
+    setAgentResult({
+      ...payload,
+      sessions: stateRef.current.sessions,
+      pack: stateRef.current.pack,
+    })
+  }, [])
+
+  /** 诊断报告单独导出，**不并进评分报告**：模型的话会漂移，混进去以后没人分得清
+   *  哪句是规则说的、哪句是模型说的。 */
+  const exportAgentReport = useCallback(
+    (format: 'md' | 'json') => {
+      if (!agentResult) return
+      const input = {
+        run: agentResult.run,
+        sessions: agentResult.sessions,
+        pack: agentResult.pack,
+        model: agentResult.model,
+        endpoint: agentResult.endpoint,
+        generatedAt: new Date(),
+        locale,
+      }
+      const model = buildAgentReportModel(input)
+      if (format === 'md') {
+        downloadFile(`trajectory-qa-agent-${nowStamp()}.md`, renderAgentMarkdown(input, model), 'text/markdown')
+      } else {
+        downloadFile(`trajectory-qa-agent-${nowStamp()}.json`, renderAgentJson(input, model), 'application/json')
+      }
+      telemetry.emit('export:agent-report', {
+        format,
+        rounds: agentResult.run.trace.rounds,
+        proposals: agentResult.run.proposals.length,
+      })
+      setToast({ key: 'toast.agentReportExported' })
+    },
+    [agentResult, locale, telemetry],
+  )
+
   const exportMarkdown = useCallback(() => {
     if (stateRef.current.sessions.length === 0) return
     const bundle = buildReportBundle(stateRef.current, cards, { locale })
@@ -519,6 +572,7 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
     cards,
     totals,
     events,
+    agentResult,
     toast,
     dismissToast: () => setToast(null),
     actions: {
@@ -531,6 +585,8 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
       chooseStep,
       applyPack,
       adoptProposal,
+      receiveAgentRun,
+      exportAgentReport,
       addAnnotation,
       removeAnnotation,
       setSessionNote,

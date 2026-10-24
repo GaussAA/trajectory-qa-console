@@ -400,6 +400,9 @@ export const zhCN = {
   'agent.ui.diffEmpty': '这项改动与当前口径一致，没有差异',
   'toast.proposalApplied': '已应用提案 {id}，原口径存为变体「{name}」',
   'toast.proposalAppliedNoBackup': '已应用提案 {id}；变体已满，原口径未另存',
+  'toast.agentReportExported': '诊断报告已导出',
+  'agent.ui.exportReport': '导出诊断报告',
+  'agent.ui.exportJson': '导出 JSON',
 
   'compare.title': '轨迹对比',
   'compare.base': '基准',
