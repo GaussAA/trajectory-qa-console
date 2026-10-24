@@ -19,6 +19,8 @@ export const en: Record<MessageKey, string> = {
   'common.emptyValue': '(empty)',
   'common.emptyList': 'None',
   'common.unknownError': 'Unknown render error',
+  'common.colon': ': ',
+  'common.listSeparator': ', ',
   'common.dismiss': 'Got it',
 
   'role.system': 'System',
@@ -520,6 +522,8 @@ export const en: Record<MessageKey, string> = {
   'agent.report.stats.tokens': 'Tokens',
   'agent.report.stats.tokensDetail': '{prompt} in / {completion} out',
   'agent.report.stats.duration': 'Total time',
+  'agent.report.sep': ': ',
+  'agent.report.paren': ' ({text})',
   'agent.report.proposals': 'Rule pack proposals',
   'agent.report.proposalNote':
     'Proposals never take effect on their own; the CLI writes the first one to proposal.pack.json so you can try it with --pack.',
@@ -574,6 +578,7 @@ export const en: Record<MessageKey, string> = {
   'cli.err.compareNeedsTwo': 'Comparison needs exactly two analyzable traces, got {count}',
   'report.advice': 'Recommendations',
   'report.adviceCount': '{count}×',
+  'report.adviceSuffix': ' ({text})',
   'report.compare.advice': 'Recommendations for the candidate',
   'report.adviceEmpty': 'Nothing actionable surfaced in this pass.',
 

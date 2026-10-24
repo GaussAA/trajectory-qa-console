@@ -164,7 +164,7 @@ export function buildMarkdownReport({ entries, pack, generatedAt, locale }: Repo
       lines.push('')
       advice.forEach((item, adviceIndex) => {
         // 只出现一次就不必标「1 处」——那是噪音。
-        const suffix = item.count > 1 ? `（${t('report.adviceCount', { count: item.count })}）` : ''
+        const suffix = item.count > 1 ? t('report.adviceSuffix', { text: t('report.adviceCount', { count: item.count }) }) : ''
         lines.push(`${adviceIndex + 1}. ${item.text}${suffix}`)
       })
       lines.push('')
@@ -279,7 +279,16 @@ export function buildComparisonModel(input: ComparisonInput) {
   const cardDiff = compareCards(input.base, input.target)
   const findingDiff = diffFindings(input.base.card.findings, input.target.card.findings)
   const rows = alignSteps(input.base.trajectory.steps, input.target.trajectory.steps)
-  return { cardDiff, findingDiff, rows, summary: summarizeAlignment(rows) }
+  return {
+    cardDiff,
+    findingDiff,
+    rows,
+    // 「哪些行算变化」与「最多写几行」只在这里定一次：Markdown 与 HTML 各算各的，
+    // HTML 曾把上限写死成 40，调用方传的 maxStepRows 对它无效。
+    changedRows: rows.filter((row) => row.status !== 'same'),
+    stepLimit: input.maxStepRows ?? 40,
+    summary: summarizeAlignment(rows),
+  }
 }
 
 /** The comparison, computed once. Rendering takes it as an argument so a
@@ -288,7 +297,7 @@ export type ComparisonModel = ReturnType<typeof buildComparisonModel>
 
 export function renderComparisonMarkdown(input: ComparisonInput, model: ComparisonModel): string {
   const t: Translate = (key, params) => translate(input.locale, key, params)
-  const { cardDiff, findingDiff, rows, summary } = model
+  const { cardDiff, findingDiff, changedRows, stepLimit, summary } = model
   const lines: string[] = []
 
   lines.push(`# ${t('report.compare.title')}`)
@@ -373,7 +382,7 @@ export function renderComparisonMarkdown(input: ComparisonInput, model: Comparis
     lines.push(`### ${t('report.compare.advice')}`)
     lines.push('')
     advice.forEach((item, adviceIndex) => {
-      const suffix = item.count > 1 ? `（${t('report.adviceCount', { count: item.count })}）` : ''
+      const suffix = item.count > 1 ? t('report.adviceSuffix', { text: t('report.adviceCount', { count: item.count }) }) : ''
       lines.push(`${adviceIndex + 1}. ${item.text}${suffix}`)
     })
     lines.push('')
@@ -385,8 +394,8 @@ export function renderComparisonMarkdown(input: ComparisonInput, model: Comparis
     `${summary.changed} ${t('compare.changed')} · ${summary.added + summary.removed} ${t('compare.structural')}`,
   )
   lines.push('')
-  const limit = input.maxStepRows ?? 40
-  const changed = rows.filter((row) => row.status !== 'same')
+  const limit = stepLimit
+  const changed = changedRows
   if (changed.length === 0) {
     lines.push(t('report.compare.noDifferences'))
     lines.push('')
@@ -411,22 +420,18 @@ export function renderComparisonMarkdown(input: ComparisonInput, model: Comparis
     }
   }
 
+  // 页脚讲评分口径，和 HTML 版、逐会话报告一致。此前这里把「问题变化」一节里的汇总行
+  // 原样再印了一遍，评分口径在对比的 Markdown 里根本没出现过。
   lines.push('---')
   lines.push('')
-  lines.push(
-    t('report.compare.findingsSummary', {
-      added: findingDiff.added.length,
-      resolved: findingDiff.resolved.length,
-      persisted: findingDiff.persisted.length,
-    }),
-  )
+  lines.push(t('report.footer'))
   lines.push('')
 
   return lines.join('\n')
 }
 
 export function renderComparisonJson(input: ComparisonInput, model: ComparisonModel): string {
-  const { cardDiff, findingDiff, rows, summary } = model
+  const { cardDiff, findingDiff, changedRows, summary } = model
   return JSON.stringify(
     {
       generatedAt: input.generatedAt.toISOString(),
@@ -442,13 +447,12 @@ export function renderComparisonJson(input: ComparisonInput, model: ComparisonMo
         resolvedItems: findingDiff.resolved,
       },
       steps: summary,
-      changedSteps: rows
-        .filter((row) => row.status !== 'same')
-        .map((row) => ({
-          status: row.status,
-          baseStep: row.before ? row.before.index + 1 : null,
-          targetStep: row.after ? row.after.index + 1 : null,
-        })),
+      // JSON 给机器读，不按 maxStepRows 截断：悄悄少几行，下游会以为变化更少。
+      changedSteps: changedRows.map((row) => ({
+        status: row.status,
+        baseStep: row.before ? row.before.index + 1 : null,
+        targetStep: row.after ? row.after.index + 1 : null,
+      })),
     },
     null,
     2,

@@ -58,7 +58,9 @@ export function EmptyState({ onPick, onSample, issues }: Props) {
           <div className="empty-issues">
             {issues.map((issue) => (
               <div key={`${issue.file}-${issue.message}`}>
-                <b>{issue.file}</b>：{issueText(issue)}
+                <b>{issue.file}</b>
+                {t('common.colon')}
+                {issueText(issue)}
               </div>
             ))}
           </div>

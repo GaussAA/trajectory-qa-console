@@ -120,11 +120,15 @@ export function renderAgentMarkdown(input: AgentReportInput, model?: AgentReport
   const lines: string[] = []
 
   lines.push(`# ${t(locale, 'agent.report.title')}`, '')
-  lines.push(`- ${t(locale, 'agent.report.generatedAt')}：${input.generatedAt.toISOString()}`)
-  lines.push(`- ${t(locale, 'agent.report.model')}：${mdInline(input.model)} @ ${mdInline(built.endpointHost)}`)
-  lines.push(`- ${t(locale, 'agent.report.pack')}：${mdInline(input.pack.name)}`)
-  lines.push(`- ${t(locale, 'agent.report.sessions')}：${input.sessions.length}`)
-  lines.push(`- ${t(locale, 'agent.report.status')}：${built.status}`)
+  const field = (key: string, value: string | number): string =>
+    `${t(locale, key)}${t(locale, 'agent.report.sep')}${value}`
+  lines.push(`- ${field('agent.report.generatedAt', input.generatedAt.toISOString())}`)
+  lines.push(
+    `- ${field('agent.report.model', `${mdInline(input.model)} @ ${mdInline(built.endpointHost)}`)}`,
+  )
+  lines.push(`- ${field('agent.report.pack', mdInline(input.pack.name))}`)
+  lines.push(`- ${field('agent.report.sessions', input.sessions.length)}`)
+  lines.push(`- ${field('agent.report.status', built.status)}`)
   if (built.statusNote) lines.push(`- ${built.statusNote}`)
   lines.push('')
 
@@ -146,7 +150,7 @@ export function renderAgentMarkdown(input: AgentReportInput, model?: AgentReport
       // 模型给的字段不可全信（也可能是旧版本存档）：缺一个字段就让整份报告崩掉，
       // 与「单条坏数据不得影响其余部分」相悖。
       if ((item.evidence ?? '').trim() !== '') {
-        lines.push(`  - ${t(locale, 'agent.report.evidence')}：${mdInline(item.evidence ?? '')}`)
+        lines.push(`  - ${field('agent.report.evidence', mdInline(item.evidence ?? ''))}`)
       }
     }
     lines.push('')
@@ -159,7 +163,7 @@ export function renderAgentMarkdown(input: AgentReportInput, model?: AgentReport
       const rule = item.ruleId ? ` ${mdCode(item.ruleId)}` : ''
       lines.push(`- ${mdInline(item.action)}${rule}`)
       if ((item.rationale ?? '').trim() !== '') {
-        lines.push(`  - ${t(locale, 'agent.report.rationale')}：${mdInline(item.rationale ?? '')}`)
+        lines.push(`  - ${field('agent.report.rationale', mdInline(item.rationale ?? ''))}`)
       }
     }
     lines.push('')
@@ -209,10 +213,18 @@ export function renderAgentMarkdown(input: AgentReportInput, model?: AgentReport
 
   lines.push(`## ${t(locale, 'agent.report.stats')}`, '')
   lines.push(
-    `- ${t(locale, 'agent.report.stats.rounds')}：${built.rounds}`,
-    `- ${t(locale, 'agent.report.stats.toolCalls')}：${built.toolCalls}`,
-    `- ${t(locale, 'agent.report.stats.tokens')}：${run.usage.prompt + run.usage.completion}（${t(locale, 'agent.report.stats.tokensDetail', { prompt: run.usage.prompt, completion: run.usage.completion })}）`,
-    `- ${t(locale, 'agent.report.stats.duration')}：${built.durationMs}ms`,
+    `- ${field('agent.report.stats.rounds', built.rounds)}`,
+    `- ${field('agent.report.stats.toolCalls', built.toolCalls)}`,
+    `- ${field(
+      'agent.report.stats.tokens',
+      `${run.usage.prompt + run.usage.completion}${t(locale, 'agent.report.paren', {
+        text: t(locale, 'agent.report.stats.tokensDetail', {
+          prompt: run.usage.prompt,
+          completion: run.usage.completion,
+        }),
+      })}`,
+    )}`,
+    `- ${field('agent.report.stats.duration', `${built.durationMs}ms`)}`,
   )
   lines.push('')
 
