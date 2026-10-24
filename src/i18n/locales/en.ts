@@ -489,6 +489,7 @@ export const en: Record<MessageKey, string> = {
   'agent.stop.rounds': 'round limit reached',
   'agent.stop.tool-calls': 'tool-call limit reached',
   'agent.stop.duration': 'time limit reached',
+  'agent.stop.output-limit': 'the model output was cut off by the length limit (answer is incomplete)',
   'agent.report.title': 'Trajectory diagnosis',
   'agent.report.generatedAt': 'Generated',
   'agent.report.model': 'Model',

@@ -477,6 +477,7 @@ export const zhCN = {
   'agent.stop.rounds': '达到轮次上限',
   'agent.stop.tool-calls': '达到工具调用上限',
   'agent.stop.duration': '达到时长上限',
+  'agent.stop.output-limit': '模型输出被长度上限截断（回答不完整）',
   'agent.report.title': '轨迹诊断报告',
   'agent.report.generatedAt': '生成时间',
   'agent.report.model': '模型',

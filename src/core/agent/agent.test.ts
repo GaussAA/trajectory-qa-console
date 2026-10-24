@@ -301,6 +301,59 @@ describe('runAgent', () => {
     expect(run.trace.stopReason).toBe('duration')
   })
 
+  it('does not let one hung call outlive the wall clock budget', async () => {
+    // 单次超时 5s、总时长 300ms：钳制前这里要挂满 5s（还会被重试），钳制后约 300ms 就收尾。
+    const hang: LlmTransport = () => new Promise(() => undefined)
+    const started = Date.now()
+    const run = await runAgent(contextWith(), {
+      ...BASE,
+      transport: hang,
+      budget: { maxDurationMs: 300, timeoutMs: 5000 },
+    })
+
+    expect(Date.now() - started).toBeLessThan(2000)
+    // 撞的是总时长上限，不是端点故障：按「未收敛」如实交代，而不是报一个错
+    expect(run.ok).toBe(true)
+    expect(run.trace.truncated).toBe(true)
+    expect(run.trace.stopReason).toBe('duration')
+  })
+
+  it('still reports a genuine per-call timeout as an error when the budget is not the cause', async () => {
+    const hang: LlmTransport = () => new Promise(() => undefined)
+    const run = await runAgent(contextWith(), {
+      ...BASE,
+      transport: hang,
+      budget: { maxDurationMs: 60_000, timeoutMs: 40 },
+    })
+
+    expect(run.ok).toBe(false)
+    expect(run.error?.message).toContain('超时')
+    expect(run.trace.stopReason).not.toBe('duration')
+  })
+
+  it('flags an answer that was cut off by the output limit instead of calling it finished', async () => {
+    const cutOff = JSON.stringify({
+      choices: [{ message: { content: '根因有三点：第一，工具参数' }, finish_reason: 'length' }],
+      usage: { prompt_tokens: 10, completion_tokens: 4096 },
+    })
+    const run = await runAgent(contextWith(), { ...BASE, transport: scripted([cutOff]).transport })
+
+    expect(run.trace.truncated).toBe(true)
+    expect(run.trace.stopReason).toBe('output-limit')
+    // 半截的话仍然交出去，让读者看到它是未完稿，而不是丢掉
+    expect(run.answer).toContain('根因有三点')
+  })
+
+  it('does not flag a normal answer that stopped by itself', async () => {
+    const run = await runAgent(contextWith(), {
+      ...BASE,
+      transport: scripted([turn({ content: '一切正常。' })]).transport,
+    })
+
+    expect(run.trace.truncated).toBe(false)
+    expect(run.trace.stopReason).toBe('answered')
+  })
+
   it('collects proposals into the run without touching the caller context', async () => {
     const { transport } = scripted([
       turn({
