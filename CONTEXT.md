@@ -382,9 +382,19 @@ session / record / thread / run` 下）、JSONL（每行一条消息或一个会
   规则是「找毛病」，空轨迹毛病为零，会得 A；角色全是 `unknown` 的异形格式同理。
   文件里所有会话都如此则整个文件失败（CLI 退出码 2）。
 
-**未适配**（不保证正确，遇到请先转成上面的形态）：SWE-agent / OpenHands 轨迹、ShareGPT 风格的
-`conversations`、LangChain `model_dump` / `messages_to_dict`（角色放在 `type` 字段里的那种）。
-这类输入若被识别成「有 assistant 步骤」的形状，仍可能得到不准确的分数。
+**也支持**（这几种曾被悄悄读错、照样给高分，现在读对了）：
+- **ShareGPT**：`{conversations:[{from:'human'|'gpt'|'system', value}]}`，或直接一串 `{from, value}`。
+- **LangChain**：`model_dump()` 的 `{type:'human'|'ai'|'tool'|'system', content}`（角色在 `type` 里，
+  只在没有显式 `role` 时才用）、`messages_to_dict()` 的 `{type, data:{…}}`、以及构造器形式
+  `{lc, type:'constructor', id:[…,'HumanMessage'], kwargs}`（角色来自类名）。剥壳只在确认是这两种壳时才做，
+  普通消息恰好带个 `data` 字段不会被误剥；`Step.raw` 仍是剥之前的原对象。
+- **SWE-agent** 记录同时有 `trajectory`（动作记录）和 `history`（消息）：取里面**真是消息**的那个数组，
+  不再按键的先后取第一个。
+
+**不支持**（会被拒绝，不是打分）：OpenHands 事件（`source` / `action` / `observation`）、
+ShareGPT 工具调用变体（`function_call` / `observation` 角色）、其它自定义日志。这类输入没有
+assistant 或 tool 步骤，走上面的「无可评分」，CLI 退出码 2。如果它们恰好带了能被读成
+assistant/tool 的字段，仍可能被读错——遇到请先转成上面的形态。
 
 ## 已知边界
 
