@@ -93,6 +93,7 @@ export const en: Record<MessageKey, string> = {
   'panel.timeline': 'Timeline panel',
   'panel.inspector': 'Inspector',
   'panel.findings': 'Findings panel',
+  'panel.app': 'The console',
 
   'common.save': 'Save',
 

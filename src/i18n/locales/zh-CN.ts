@@ -91,6 +91,7 @@ export const zhCN = {
   'panel.timeline': '时间线面板',
   'panel.inspector': '检视器',
   'panel.findings': '问题清单面板',
+  'panel.app': '整个界面',
 
   'session.collapse': '折叠会话面板',
   'session.expand': '展开会话面板',
