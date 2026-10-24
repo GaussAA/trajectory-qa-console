@@ -12,7 +12,7 @@ import {
   type Step,
   type Trajectory,
 } from '../model'
-import { computeMetrics, type TrajectoryMetrics } from '../analysis/metrics'
+import { CLAIM_PATTERN, computeMetrics, type TrajectoryMetrics } from '../analysis/metrics'
 import { DEFAULT_PACK } from './builtin-pack'
 
 export interface StepContext {
@@ -37,9 +37,6 @@ export interface StepContext {
   claimWithoutEvidence: boolean
   hasImage: boolean
 }
-
-const CLAIM_PATTERN =
-  /(根据(搜索|查询|文档|资料|数据|报告)|搜索(结果|显示)|检索(结果|到)|数据显示|文档(中|里|指出|提到)|资料(显示|表明)|经查)/
 
 const EVIDENCE_LIMIT = 180
 
