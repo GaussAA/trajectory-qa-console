@@ -378,7 +378,7 @@ export default function App({
                     ))}
                   </select>
                 </label>
-                <ErrorBoundary nameKey="panel.score" compact onError={reportBoundaryError('score')}>
+                <ErrorBoundary nameKey="panel.score" compact resetKey={session.id} onError={reportBoundaryError('score')}>
                   <ScorePanel
                     card={card}
                     trajectory={session.trajectory}
@@ -386,7 +386,7 @@ export default function App({
                     ruleIssueCount={card.ruleIssues.length}
                   />
                 </ErrorBoundary>
-                <ErrorBoundary nameKey="panel.timeline" compact onError={reportBoundaryError('timeline')}>
+                <ErrorBoundary nameKey="panel.timeline" compact resetKey={`${session.id}:${state.selectedStep}`} onError={reportBoundaryError('timeline')}>
                   <Timeline
                     trajectory={session.trajectory}
                     card={card}
@@ -397,7 +397,7 @@ export default function App({
               </div>
 
               <div className="col col-right">
-                <ErrorBoundary nameKey="panel.inspector" compact onError={reportBoundaryError('inspector')}>
+                <ErrorBoundary nameKey="panel.inspector" compact resetKey={`${session.id}:${state.selectedStep}`} onError={reportBoundaryError('inspector')}>
                 <Inspector
                   trajectory={session.trajectory}
                   metrics={session.metrics}
@@ -409,7 +409,7 @@ export default function App({
                     onRemoveAnnotation={actions.removeAnnotation}
                   />
                 </ErrorBoundary>
-                <ErrorBoundary nameKey="panel.findings" compact onError={reportBoundaryError('findings')}>
+                <ErrorBoundary nameKey="panel.findings" compact resetKey={session.id} onError={reportBoundaryError('findings')}>
                   <FindingsPanel
                     card={card}
                     dimensions={state.pack.dimensions}
