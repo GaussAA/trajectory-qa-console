@@ -6,6 +6,7 @@
  */
 
 import type { Trajectory } from '../model'
+import { countPrivacyHits } from './privacy'
 
 export interface TrajectoryMetrics {
   stepCount: number
@@ -36,13 +37,6 @@ export interface TrajectoryMetrics {
   assistantWithoutTools: boolean
 }
 
-const PRIVACY_PATTERNS: RegExp[] = [
-  /(?<!\d)1[3-9]\d{9}(?!\d)/g, // mainland mobile
-  /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, // email
-  /(?<!\d)\d{17}[\dXx](?!\d)/g, // national id
-  /\bsk-[A-Za-z0-9]{16,}\b/g, // provider api key
-]
-
 /** 「引用了检索/文档结论」的措辞。`sem-unverified-claim` 与指标共用这一份：
  *  之前两处各抄了一遍，且只有中文，英文轨迹永远不会命中。
  *  英文这半刻意保守：只认「据搜索/文档/报告」「X 显示/指出」这类明确转述外部来源的说法，
@@ -56,15 +50,6 @@ export const CLAIM_PATTERN = new RegExp(
   ].join('|'),
   'i',
 )
-
-function countPrivacyHits(text: string): number {
-  let hits = 0
-  for (const pattern of PRIVACY_PATTERNS) {
-    const matches = text.match(pattern)
-    hits += matches ? matches.length : 0
-  }
-  return hits
-}
 
 function callSignature(name: string, rawArgs: string): string {
   let normalized = rawArgs.trim()
