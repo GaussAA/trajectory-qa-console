@@ -262,6 +262,10 @@ export const zhCN = {
   'rules.templateHint':
     '消息模板用 {field} 插入上下文值，例如「第 {step} 步有 {unpairedCalls} 个未配对调用」。',
   'rules.imported': '已载入 {file}，尚未应用',
+  'rules.builtin': '载入内置规则包',
+  'rules.builtinZh': '中文包',
+  'rules.builtinEn': '英文包',
+  'rules.builtinLoaded': '已载入内置{name}，尚未应用',
   'rules.applied': '已应用：{rules} 条规则 / {dimensions} 个维度',
   'rules.jsonError': 'JSON 解析失败：{message}',
   'rules.closeHint': '关闭（Esc）',

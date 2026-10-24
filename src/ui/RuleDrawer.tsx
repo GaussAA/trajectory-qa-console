@@ -4,6 +4,7 @@ import type { PackVariant, RuleIssue, RulePack } from '../core/model'
 import { fieldsForScope, formatPackErrors, validatePack } from '../core/rules/contract'
 import { buildTuningReport, numericLiterals, replaceLiteral, type TuningSession } from '../core/rules/tuning'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
+import { BUILTIN_PACK_EN } from '../core/rules/builtin-pack-en'
 import { comparePacks, type PackOption } from '../core/pack-compare'
 import { buildPackCompareMarkdown } from '../lib/pack-compare-report'
 import { formatDateTime } from '../i18n/core'
@@ -175,6 +176,13 @@ export function RuleDrawer({
     setStatus('')
   }
 
+  /** 载入内置包：和导入文件一样只写草稿，「校验并应用」仍是唯一生效入口。 */
+  const loadBuiltin = (builtin: RulePack, name: string) => {
+    setDraft(JSON.stringify(builtin, null, 2))
+    setErrors([])
+    setStatus(t('rules.builtinLoaded', { name }))
+  }
+
   const importFile = async (file: File | undefined) => {
     if (!file) return
     const text = await file.text()
@@ -309,6 +317,28 @@ export function RuleDrawer({
               </ul>
             </div>
           )}
+
+          <section className="variant-section">
+            <div className="variant-head">
+              <h4>{t('rules.builtin')}</h4>
+              <span className="variant-tools">
+                <button
+                  type="button"
+                  className="btn ghost sm"
+                  onClick={() => loadBuiltin(DEFAULT_PACK, t('rules.builtinZh'))}
+                >
+                  {t('rules.builtinZh')}
+                </button>
+                <button
+                  type="button"
+                  className="btn ghost sm"
+                  onClick={() => loadBuiltin(BUILTIN_PACK_EN, t('rules.builtinEn'))}
+                >
+                  {t('rules.builtinEn')}
+                </button>
+              </span>
+            </div>
+          </section>
 
           <section className="variant-section">
             <div className="variant-head">
