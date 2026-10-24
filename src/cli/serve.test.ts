@@ -1,8 +1,8 @@
 import { request as httpRequest } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { describe, expect, it, vi } from 'vitest'
-import { analyze } from '../core/analysis'
 import type { LlmTransport } from '../core/llm/transport'
+import { reimbursementSessions } from '../core/test-support'
 import { allowOrigin, createAgentServer, type ServeConfig } from './serve'
 
 const SUBMITTED = JSON.stringify({
@@ -31,15 +31,7 @@ const LLM = { url: 'https://llm.test/v1/chat/completions', model: 'm', apiKey: '
 
 /** 借 analyze 造一条结构正确的会话，省得手写 Step 的每个字段。 */
 function session(id = 's-1') {
-  const analyzed = analyze({
-    source: JSON.stringify([
-      { role: 'user', content: '查一下报销标准' },
-      { role: 'assistant', content: '住宿上限 500 元。' },
-    ]),
-    label: 'a.json',
-  })
-  if (!analyzed.ok) throw new Error(analyzed.error.message)
-  const trajectory = analyzed.value.sessions[0]?.trajectory
+  const trajectory = reimbursementSessions()[0]?.trajectory
   if (!trajectory) throw new Error('fixture failed')
   return { id, label: trajectory.label, steps: trajectory.steps, meta: trajectory.meta }
 }

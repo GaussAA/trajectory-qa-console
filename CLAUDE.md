@@ -65,6 +65,9 @@ The pipeline and the rules that keep it consistent:
 - The exported HTML reports in `src/lib` carry their own stylesheet and cannot use `var(--fs-*)`, but `check-typography.mjs` holds them to the same 11px floor. The build must stay one self-contained file under 1500 KB, with no external scripts, stylesheets or remote images. The CLI bundle may import only `node:` built-ins.
 - ESLint forbids `any`, allows only `console.warn` and `console.error` outside tests, and ignores unused names only when they start with `_`. tsconfig turns on `noUncheckedIndexedAccess`. Prettier settings: no semicolons, single quotes, 110-character lines.
 
+- **Layer direction is a lint rule.** `eslint.config.js` (`layerRules`) forbids upward relative imports, tests included: `core` may not import `app/ui/lib/cli`, `lib` not `app/ui/cli`, `app` not `ui/cli`, `cli` not `ui`, and `i18n` not any other layer. A test that needs a higher layer belongs in that layer's directory. The rule matches relative specifiers by depth (up to 3 levels), so keep imports relative.
+- **Shared test builders live in `src/core/test-support.ts`** (`analyzeSessions`, `reimbursementSessions`, `makeStep`). Test files only; it is excluded from coverage, and production code must not import it.
+
 Another convention, not checked by a script: CSS is split into four layers (`tokens` → `base` → `layout` → `components`). Each layer may reference only variables from the layers below it, and conflicts are not resolved by raising specificity.
 
 ## Decisions already made

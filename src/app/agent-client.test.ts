@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { analyze } from '../core/analysis'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
+import { reimbursementSessions as sessions } from '../core/test-support'
 import { diagnose, readAgentTarget } from './agent-client'
 
 const SUBMITTED = {
@@ -10,18 +10,6 @@ const SUBMITTED = {
   proposals: [],
   trace: { entries: [], rounds: 1, toolCalls: 1, truncated: false, stopReason: 'submitted' },
   usage: { prompt: 10, completion: 5 },
-}
-
-function sessions() {
-  const parsed = analyze({
-    source: JSON.stringify([
-      { role: 'user', content: '查一下报销标准' },
-      { role: 'assistant', content: '住宿上限 500 元。' },
-    ]),
-    label: 'a.json',
-  })
-  if (!parsed.ok) throw new Error(parsed.error.message)
-  return parsed.value.sessions
 }
 
 function streamOf(lines: unknown[]): Response {

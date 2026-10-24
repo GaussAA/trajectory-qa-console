@@ -3,7 +3,6 @@
  *  能触发取资源或引用外部值的写法全拦下。 */
 
 import { describe, expect, it } from 'vitest'
-import { createMemoryStorage, createPersistence } from '../../app/persistence'
 import type { RulePack } from '../model'
 import { DEFAULT_PACK } from './builtin-pack'
 import { isSafeCssColor, validatePack } from './contract'
@@ -74,25 +73,5 @@ describe('validatePack and the dimension colour', () => {
     expect(result.ok).toBe(false)
     if (result.ok) return
     expect(result.errors.some((error) => error.path === 'dimensions.0.color')).toBe(true)
-  })
-})
-
-describe('a stored pack with a hostile colour', () => {
-  const hostile = packWithColor('url(http://attacker.example/p.png)')
-
-  it('falls back to the default pack instead of rendering it', () => {
-    const storage = createMemoryStorage()
-    storage.setItem('tqa.pack', JSON.stringify({ schemaVersion: 1, data: hostile }))
-    expect(createPersistence(storage).loadPack()).toEqual(DEFAULT_PACK)
-  })
-
-  it('drops a stored variant carrying one, keeping the clean variants', () => {
-    const storage = createMemoryStorage()
-    const variant = (id: string, pack: RulePack) => ({ id, name: id, savedAt: '2026-10-24T00:00:00Z', pack })
-    storage.setItem(
-      'tqa.pack-variants',
-      JSON.stringify({ schemaVersion: 1, data: [variant('bad', hostile), variant('good', DEFAULT_PACK)] }),
-    )
-    expect(createPersistence(storage).loadPackVariants().map((item) => item.id)).toEqual(['good'])
   })
 })

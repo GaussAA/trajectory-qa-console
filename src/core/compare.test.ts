@@ -1,29 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import type { Finding, Step } from './model'
+import type { Finding } from './model'
 import { DEFAULT_PACK } from './rules/builtin-pack'
+import { makeStep as step } from './test-support'
 import { analyze } from './analysis'
 import { scoreSession, type SessionAnalysis } from './analysis'
 import { alignSteps, compareCards, diffFindings, stepSignature, summarizeAlignment } from './compare'
-
-function step(index: number, role: Step['role'], text: string, toolNames: string[] = []): Step {
-  return {
-    index,
-    role,
-    text,
-    reasoning: '',
-    toolCalls: toolNames.map((name, position) => ({
-      id: `c${position}`,
-      name,
-      rawArgs: '{}',
-      args: {},
-      argsValid: true,
-    })),
-    tokens: { input: 0, output: 0, total: 0, estimated: true },
-    charCount: text.length,
-    raw: {},
-    parseNotes: [],
-  }
-}
 
 function finding(ruleId: string, stepIndex: number | undefined, message = 'x'): Finding {
   return {
