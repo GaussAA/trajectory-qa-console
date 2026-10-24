@@ -38,7 +38,8 @@
 
 - **字号只有 6 档**：`--fs-xs 11` / `--fs-sm 12` / `--fs-base 13` / `--fs-md 15` / `--fs-lg 19` /
   `--fs-xl 22`。**下限 11px**。样式表里出现裸 `font-size: Npx` 会被
-  `scripts/check-typography.mjs` 拦下（已并入 `pnpm verify`）。
+  `scripts/check-typography.mjs` 拦下（已并入 `pnpm verify`）。导出的 HTML 报告（`src/lib`）内嵌自己的
+  样式表，拿不到应用的 CSS 变量所以不要求走标度，但同样守这条 11px 下限（此前它有 10px、10.5px 的字）。
 - 为什么这么死：改之前 3125 行 CSS 里有 137 处裸字号、其中 94 处小于 11px。这不是审美偏好——
   8.5–10px 的中文在正常视距下读不清，连续看一小时就是成本。
 - **弱化色 `--text-mute` 不得低于 4.5:1**（现为 5.16:1）。原先 4.39:1 恰好配着 9px 小字用。
@@ -357,7 +358,8 @@ node dist-cli/qa.mjs a.json b.json --compare --fail-below 80    # 只卡「对�
 ## 持续集成
 
 `.github/workflows/ci.yml`：push 到 main、PR、手动触发；先 `pnpm install --frozen-lockfile`，再 `pnpm verify`。
-`verify` 依次是：typecheck → lint → 覆盖率测试 → 文案扫描（`src/ui` + `src/cli` + `src/app`）→ 单文件构建 →
+`verify` 依次是：typecheck → lint → 覆盖率测试 → 文案扫描（`src/ui` + `src/cli` + `src/app` + `src/lib`，
+汉字与全角标点都算；导出报告里写死的 `：` `（` 会让英文报告混进全角符号）→ 单文件构建 →
 产物契约校验 → CLI 构建 → CLI 冒烟（`scripts/smoke-cli.mjs`）。
 产物契约校验（`scripts/check-artifact.mjs`）要求：不得含外部脚本/样式/远程图片，
 必须有 `#root`，体积不超过 1500 KB（`ARTIFACT_BUDGET_KB` 可调）。

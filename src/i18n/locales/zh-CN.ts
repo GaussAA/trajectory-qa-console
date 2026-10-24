@@ -5,6 +5,8 @@ export const zhCN = {
   'app.subtitle': 'Trajectory QA Console',
 
   'common.cancel': '取消',
+  'common.colon': '：',
+  'common.listSeparator': '、',
   'common.close': '关闭',
   'common.import': '导入',
   'common.export': '导出',
@@ -503,6 +505,8 @@ export const zhCN = {
   'agent.report.stats.tokens': 'token',
   'agent.report.stats.tokensDetail': '输入 {prompt} / 输出 {completion}',
   'agent.report.stats.duration': '累计耗时',
+  'agent.report.sep': '：',
+  'agent.report.paren': '（{text}）',
   'agent.report.proposals': '规则包提案',
   'agent.report.proposalNote': '提案不会自动生效；命令行已把第一份写成 proposal.pack.json，可用 --pack 试用。',
   'agent.report.proposalImpact': '有效扣分 {impact}',
@@ -555,6 +559,8 @@ export const zhCN = {
   'cli.err.compareNeedsTwo': '对比需要恰好两条可分析轨迹，当前 {count} 条',
   'report.advice': '建议',
   'report.adviceCount': '{count} 处',
+  // 括号与冒号属于文案：中文用全角、英文用半角加空格。写死在代码里，英文报告就会混进全角符号。
+  'report.adviceSuffix': '（{text}）',
   'report.compare.advice': '对照改进建议',
   'report.adviceEmpty': '当前没有可给出具体动作的问题。',
 
