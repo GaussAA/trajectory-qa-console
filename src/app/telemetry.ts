@@ -61,18 +61,21 @@ const REDACTED_KEYS = new Set([
   'key',
 ])
 
+/** Placeholders are deliberately locale-neutral: telemetry events are data
+ *  that a developer reads next to a bug report, and a stable shape matters more
+ *  than a friendly one. UI-facing strings live in the dictionary instead. */
 function clip(value: string): string {
-  return value.length > MAX_STRING ? `${value.slice(0, MAX_STRING)}…(${value.length} 字符)` : value
+  return value.length > MAX_STRING ? `${value.slice(0, MAX_STRING)}… (${value.length} chars)` : value
 }
 
 function describeHidden(value: unknown): string {
-  if (typeof value === 'string') return `[已隐藏，${value.length} 字符]`
-  if (Array.isArray(value)) return `[已隐藏，${value.length} 项]`
-  return '[已隐藏]'
+  if (typeof value === 'string') return `[hidden: ${value.length} chars]`
+  if (Array.isArray(value)) return `[hidden: ${value.length} items]`
+  return '[hidden]'
 }
 
 function redact(value: unknown, depth = 0): unknown {
-  if (depth > MAX_DEPTH) return '[过深，已省略]'
+  if (depth > MAX_DEPTH) return '[too deep]'
   if (typeof value === 'string') return clip(value)
   if (typeof value === 'number' || typeof value === 'boolean' || value === null) return value
   if (Array.isArray(value)) {

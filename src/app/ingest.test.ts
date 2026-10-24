@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { INGEST_LIMITS, readFiles, sampleInputs, type IngestFile } from './ingest'
+import {
+  INGEST_LIMITS,
+  formatBytes,
+  issueMessageKey,
+  readFiles,
+  sampleInputs,
+  type IngestFile,
+  type IngestIssueCode,
+} from './ingest'
+import { zhCN } from '../i18n/locales/zh-CN'
+import { en } from '../i18n/locales/en'
 
 function fakeFile(name: string, content: string, size = content.length): IngestFile {
   return { name, size, text: async () => content }
@@ -62,5 +72,36 @@ describe('ingest', () => {
   it('ships four demo inputs', () => {
     expect(sampleInputs()).toHaveLength(4)
     expect(sampleInputs().every((input) => input.text.length > 0)).toBe(true)
+  })
+
+  it('carries the template params the dictionary entry needs', async () => {
+    const tooMany = await readFiles(
+      Array.from({ length: INGEST_LIMITS.maxFiles + 2 }, (_, index) =>
+        fakeFile(`f${index}.json`, '[]'),
+      ),
+    )
+    const tooLarge = await readFiles([
+      { name: 'huge.json', size: INGEST_LIMITS.maxFileBytes + 1, text: async () => '[]' },
+    ])
+
+    expect(tooMany.issues[0]?.params).toEqual({ limit: INGEST_LIMITS.maxFiles, extra: 2 })
+    expect(tooLarge.issues[0]?.params).toEqual({
+      size: formatBytes(INGEST_LIMITS.maxFileBytes + 1),
+      limit: formatBytes(INGEST_LIMITS.maxFileBytes),
+    })
+  })
+})
+
+/** The UI renders `t(issueMessageKey(code), params)`. If a code loses its
+ *  dictionary entry, English users silently fall back to the neutral message —
+ *  which is how the whole i18n gap started. */
+describe('issue message keys', () => {
+  it('maps every code to an entry that exists in both locales', () => {
+    const codes = ['too-large', 'too-many', 'total-limit', 'read-failed', 'empty', 'analysis-failed']
+    for (const code of codes) {
+      const key = issueMessageKey(code as IngestIssueCode)
+      expect(zhCN[key], `zh-CN missing ${key}`).toBeTruthy()
+      expect(en[key], `en missing ${key}`).toBeTruthy()
+    }
   })
 })

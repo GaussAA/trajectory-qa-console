@@ -52,8 +52,8 @@ describe('telemetry', () => {
     expect(data?.text).not.toContain('13812345678')
     expect(data?.args).not.toContain('110101')
     expect(data?.nested).toEqual({
-      content: '[已隐藏，6 字符]',
-      apiKey: '[已隐藏，67 字符]',
+      content: '[hidden: 6 chars]',
+      apiKey: '[hidden: 67 chars]',
     })
   })
 
@@ -65,7 +65,7 @@ describe('telemetry', () => {
     const note = telemetry.snapshot()[0]?.data?.note
     expect(typeof note).toBe('string')
     expect((note as string).length).toBeLessThan(200)
-    expect(note).toContain('5000 字符')
+    expect(note).toContain('5000 chars')
   })
 
   it('keeps error messages but drops the stack', () => {

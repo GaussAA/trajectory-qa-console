@@ -1,15 +1,19 @@
 #!/usr/bin/env node
-/** Fails when UI source contains hardcoded CJK, which would bypass the
+/** Fails when user-facing source contains hardcoded CJK, which would bypass the
  *  dictionary and leave English users with a half-translated screen.
  *
  *  Comments are stripped first, so Chinese explanations remain welcome.
- *  Rule packs and core diagnostics are data/logic, not UI chrome, and are not
- *  scanned here. */
+ *
+ *  Scope: src/ui, src/cli and src/app — everything a user can read. `src/core`
+ *  is deliberately excluded: its messages are data/logic (parse notes, rule
+ *  titles), and translating them is a separate design question recorded in
+ *  CONTEXT.md. Diagnostic placeholders in src/app are locale-neutral by
+ *  convention (telemetry event payloads), not translated. */
 
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
-const ROOTS = ['src/ui', 'src/cli']
+const ROOTS = ['src/ui', 'src/cli', 'src/app']
 const CJK = /[\u4e00-\u9fff]/
 
 function walk(dir) {
@@ -54,9 +58,9 @@ for (const file of ROOTS.flatMap(walk)) {
 }
 
 if (problems.length > 0) {
-  console.error('✗ UI/CLI 中存在硬编码中文，请移入 src/i18n 字典：')
+  console.error('✗ UI/CLI/app 源码中存在硬编码中文，请移入 src/i18n 字典：')
   for (const problem of problems) console.error(`  ${problem}`)
   process.exit(1)
 }
 
-console.log('✓ UI 与 CLI 文案全部经字典，无硬编码中文')
+console.log('✓ UI 与 CLI、app 层文案全部经字典，无硬编码中文')

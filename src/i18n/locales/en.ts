@@ -65,6 +65,14 @@ export const en: Record<MessageKey, string> = {
   'error.empty-file': 'File is empty',
   'error.total-limit': 'Total import size exceeded',
   'error.too-many': 'Too many files',
+  'ingest.tooManyFiles': 'At most {limit} files may be imported at once; ignored the extra {extra}',
+  'ingest.fileTooLarge': '{file} ({size}) exceeds the per-file limit of {limit}',
+  'ingest.totalTooLarge': 'Total import size exceeds {limit}; skipped {file}',
+  'ingest.emptyFile': 'File is empty',
+  'ingest.readFailed': 'Could not read: {reason}',
+  'analysis.workerStartFailed': 'Could not start the analysis worker',
+  'analysis.workerError': 'The analysis worker failed',
+  'analysis.workerTimeout': 'The analysis worker did not respond within {ms}ms; degraded to sync',
 
   'loading.title': 'Analyzing traces…',
   'loading.description':

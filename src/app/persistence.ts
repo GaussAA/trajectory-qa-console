@@ -66,10 +66,13 @@ function wrap<T>(data: T): string {
 /** Raised when stored data was written by a *newer* version of this app.
  *
  *  This is not corruption — reading it as v1 would silently misinterpret the
- *  payload. Degrading to defaults and saying so is the honest option. */
+ *  payload. Degrading to defaults and saying so is the honest option.
+ *
+ *  The message is locale-neutral on purpose: it only ever reaches telemetry,
+ *  which is developer-facing data, not UI chrome. */
 export class FutureSchemaVersionError extends Error {
   constructor(readonly foundVersion: number) {
-    super(`存储数据版本 ${foundVersion} 高于本程序支持的 ${SCHEMA_VERSION}`)
+    super(`stored schema version ${foundVersion} is newer than supported ${SCHEMA_VERSION}`)
     this.name = 'FutureSchemaVersionError'
   }
 }

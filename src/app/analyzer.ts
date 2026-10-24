@@ -39,7 +39,7 @@ export function createSyncAnalyzer(): AnalyzerPort {
     async analyze(request, signal) {
       // Synchronous by nature, so this is the only point at which a signal can
       // still be honoured — but it must be, or the two adapters disagree.
-      if (signal?.aborted) return fail('aborted', '已取消分析')
+      if (signal?.aborted) return fail('aborted', 'Cancelled')
       try {
         return analyzeCore({
           source: request.text,
@@ -48,7 +48,7 @@ export function createSyncAnalyzer(): AnalyzerPort {
           maxSteps: request.maxSteps,
         })
       } catch (error) {
-        return fail('analysis-failed', '分析过程出错', {
+        return fail('analysis-failed', 'Analysis failed', {
           reason: error instanceof Error ? error.message : String(error),
         })
       }
@@ -91,7 +91,7 @@ export function createWorkerAnalyzer(
           worker = factory()
         } catch (error) {
           resolve(
-            fail('analysis-failed', '无法启动分析线程', {
+            fail('analysis-failed', 'Worker could not start', {
               reason: error instanceof Error ? error.message : String(error),
             }),
           )
@@ -106,10 +106,10 @@ export function createWorkerAnalyzer(
           finish(event.data.result)
         }
         const onError = (event: ErrorEvent) => {
-          finish(fail('analysis-failed', event.message || '分析线程执行失败'))
+          finish(fail('analysis-failed', event.message || 'Worker failed'))
         }
         const onAbort = () => {
-          finish(fail('aborted', '已取消分析'))
+          finish(fail('aborted', 'Cancelled'))
         }
         const cleanup = () => {
           for (const dispose of disposers) dispose()
@@ -127,13 +127,13 @@ export function createWorkerAnalyzer(
         worker.addEventListener('error', onError)
 
         if (signal?.aborted) {
-          finish(fail('aborted', '已取消分析'))
+          finish(fail('aborted', 'Cancelled'))
           return
         }
         signal?.addEventListener('abort', onAbort, { once: true })
 
         const watchdog = setTimeout(() => {
-          finish(fail('analysis-failed', `分析线程 ${timeoutMs}ms 未响应，已降级`))
+          finish(fail('analysis-failed', `No response within ${timeoutMs}ms; degraded`))
         }, timeoutMs)
         disposers.push(() => clearTimeout(watchdog))
 

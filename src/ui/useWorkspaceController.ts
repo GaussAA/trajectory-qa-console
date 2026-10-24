@@ -12,7 +12,14 @@ import { buildStressTrace } from '../core/sample'
 import { createAnalyzer, type AnalyzerPort } from '../app/analyzer'
 import { buildDiagnostics, buildReportBundle, downloadText } from '../app/exporters'
 import { MAX_PACK_VARIANTS, parsePackVariants, serializePackVariants } from '../app/persistence'
-import { readFiles, sampleInputs, type IngestFile, type IngestIssue, type TextInput } from '../app/ingest'
+import {
+  issueMessageKey,
+  readFiles,
+  sampleInputs,
+  type IngestFile,
+  type IngestIssue,
+  type TextInput,
+} from '../app/ingest'
 import type { PersistencePort } from '../app/persistence'
 import type { Telemetry, TelemetryEvent } from '../app/telemetry'
 import {
@@ -193,7 +200,12 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
       if (collected.length === 0) {
         const message = issues[0]?.message ?? 'No usable traces'
         dispatch({ type: 'ingest/failure', error: { code: 'analysis-failed', message } })
-        setToast(issues[0] ? { text: issues[0].message } : { key: 'toast.nothingUsable' })
+        const first = issues[0]
+        setToast(
+          first
+            ? { key: issueMessageKey(first.code), params: first.params }
+            : { key: 'toast.nothingUsable' },
+        )
         return
       }
 
@@ -220,7 +232,12 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
       if (inputs.length === 0) {
         const message = issues[0]?.message ?? 'No readable files'
         dispatch({ type: 'ingest/failure', error: { code: 'analysis-failed', message } })
-        setToast(issues[0] ? { text: issues[0].message } : { key: 'toast.nothingReadable' })
+        const first = issues[0]
+        setToast(
+          first
+            ? { key: issueMessageKey(first.code), params: first.params }
+            : { key: 'toast.nothingReadable' },
+        )
         return
       }
       await ingest(inputs)

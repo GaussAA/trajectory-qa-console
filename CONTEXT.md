@@ -227,7 +227,7 @@ node dist-cli/qa.mjs a.json b.json --compare --fail-below 80    # 只卡「对�
 ## 持续集成
 
 `.github/workflows/ci.yml`：push 到 main、PR、手动触发；先 `pnpm install --frozen-lockfile`，再 `pnpm verify`。
-`verify` 依次是：typecheck → lint → 覆盖率测试 → 文案扫描（`src/ui` + `src/cli`）→ 单文件构建 →
+`verify` 依次是：typecheck → lint → 覆盖率测试 → 文案扫描（`src/ui` + `src/cli` + `src/app`）→ 单文件构建 →
 产物契约校验 → CLI 构建 → CLI 冒烟（`scripts/smoke-cli.mjs`）。
 产物契约校验（`scripts/check-artifact.mjs`）要求：不得含外部脚本/样式/远程图片，
 必须有 `#root`，体积不超过 1500 KB（`ARTIFACT_BUDGET_KB` 可调）。
