@@ -43,12 +43,17 @@ import {
   type LlmTransport,
 } from '../core/semantic'
 import { parseArgs, type CliOptions, type ReportFormat, type UsageError } from './args'
+import { resolveSemantic, type SemanticConfig } from './llm-config'
+import { createAgentServer } from './serve'
 import { displayPath, runBatch } from './batch'
 import { collectFiles } from './collect'
 import { renderHelp, renderSummary } from './summary'
 import { CLI_VERSION } from './version'
 
 export const EXIT = { ok: 0, gate: 1, error: 2 } as const
+
+/** 端点配置在 `llm-config.ts`，这里转发一次，保持既有 import 路径可用。 */
+export { chatCompletionsUrl, resolveSemantic, type SemanticConfig } from './llm-config'
 
 export type Write = (chunk: string) => void
 
@@ -187,40 +192,75 @@ export interface CliDeps {
   /** 注入传输层：测试用假实现，生产用 fetch。 */
   transport?: LlmTransport
   env?: Record<string, string | undefined>
+  /** 测试用：给一个已中止的信号，`serve` 会立刻收尾（否则它要一直跑）。 */
+  signal?: AbortSignal
 }
 
-export interface SemanticConfig {
-  url: string
-  model: string
-  apiKey: string
+interface ServeIo {
+  stdout: Write
+  stderr: Write
+  env: Record<string, string | undefined>
+  deps: CliDeps
 }
 
-/** 把「版本化 base」补成完整端点：`https://host/v1` → `https://host/v1/chat/completions`。
- *
- *  只认 `/v1`、`/v1beta` 这类版本尾巴——其余一律原样返回。
- *  不这么做的话，本地代理那种自带路径的地址（`http://127.0.0.1:18880/api/chat`）
- *  会被拼成 `.../api/chat/chat/completions`，等于把一个能用的配置改坏。 */
-export function chatCompletionsUrl(raw: string): string {
-  const trimmed = raw.trim().replace(/\/+$/, '')
-  if (trimmed === '') return ''
-  if (/\/chat\/completions$/.test(trimmed)) return trimmed
-  if (/\/v\d+[a-z]*$/i.test(trimmed)) return `${trimmed}/chat/completions`
-  return trimmed
-}
+/** 常驻诊断服务：界面「诊断」按钮的后端。密钥留在本进程，浏览器拿不到。 */
+async function runServe(options: CliOptions, io: ServeIo): Promise<number> {
+  const { stdout, stderr, env, deps } = io
+  const t = (key: MessageKey, params?: Record<string, string | number>) => translate(options.locale, key, params)
 
-/** 密钥只从环境变量读：不落盘、不进命令行历史、不进日志。 */
-export function resolveSemantic(
-  options: CliOptions,
-  env: Record<string, string | undefined>,
-): { ok: true; config: SemanticConfig } | { ok: false; missing: string[] } {
-  const url = chatCompletionsUrl(options.llmUrl ?? env.TQA_LLM_URL ?? env.TQA_LLM_BASE_URL ?? '')
-  const model = options.llmModel ?? env.TQA_LLM_MODEL ?? ''
-  const apiKey = env.TQA_LLM_API_KEY ?? ''
-  const missing: string[] = []
-  if (!url) missing.push('--llm-url / TQA_LLM_URL / TQA_LLM_BASE_URL')
-  if (!model) missing.push('--llm-model / TQA_LLM_MODEL')
-  if (!apiKey) missing.push('TQA_LLM_API_KEY')
-  return missing.length > 0 ? { ok: false, missing } : { ok: true, config: { url, model, apiKey } }
+  const resolved = resolveSemantic(options, env)
+  if (!resolved.ok) {
+    stderr(`✗ ${t('cli.err.agentConfig', { missing: resolved.missing.join(' / ') })}\n`)
+    return EXIT.error
+  }
+
+  const server = createAgentServer({
+    llm: resolved.config,
+    token: options.token,
+    transport: deps.transport,
+  })
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      server.once('error', reject)
+      server.listen(options.port, options.host, () => resolve())
+    })
+  } catch (error) {
+    stderr(
+      `✗ ${t('cli.err.serveListen', {
+        host: options.host,
+        port: options.port,
+        message: error instanceof Error ? error.message : String(error),
+      })}\n`,
+    )
+    return EXIT.error
+  }
+
+  // 打印**实际**端口：`--port 0` 时由系统分配，照抄命令行的 0 会让人连错地方。
+  const address = server.address()
+  const actualPort = typeof address === 'object' && address !== null ? address.port : options.port
+  const url = `http://${options.host}:${actualPort}`
+  stdout(`${t('cli.serveReady', { url })}\n`)
+  stdout(`${t('cli.serveHint', { origin: url })}\n`)
+  if (options.token === null) stderr(`${t('cli.serveNoToken')}\n`)
+  else stdout(`${t('cli.serveWithToken')}\n`)
+  if (!['127.0.0.1', 'localhost', '::1'].includes(options.host)) {
+    stderr(`${t('cli.servePublicHost', { host: options.host })}\n`)
+  }
+
+  return await new Promise<number>((resolve) => {
+    const stop = () => {
+      server.close(() => resolve(EXIT.ok))
+    }
+    // 测试给 signal；生产听 SIGINT/SIGTERM。两者只能存在一个，免得测试里留下监听器。
+    if (deps.signal) {
+      if (deps.signal.aborted) stop()
+      else deps.signal.addEventListener('abort', stop, { once: true })
+      return
+    }
+    process.once('SIGINT', stop)
+    process.once('SIGTERM', stop)
+  })
 }
 
 export async function main(
@@ -232,7 +272,11 @@ export async function main(
   const stderr = io.err ?? err
   const env = deps.env ?? process.env
 
-  const parsed = parseArgs(argv)
+  // `qa serve` 是常驻服务，不是批量分析：没有路径、也不该走报告流程。
+  const command = argv[0] === 'serve' ? 'serve' : 'run'
+  const rest = command === 'serve' ? argv.slice(1) : argv
+
+  const parsed = parseArgs(rest, { allowNoPaths: command === 'serve' })
   if (!parsed.ok) {
     const locale = peekLocale(argv)
     stderr(`✗ ${usageMessage(parsed.error, locale)}\n${translate(locale, 'cli.helpHint')}\n`)
@@ -250,6 +294,10 @@ export async function main(
   if (options.version) {
     stdout(`${CLI_VERSION}\n`)
     return EXIT.ok
+  }
+
+  if (command === 'serve') {
+    return await runServe(options, { stdout, stderr, env, deps })
   }
 
   // 互斥参数先校验再干活。此前这段检查排在 runBatch（内含 LLM 调用）之后，

@@ -560,6 +560,44 @@ describe('loadPack', () => {
   })
 })
 
+describe('serve subcommand', () => {
+  it('refuses to start without LLM configuration', async () => {
+    const { io, chunks } = capture()
+    expect(await main(['serve'], io, { env: {} })).toBe(EXIT.error)
+    expect(chunks.err).toContain('TQA_LLM_API_KEY')
+  })
+
+  it('starts, prints where it listens, and stops on the abort signal', async () => {
+    const controller = new AbortController()
+    controller.abort()
+    const { io, chunks } = capture()
+
+    const code = await main(['serve', '--port', '0', '--token', 'abc'], io, {
+      env: { TQA_LLM_BASE_URL: 'https://llm.test/v1', TQA_LLM_MODEL: 'm', TQA_LLM_API_KEY: 'k' },
+      signal: controller.signal,
+    })
+
+    expect(code).toBe(EXIT.ok)
+    // 端口 0 由系统分配，打印的必须是**实际**端口而不是命令行里的 0。
+    expect(chunks.out).toContain('http://127.0.0.1:')
+    expect(chunks.out).not.toContain('http://127.0.0.1:0\n')
+    expect(chunks.out).toContain('agentToken')
+  })
+
+  it('warns when the bind address is not a loopback one', async () => {
+    const controller = new AbortController()
+    controller.abort()
+    const { io, chunks } = capture()
+
+    await main(['serve', '--port', '0', '--host', '0.0.0.0'], io, {
+      env: { TQA_LLM_BASE_URL: 'https://llm.test/v1', TQA_LLM_MODEL: 'm', TQA_LLM_API_KEY: 'k' },
+      signal: controller.signal,
+    })
+
+    expect(chunks.err).toContain('不是回环地址')
+  })
+})
+
 describe('cli contract', () => {
   const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')) as {
     version: string

@@ -18,6 +18,7 @@ import { parseDiagnosis, toolByName, toolSpecs } from './tools'
 import { AGENT_BUDGET } from './types'
 import type {
   AgentBudget,
+  AgentEvent,
   AgentMessage,
   AgentRun,
   AgentTrace,
@@ -41,6 +42,19 @@ export interface AgentOptions {
   now?: () => number
   /** 重试间隔：测试置 0，免得为一个 500 真等 800ms。 */
   retryDelayMs?: number
+  /** 进度回调：界面与 `serve` 用它显示「第几轮、调了什么」。
+   *  回调抛错（比如客户端断开）不得影响诊断本身。 */
+  onEvent?: (event: AgentEvent) => void
+}
+
+/** 进度回调不该有能力搞垮一次诊断：写流失败（客户端关了页面）只丢进度。 */
+function emit(options: AgentOptions, event: AgentEvent): void {
+  if (!options.onEvent) return
+  try {
+    options.onEvent(event)
+  } catch {
+    // 故意吞掉：进度是附属信息，不能因为它中断主流程。
+  }
 }
 
 /** 参数不是合法 JSON 时保留原文回灌：模型能看见自己写坏了什么，
@@ -163,6 +177,7 @@ export async function runAgent(
       reasoningChars: turn.reasoningChars,
       ms: now() - sentAt,
     })
+    emit(options, { kind: 'round', round, toolCalls: turn.toolCalls.length })
 
     if (turn.toolCalls.length === 0) {
       answer = turn.content
@@ -215,6 +230,13 @@ export async function runAgent(
         args: call.arguments,
         ok: outcome.ok,
         result: outcome.content,
+        ms: now() - toolStarted,
+      })
+      emit(options, {
+        kind: 'tool',
+        round,
+        name: call.name,
+        ok: outcome.ok,
         ms: now() - toolStarted,
       })
       messages.push({ role: 'tool', content: outcome.content, toolCallId: call.id })

@@ -172,6 +172,14 @@ export interface AgentTrace {
   stopReason: StopReason
 }
 
+// ---------- 进度事件 ----------
+
+/** 循环内的进度信号：界面靠它显示「第几轮、调了什么」。
+ *  只报事实，不报模型文本——那个在最后一次性给出，免得半截话被当成结论。 */
+export type AgentEvent =
+  | { kind: 'round'; round: number; toolCalls: number }
+  | { kind: 'tool'; round: number; name: string; ok: boolean; ms: number }
+
 // ---------- 结论 ----------
 
 export interface DiagnosisRootCause {
