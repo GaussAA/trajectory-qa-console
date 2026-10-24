@@ -60,6 +60,7 @@ export const en: Record<MessageKey, string> = {
   'error.unrecognized-structure': 'Unrecognized structure: no messages/steps array found',
   'error.too-large': 'File exceeds the size limit',
   'error.too-many-steps': 'Too many steps',
+  'error.nothing-to-score': 'No assistant or tool steps, so there is nothing to score (empty trace, or an unrecognised format)',
   'error.invalid-pack': 'Invalid rule pack',
   'error.analysis-failed': 'Analysis failed',
   'error.aborted': 'Cancelled',

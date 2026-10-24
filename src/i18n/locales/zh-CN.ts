@@ -59,6 +59,7 @@ export const zhCN = {
   'error.unrecognized-structure': '结构无法识别：未找到 messages / steps 数组',
   'error.too-large': '文件超过大小上限',
   'error.too-many-steps': '步数超过上限',
+  'error.nothing-to-score': '没有助手或工具步骤，无可评分内容（轨迹为空，或格式无法识别）',
   'error.invalid-pack': '规则包不合法',
   'error.analysis-failed': '分析失败',
   'error.aborted': '已取消',
