@@ -10,6 +10,10 @@
  *   1. Every `font-size` in src/styles must be `var(--fs-*)`.
  *   2. tokens.css must define the whole scale, ascending, with 11px as the floor.
  *   3. Inline `fontSize` in TSX must not use raw px either.
+ *   4. Every stylesheet must have balanced braces. This one exists because of a
+ *      real slip: deleting a `@media` header while keeping its body left the file
+ *      malformed, the following rules silently stopped applying, and the layout
+ *      looked "almost right" for hours. A brace count would have caught it.
  */
 
 import { readdirSync, readFileSync, statSync } from 'node:fs'
@@ -75,8 +79,16 @@ for (const file of TSX_ROOTS.flatMap((root) => walk(root, /\.tsx?$/))) {
   })
 }
 
+/** 4：花括号平衡。去掉注释再数，否则注释里的花括号会误报。 */
+for (const file of styleFiles) {
+  const source = readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+  const open = (source.match(/\{/g) ?? []).length
+  const close = (source.match(/\}/g) ?? []).length
+  if (open !== close) problems.push(`${file}  花括号不平衡：{ ${open} 个 vs } ${close} 个`)
+}
+
 if (problems.length > 0) {
-  console.error('✗ 字号脱离了标度，请改用 var(--fs-*)（下限 11px）：')
+  console.error('✗ 样式检查未过（字号须走标度、下限 11px；花括号须平衡）：')
   for (const problem of problems) console.error(`  ${problem}`)
   process.exit(1)
 }

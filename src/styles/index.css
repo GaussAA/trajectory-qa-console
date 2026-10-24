@@ -14,3 +14,5 @@
 @import './components/drawer.css';
 @import './components/overlays.css';
 @import './components/agent.css';
+/* 响应式必须最后：断点之间同权重，靠引入顺序决胜负。 */
+@import './responsive.css';

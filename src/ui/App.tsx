@@ -305,6 +305,22 @@ export default function App({
           ) : (
             <>
               <div className="col col-center">
+                {/* 窄屏（≤1279）左栏整个收起，会话切换挪到这里。
+                    会话列表只在开头选一次，而标注是反复做的动作——
+                    让位给中栏，比让标注多绕一步划算。 */}
+                <label className="narrow-session">
+                  <span>{t('panel.sessions')}</span>
+                  <select
+                    value={session.id}
+                    onChange={(event) => actions.chooseSession(event.target.value)}
+                  >
+                    {state.sessions.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {labelOf(state.notes, item.trajectory)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <ErrorBoundary nameKey="panel.score" compact onError={reportBoundaryError('score')}>
                   <ScorePanel
                     card={card}

@@ -54,17 +54,6 @@
   }
 }
 
-@media (max-width: 1240px) {
-  .main-grid {
-    grid-template-columns: 224px minmax(0, 1fr) 356px;
-  }
-  .dim-grid {
-    grid-template-columns: 1fr;
-  }
-  .kpis {
-    gap: 12px;
-  }
-}
 
 /* ---------- resilience: boundaries, loading, diagnostics ---------- */
 

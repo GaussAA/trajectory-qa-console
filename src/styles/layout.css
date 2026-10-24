@@ -111,7 +111,14 @@
   grid-template-columns: 258px minmax(0, 1fr) 396px;
   gap: 12px;
   padding: 0 14px 14px;
-  min-width: 1000px;
+  /* 1000px 的下限会让 13 寸笔记本（150% 缩放后约 910 CSS 宽）直接横向滚动。
+     降到 860，并让左栏在窄屏收起——宁可少一栏，也不要一条横向滚动条。 */
+  min-width: 860px;
+}
+
+/* 窄屏下才出现的会话选择器：宽屏时左栏一直在，它是无用的一行。 */
+.narrow-session {
+  display: none;
 }
 
 .col {

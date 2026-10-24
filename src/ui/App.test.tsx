@@ -266,6 +266,24 @@ describe('App smoke', () => {
     expect(events).toContain('ingest:file')
   })
 
+  it('offers a session picker for narrow layouts, and it actually switches', async () => {
+    const { user } = setup()
+    await loadSamples(user)
+
+    // 窄屏（≤1279）左栏整个收起，会话切换靠这个下拉。
+    // 它在宽屏时被 CSS 隐藏，但 DOM 里一直在——所以要验「切换是否真的生效」，
+    // 而不是「有没有这个元素」。
+    const picker = screen.getByRole('combobox', { name: '会话面板' }) as HTMLSelectElement
+    expect(picker.options.length).toBeGreaterThan(1)
+
+    // 选项的 value 是内部 id，标签才是文件名——按标签找再取它的 value。
+    const target = [...picker.options].find((option) => option.textContent?.includes('demo-02'))
+    expect(target).toBeTruthy()
+    await user.selectOptions(picker, target?.value as string)
+
+    await waitFor(() => expect(screen.getByRole('heading', { name: /demo-02/ })).toBeTruthy())
+  })
+
   it('collapses the findings panel to one line when no rule fired', async () => {
     const { user } = setup()
     await loadSamples(user)

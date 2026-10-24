@@ -1,0 +1,61 @@
+/* ---------- 响应式 ----------
+   这个文件必须**最后引入**（index.css 末尾）。
+   原因：断点规则彼此同权重，靠引入顺序决胜负。原先 1240 断点写在 overlays.css 里，
+   而布局规则在 layout.css——后者反而先引入，于是窄屏时列宽被 overlays 改回去，
+   左栏也藏不住（.col 的 display:flex 在后面把它压回来了）。
+   把所有断点收进一个文件、放在最后，胜负就只有一个地方说了算。 */
+
+/* ≤1279：左栏（会话列表）收起，中栏吃掉它的宽度。
+   会话切换由中栏顶部的下拉接管；右栏保留常驻——标注不能被多绕一步。 */
+@media (max-width: 1279px) {
+  .main-grid {
+    grid-template-columns: minmax(0, 1fr) 344px;
+  }
+
+  .main-grid.compare-mode {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .col-left {
+    display: none;
+  }
+
+  .narrow-session {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--fs-xs);
+    color: var(--text-mute);
+  }
+
+  .narrow-session select {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+/* 1241–1279：三栏各收一档（此时左栏还在）。
+   注意区间必须卡在 1279 以上：≤1279 左栏已经收起（display:none，不占网格位），
+   若这里还按三栏排，空出来的那一列就是一大片空白。 */
+@media (min-width: 1280px) and (max-width: 1400px) {
+  .main-grid {
+    grid-template-columns: 224px minmax(0, 1fr) 356px;
+  }
+}
+
+@media (max-width: 1120px) {
+  /* 顶栏 KPI 是重复信息（面板里都有），窄屏优先保操作区：
+     不然「HTML 报告」「导出报告」会被挤出屏幕——输出动作消失了可不是小事。 */
+  .kpis {
+    display: none;
+  }
+
+  .topbar {
+    gap: 12px;
+    padding: 0 12px;
+  }
+
+  .topbar-actions {
+    gap: 6px;
+  }
+}
