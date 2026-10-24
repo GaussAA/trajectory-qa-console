@@ -7,6 +7,8 @@
   position: relative;
 }
 
+/* 顶栏与主网格同一上限：否则带鱼屏上品牌贴在最左、按钮贴在最右，
+   而内容缩在中间，两头各飘着一件不相干的东西。 */
 .topbar {
   height: 64px;
   flex: 0 0 64px;
@@ -14,6 +16,9 @@
   align-items: center;
   gap: 18px;
   padding: 0 18px;
+  width: 100%;
+  max-width: 1700px;
+  margin-inline: auto;
 }
 
 .brand {
@@ -104,16 +109,38 @@
   margin: 0 2px;
 }
 
+/* 左栏宽度是一个变量：宽屏由用户决定（折叠/展开），窄屏由断点强制收成图标条。
+   栏内内容怎么收敛不看视口，而看「这一栏现在多宽」——那是容器查询的事。 */
 .main-grid {
+  --left-w: 258px;
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 258px minmax(0, 1fr) 396px;
+  grid-template-columns: var(--left-w) minmax(0, 1fr) 396px;
   gap: 12px;
   padding: 0 14px 14px;
-  /* 1000px 的下限会让 13 寸笔记本（150% 缩放后约 910 CSS 宽）直接横向滚动。
-     降到 860，并让左栏在窄屏收起——宁可少一栏，也不要一条横向滚动条。 */
-  min-width: 860px;
+  /* 横向滚动条的旧来源：min-width 一卡，窄窗口就整体溢出。
+     现在改成由骨架降级来保证「任何宽度都不溢出」。 */
+  min-width: 0;
+  /* 带鱼屏（3440px）下三栏会被拉到天各一方；整体收进来居中，
+     留白是刻意的，不是没画完。
+     注意：必须同时写 width: 100%——列向 flex 容器里，
+     只写 margin-inline: auto 会取消 stretch，网格会塌成内容宽（中栏直接 0px）。 */
+  width: 100%;
+  max-width: 1700px;
+  margin-inline: auto;
+}
+
+.main-grid[data-left='rail'] {
+  --left-w: 56px;
+}
+
+/* 大屏上限：带鱼屏（3440px）下中栏曾摊到 2734px，
+   一行长文没人读得下去。内容区封顶后居中，两侧留白是刻意的。 */
+.col-center > * {
+  max-width: 980px;
+  width: 100%;
+  margin-inline: auto;
 }
 
 /* 窄屏下才出现的会话选择器：宽屏时左栏一直在，它是无用的一行。 */
@@ -126,6 +153,11 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  /* 每一栏都是独立的容器：栏内的组件按「自己有多宽」决定排布，
+     而不是按视口宽度猜。上一轮就栽在这——dim-grid 靠 viewport 判断两列，
+     可它真正的宽度取决于左栏在不在。 */
+  container-type: inline-size;
+  container-name: col;
 }
 
 /* ---------- surfaces ---------- */

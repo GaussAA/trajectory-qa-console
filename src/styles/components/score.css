@@ -16,7 +16,15 @@
 
 .ring-wrap {
   flex: 0 0 auto;
+  /* 尺寸交给 CSS：矮屏档要把它压小，硬编码 112 就压不动了。 */
+  width: 112px;
   filter: drop-shadow(0 0 18px rgba(94, 234, 212, 0.16));
+}
+
+.ring-wrap svg {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .score-body {
@@ -150,7 +158,9 @@
   color: var(--text-mute);
 }
 
-@media (max-width: 1279px) {
+/* 栏内够宽就四列，不够就两列——看的是「这一栏多宽」，
+   不是「屏幕多宽」。左栏折叠后中栏变宽，这里自动回到四列。 */
+@container col (max-width: 620px) {
   .dim-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

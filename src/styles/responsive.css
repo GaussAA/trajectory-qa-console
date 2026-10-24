@@ -8,15 +8,18 @@
 /* ≤1279：左栏（会话列表）收起，中栏吃掉它的宽度。
    会话切换由中栏顶部的下拉接管；右栏保留常驻——标注不能被多绕一步。 */
 @media (max-width: 1279px) {
+  /* 左栏收成 56px 图标条（会话切换靠中栏顶部的下拉）。
+     折叠开关在这里没有意义——窄屏本来就该是图标条。 */
   .main-grid {
-    grid-template-columns: minmax(0, 1fr) 344px;
+    --left-w: 56px;
+    grid-template-columns: var(--left-w) minmax(0, 1fr) 344px;
   }
 
   .main-grid.compare-mode {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .col-left {
+  .session-collapse {
     display: none;
   }
 
@@ -57,5 +60,83 @@
 
   .topbar-actions {
     gap: 6px;
+  }
+}
+
+/* ---------- 高度分档 ----------
+   宽度决定「几栏」，高度决定「每栏多紧凑」。原先只看宽度：
+   1920×720 的时间线只剩 442px，而分数区恒占 188px（占屏高 26%），
+   且 600px 高的窗口里占比 31%——它却一点不收缩。 */
+@media (max-height: 820px) {
+  .score-panel {
+    padding: 10px 14px 12px;
+    gap: 10px;
+  }
+
+  .ring-wrap {
+    width: 76px;
+  }
+}
+
+@media (max-height: 680px) {
+  .topbar {
+    height: 56px;
+    flex: 0 0 56px;
+  }
+
+  /* 极矮屏：四维让位给时间线（它才是干活的地方），分数环与等级留着。 */
+  .score-panel .dim-grid {
+    display: none;
+  }
+
+  .ring-wrap {
+    width: 60px;
+  }
+}
+
+/* ≤1023：单栏堆叠，页面纵向滚动。
+   桌面区间到此为止——不做手机版底部导航（轨迹质检是桌面工作）。
+   底线只有一个：任何宽度都不出现横向滚动条。 */
+@media (max-width: 1023px) {
+  .app {
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .main-grid {
+    display: block;
+    max-width: none;
+    padding-bottom: 24px;
+  }
+
+  .col {
+    display: block;
+  }
+
+  .col > * {
+    margin-bottom: 12px;
+  }
+
+  /* 单栏时左栏是完整列表（不再收成图标条），顶部的会话下拉就多余了。 */
+  .narrow-session {
+    display: none;
+  }
+
+  .col-center > *,
+  .col-right > * {
+    max-width: none;
+  }
+
+  .timeline-panel {
+    max-height: 68vh;
+  }
+
+  /* 按钮多的时候允许顶栏换行，宁可两行也不截断——被截掉的「导出报告」比丑更糟。 */
+  .topbar {
+    height: auto;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    row-gap: 8px;
+    padding-bottom: 8px;
   }
 }

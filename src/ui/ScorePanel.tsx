@@ -30,7 +30,7 @@ export function ScorePanel({ card, trajectory, label, ruleIssueCount }: Props) {
     <section className="panel score-panel glass">
       <div className="score-main">
         <div className="ring-wrap">
-          <svg width="112" height="112" viewBox="0 0 112 112" role="img" aria-label={`${card.overall}`}>
+          <svg viewBox="0 0 112 112" role="img" aria-label={`${card.overall}`}>
             <defs>
               <linearGradient id="score-ring" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stopColor="#5eead4" />

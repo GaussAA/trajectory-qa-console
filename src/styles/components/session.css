@@ -328,3 +328,66 @@
   gap: 3px;
   margin-top: 2px;
 }
+
+/* ---------- 图标条形态 ----------
+   栏窄到 120px 以下时（用户折叠，或窄屏自动收），这一栏退成图标条：
+   每条会话只剩一个等级徽标。用容器查询而不是视口——因为「这一栏多宽」
+   取决于左栏在不在，与屏幕多宽无关。 */
+@container col (max-width: 120px) {
+  .session-panel .panel-title,
+  .session-panel .panel-sub,
+  .session-panel .session-copy,
+  .session-panel .session-select-toggle,
+  .session-panel .tag-filter,
+  .session-panel .session-edit {
+    display: none;
+  }
+
+  .session-panel .session-item {
+    justify-content: center;
+    padding: 5px 0;
+  }
+
+  .session-panel .session-badge {
+    display: none;
+  }
+
+  .session-panel .btn-label {
+    display: none;
+  }
+
+  .session-panel .session-foot {
+    flex-direction: column;
+  }
+
+  .session-panel .session-foot .btn {
+    justify-content: center;
+    padding: 0 6px;
+  }
+}
+
+.session-collapse {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-mute);
+  cursor: pointer;
+}
+
+.session-collapse:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.session-collapse svg {
+  transition: transform 0.16s ease;
+}
+
+.session-collapse svg.flip {
+  transform: rotate(180deg);
+}

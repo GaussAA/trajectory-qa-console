@@ -24,6 +24,9 @@ interface Props {
   onRemove: (ids: string[]) => void
   onAdd: () => void
   onClear: () => void
+  /** 左栏是否折叠成图标条。窄屏会自动折叠，宽屏由用户决定。 */
+  collapsed: boolean
+  onToggleCollapsed: () => void
 }
 
 export function SessionList({
@@ -38,6 +41,8 @@ export function SessionList({
   onRemove,
   onAdd,
   onClear,
+  collapsed,
+  onToggleCollapsed,
 }: Props) {
   const t = useT()
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -155,6 +160,15 @@ export function SessionList({
           {tagFilter ? `${visibleSessions.length}/${sessions.length}` : sessions.length}
         </span>
         <span className="grow" />
+        <button
+          type="button"
+          className="session-collapse"
+          onClick={onToggleCollapsed}
+          aria-pressed={collapsed}
+          title={collapsed ? t('session.expand') : t('session.collapse')}
+        >
+          <Icon name="chevron" size={13} className={collapsed ? 'flip' : ''} />
+        </button>
         <button
           type="button"
           className={cx('session-select-toggle', selecting && 'active')}
@@ -426,12 +440,13 @@ export function SessionList({
       )}
 
       <footer className="session-foot">
-        <button type="button" className="btn subtle sm" onClick={onAdd}>
+        <button type="button" className="btn subtle sm" onClick={onAdd} title={t('action.appendFile')}>
           <Icon name="plus" size={13} />
-          {t('action.appendFile')}
+          <span className="btn-label">{t('action.appendFile')}</span>
         </button>
-        <button type="button" className="btn ghost sm" onClick={onClear}>
-          {t('common.clear')}
+        <button type="button" className="btn ghost sm" onClick={onClear} title={t('common.clear')}>
+          <Icon name="trash" size={13} />
+          <span className="btn-label">{t('common.clear')}</span>
         </button>
       </footer>
     </section>

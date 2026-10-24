@@ -21,6 +21,7 @@ import { readAgentTarget } from '../app/agent-client'
 import { useWorkspaceController } from './useWorkspaceController'
 import { LOCALES, useI18n } from '../i18n'
 import { cx } from '../lib/format'
+import { readLeftCollapsed, writeLeftCollapsed } from '../lib/prefs'
 
 export interface AppProps {
   analyzer?: AnalyzerPort
@@ -58,6 +59,15 @@ export default function App({
   )
   const canCompare = state.sessions.length >= 2
   const [dragging, setDragging] = useState(false)
+  // 左栏折叠：宽屏是用户的选择（持久化），窄屏由 CSS 自动收成图标条。
+  const [leftCollapsed, setLeftCollapsed] = useState(readLeftCollapsed)
+  const toggleLeftCollapsed = useCallback(() => {
+    setLeftCollapsed((current) => {
+      const next = !current
+      writeLeftCollapsed(next)
+      return next
+    })
+  }, [])
   const fileRef = useRef<HTMLInputElement>(null)
   const dragDepth = useRef(0)
   const demoLoaded = useRef(false)
@@ -316,6 +326,7 @@ export default function App({
       ) : (
         <main
           className={cx('main-grid', compareOpen && canCompare && 'compare-mode')}
+          data-left={leftCollapsed ? 'rail' : 'full'}
           aria-label={t('app.name')}
         >
           <div className="col col-left">
@@ -332,6 +343,8 @@ export default function App({
                 onRemove={actions.removeSessions}
                 onAdd={() => fileRef.current?.click()}
                 onClear={actions.clear}
+                collapsed={leftCollapsed}
+                onToggleCollapsed={toggleLeftCollapsed}
               />
             </ErrorBoundary>
           </div>

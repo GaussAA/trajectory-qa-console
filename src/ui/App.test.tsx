@@ -266,6 +266,21 @@ describe('App smoke', () => {
     expect(events).toContain('ingest:file')
   })
 
+  it('collapses the session rail on demand, and the choice sticks', async () => {
+    const { user } = setup()
+    await loadSamples(user)
+
+    const main = document.querySelector('main')
+    expect(main?.getAttribute('data-left')).toBe('full')
+
+    await user.click(screen.getByRole('button', { name: /折叠会话面板/ }))
+    expect(main?.getAttribute('data-left')).toBe('rail')
+
+    // 再点一次是展开——折叠成图标条之后，得还有路回来。
+    await user.click(screen.getByRole('button', { name: /展开会话面板/ }))
+    expect(main?.getAttribute('data-left')).toBe('full')
+  })
+
   it('moves between steps with the arrow keys', async () => {
     const { user } = setup()
     await loadSamples(user)

@@ -91,6 +91,8 @@ export const zhCN = {
   'panel.inspector': '检视器',
   'panel.findings': '问题清单面板',
 
+  'session.collapse': '折叠会话面板',
+  'session.expand': '展开会话面板',
   'session.errorBadge': '{count} 个严重问题',
   'session.rename': '重命名会话',
   'session.tags': '标签（逗号分隔）',
