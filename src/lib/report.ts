@@ -10,6 +10,7 @@
 import { formatTokens } from '../core/estimate'
 import type { ScoreCard } from '../core/analysis'
 import { alignSteps, compareCards, diffFindings, summarizeAlignment, type AlignStatus } from '../core/compare'
+import { mdCell, mdInline } from './markdown'
 import { buildAdvice } from '../core/rules/advice'
 import type { RulePack, Severity, Trajectory } from '../core/model'
 import {
@@ -69,10 +70,6 @@ const SEVERITY_KEY: Record<Severity, MessageKey> = {
   info: 'severity.info',
 }
 
-function escapeCell(text: string): string {
-  return text.replace(/\|/g, '\\|').replace(/\n+/g, ' ')
-}
-
 function severityText(t: Translate, severity: Severity): string {
   const key = SEVERITY_KEY[severity]
   return key ? t(key) : severity
@@ -87,7 +84,7 @@ export function buildMarkdownReport({ entries, pack, generatedAt, locale }: Repo
   lines.push(`- ${t('report.generatedAt', { time: formatDateTime(locale, generatedAt) })}`)
   const totals = reportTotals(entries, pack)
 
-  lines.push(`- ${t('report.rulePack', { name: pack.name, count: totals.enabledRules })}`)
+  lines.push(`- ${t('report.rulePack', { name: mdInline(pack.name), count: totals.enabledRules })}`)
   lines.push(`- ${t('report.sessionCount', { count: totals.sessions })}`)
   lines.push(`- ${t('report.totalSteps', { count: totals.steps })}`)
   lines.push(`- ${t('report.estimatedTokens', { tokens: formatTokens(totals.tokens) })}`)
@@ -104,7 +101,7 @@ export function buildMarkdownReport({ entries, pack, generatedAt, locale }: Repo
   lines.push('| --- | ---: | ---: | ---: | :---: | ---: | ---: | ---: |')
   for (const { trajectory, card } of entries) {
     lines.push(
-      `| ${escapeCell(trajectory.label)} | ${trajectory.steps.length} | ${formatTokens(
+      `| ${mdCell(trajectory.label)} | ${trajectory.steps.length} | ${formatTokens(
         trajectory.meta.totalTokens,
       )} | ${card.overall} | ${card.grade} | ${card.counts.error} | ${card.counts.warn} | ${card.counts.info} |`,
     )
@@ -112,7 +109,7 @@ export function buildMarkdownReport({ entries, pack, generatedAt, locale }: Repo
   lines.push('')
 
   entries.forEach(({ trajectory, card }, index) => {
-    lines.push(`## ${index + 1}. ${trajectory.label}`)
+    lines.push(`## ${index + 1}. ${mdInline(trajectory.label)}`)
     lines.push('')
     lines.push(
       `**${t('report.totalScore', {
@@ -126,7 +123,7 @@ export function buildMarkdownReport({ entries, pack, generatedAt, locale }: Repo
       lines.push(`> ${t('report.cappedNote', { raw: card.rawOverall, score: card.overall })}`)
       lines.push('')
     }
-    if (trajectory.meta.model) lines.push(`- ${t('report.model', { model: trajectory.meta.model })}`)
+    if (trajectory.meta.model) lines.push(`- ${t('report.model', { model: mdInline(trajectory.meta.model) })}`)
     if (trajectory.meta.estimatedTokens) lines.push(`- ${t('report.estimatedNote')}`)
     lines.push('')
 
@@ -137,7 +134,7 @@ export function buildMarkdownReport({ entries, pack, generatedAt, locale }: Repo
     )
     lines.push('| --- | ---: | ---: | ---: |')
     for (const dimension of card.dimensions) {
-      const name = labelFor(locale, 'dimension', dimension.id, dimension.label)
+      const name = mdCell(labelFor(locale, 'dimension', dimension.id, dimension.label))
       lines.push(`| ${name} | ${dimension.score} | ${dimension.lost} | ${dimension.findings} |`)
     }
     lines.push('')
@@ -154,10 +151,10 @@ export function buildMarkdownReport({ entries, pack, generatedAt, locale }: Repo
       const location =
         finding.stepIndex !== undefined ? ` · ${t('report.stepAt', { index: finding.stepIndex + 1 })}` : ''
       lines.push(
-        `${findingIndex + 1}. **${severityText(t, finding.severity)}** · **${finding.ruleTitle}**${location}`,
+        `${findingIndex + 1}. **${severityText(t, finding.severity)}** · **${mdInline(finding.ruleTitle)}**${location}`,
       )
-      lines.push(`   - ${t('report.detail', { text: escapeCell(finding.message) })}`)
-      if (finding.evidence) lines.push(`   - ${t('report.evidence', { text: escapeCell(finding.evidence) })}`)
+      lines.push(`   - ${t('report.detail', { text: mdCell(finding.message) })}`)
+      if (finding.evidence) lines.push(`   - ${t('report.evidence', { text: mdCell(finding.evidence) })}`)
     })
     lines.push('')
 
@@ -183,7 +180,7 @@ export function buildMarkdownReport({ entries, pack, generatedAt, locale }: Repo
         const key = `${issue.ruleId}:${issue.message}`
         if (seen.has(key)) continue
         seen.add(key)
-        lines.push(`- ${t('report.ruleIssueItem', { id: issue.ruleId, message: issue.message })}`)
+        lines.push(`- ${t('report.ruleIssueItem', { id: mdInline(issue.ruleId), message: mdInline(issue.message) })}`)
       }
     }
     lines.push('')
@@ -255,13 +252,13 @@ function signed(value: number): string {
 function clip(text: string, limit = 60): string {
   const flat = text.trim().replace(/\s+/g, ' ')
   const short = flat.length <= limit ? flat : `${flat.slice(0, limit)}…`
-  return escapeCell(short)
+  return mdCell(short)
 }
 
 function stepPreview(step: { text: string; toolCalls: { name: string }[] } | undefined): string {
   if (!step) return '—'
   if (step.text.trim()) return clip(step.text)
-  if (step.toolCalls.length > 0) return escapeCell(step.toolCalls.map((call) => call.name).join(', '))
+  if (step.toolCalls.length > 0) return mdCell(step.toolCalls.map((call) => call.name).join(', '))
   return '—'
 }
 
@@ -287,8 +284,8 @@ export function renderComparisonMarkdown(input: ComparisonInput, model: Comparis
   lines.push(`# ${t('report.compare.title')}`)
   lines.push('')
   lines.push(`- ${t('report.generatedAt', { time: formatDateTime(input.locale, input.generatedAt) })}`)
-  lines.push(`- ${t('report.compare.base', { label: input.base.trajectory.label })}`)
-  lines.push(`- ${t('report.compare.target', { label: input.target.trajectory.label })}`)
+  lines.push(`- ${t('report.compare.base', { label: mdInline(input.base.trajectory.label) })}`)
+  lines.push(`- ${t('report.compare.target', { label: mdInline(input.target.trajectory.label) })}`)
   lines.push('')
 
   lines.push(`## ${t('report.compare.scoreSection')}`)
@@ -326,7 +323,7 @@ export function renderComparisonMarkdown(input: ComparisonInput, model: Comparis
   )
   lines.push('| --- | ---: | ---: | ---: |')
   for (const dimension of cardDiff.dimensions) {
-    const name = labelFor(input.locale, 'dimension', dimension.id, dimension.label)
+    const name = mdCell(labelFor(input.locale, 'dimension', dimension.id, dimension.label))
     lines.push(`| ${name} | ${dimension.before} | ${dimension.after} | ${signed(dimension.delta)} |`)
   }
   lines.push('')
@@ -350,9 +347,9 @@ export function renderComparisonMarkdown(input: ComparisonInput, model: Comparis
       const location =
         finding.stepIndex !== undefined ? ` · ${t('report.stepAt', { index: finding.stepIndex + 1 })}` : ''
       lines.push(
-        `${index + 1}. **${severityText(t, finding.severity)}** · **${finding.ruleTitle}**${location}`,
+        `${index + 1}. **${severityText(t, finding.severity)}** · **${mdInline(finding.ruleTitle)}**${location}`,
       )
-      lines.push(`   - ${t('report.detail', { text: escapeCell(finding.message) })}`)
+      lines.push(`   - ${t('report.detail', { text: mdCell(finding.message) })}`)
     })
     lines.push('')
   }

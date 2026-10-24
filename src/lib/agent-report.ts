@@ -11,6 +11,7 @@ import type { AgentRun, TraceEntry } from '../core/agent/types'
 import type { RulePack } from '../core/model'
 import type { SessionAnalysis } from '../core/analysis'
 import { hasMessage, translate, type Locale, type MessageKey } from '../i18n/core'
+import { mdBlock, mdCell, mdCode, mdInline } from './markdown'
 
 export interface AgentReportInput {
   run: AgentRun
@@ -49,7 +50,7 @@ function t(locale: Locale, key: string, params?: Record<string, string | number>
 }
 
 function escapeCell(text: string): string {
-  return text.replace(/\|/g, '\\|').replace(/\r?\n/g, ' ').trim()
+  return mdCell(text).trim()
 }
 
 function clip(text: string, limit: number): string {
@@ -120,8 +121,8 @@ export function renderAgentMarkdown(input: AgentReportInput, model?: AgentReport
 
   lines.push(`# ${t(locale, 'agent.report.title')}`, '')
   lines.push(`- ${t(locale, 'agent.report.generatedAt')}：${input.generatedAt.toISOString()}`)
-  lines.push(`- ${t(locale, 'agent.report.model')}：${input.model} @ ${built.endpointHost}`)
-  lines.push(`- ${t(locale, 'agent.report.pack')}：${input.pack.name}`)
+  lines.push(`- ${t(locale, 'agent.report.model')}：${mdInline(input.model)} @ ${mdInline(built.endpointHost)}`)
+  lines.push(`- ${t(locale, 'agent.report.pack')}：${mdInline(input.pack.name)}`)
   lines.push(`- ${t(locale, 'agent.report.sessions')}：${input.sessions.length}`)
   lines.push(`- ${t(locale, 'agent.report.status')}：${built.status}`)
   if (built.statusNote) lines.push(`- ${built.statusNote}`)
@@ -133,19 +134,19 @@ export function renderAgentMarkdown(input: AgentReportInput, model?: AgentReport
   // 运行失败时不展示半截输出：中断前的模型文本容易被读成结论。
   // 失败原因在上方状态行，这里只如实说「没有结论」。
   const verdict = run.ok ? (run.diagnosis?.verdict ?? run.answer) : ''
-  lines.push(verdict.trim() === '' ? t(locale, 'agent.report.noConclusion') : verdict.trim(), '')
+  lines.push(verdict.trim() === '' ? t(locale, 'agent.report.noConclusion') : mdBlock(verdict.trim()), '')
 
   const rootCauses = run.diagnosis?.rootCauses ?? []
   if (rootCauses.length > 0) {
     lines.push(`### ${t(locale, 'agent.report.rootCauses')}`, '')
     for (const item of rootCauses) {
       const where = sessionLabel(sessions, item.session)
-      const prefix = where ? `**${where}** · ` : ''
-      lines.push(`- ${prefix}${item.cause}`)
+      const prefix = where ? `**${mdInline(where)}** · ` : ''
+      lines.push(`- ${prefix}${mdInline(item.cause)}`)
       // 模型给的字段不可全信（也可能是旧版本存档）：缺一个字段就让整份报告崩掉，
       // 与「单条坏数据不得影响其余部分」相悖。
       if ((item.evidence ?? '').trim() !== '') {
-        lines.push(`  - ${t(locale, 'agent.report.evidence')}：${item.evidence}`)
+        lines.push(`  - ${t(locale, 'agent.report.evidence')}：${mdInline(item.evidence ?? '')}`)
       }
     }
     lines.push('')
@@ -155,10 +156,10 @@ export function renderAgentMarkdown(input: AgentReportInput, model?: AgentReport
   if (actions.length > 0) {
     lines.push(`### ${t(locale, 'agent.report.actions')}`, '')
     for (const item of actions) {
-      const rule = item.ruleId ? ` \`${item.ruleId}\`` : ''
-      lines.push(`- ${item.action}${rule}`)
+      const rule = item.ruleId ? ` ${mdCode(item.ruleId)}` : ''
+      lines.push(`- ${mdInline(item.action)}${rule}`)
       if ((item.rationale ?? '').trim() !== '') {
-        lines.push(`  - ${t(locale, 'agent.report.rationale')}：${item.rationale}`)
+        lines.push(`  - ${t(locale, 'agent.report.rationale')}：${mdInline(item.rationale ?? '')}`)
       }
     }
     lines.push('')
@@ -169,10 +170,10 @@ export function renderAgentMarkdown(input: AgentReportInput, model?: AgentReport
     lines.push(`## ${t(locale, 'agent.report.proposals')}`, '')
     lines.push(`> ${t(locale, 'agent.report.proposalNote')}`, '')
     for (const proposal of run.proposals) {
-      lines.push(`### ${proposal.id} · ${proposal.rationale}`, '')
+      lines.push(`### ${mdInline(proposal.id)} · ${mdInline(proposal.rationale)}`, '')
       for (const applied of proposal.applied) {
         lines.push(
-          `- \`${applied.ruleId}\` → ${applied.severity} · ${t(locale, 'agent.report.proposalImpact', {
+          `- ${mdCode(applied.ruleId)} → ${applied.severity} · ${t(locale, 'agent.report.proposalImpact', {
             impact: applied.effectiveImpact,
           })}`,
         )
