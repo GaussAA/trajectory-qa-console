@@ -21,6 +21,9 @@ export const en: Record<MessageKey, string> = {
   'common.unknownError': 'Unknown render error',
   'common.colon': ': ',
   'common.listSeparator': ', ',
+  'rules.confirmClose': 'The draft has changes that were not applied. Closing will lose them.',
+  'rules.keepEditing': 'Keep editing',
+  'rules.discardAndClose': 'Discard changes and close',
   'common.dismiss': 'Got it',
 
   'role.system': 'System',

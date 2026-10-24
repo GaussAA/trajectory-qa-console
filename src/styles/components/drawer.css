@@ -104,6 +104,22 @@
   border: 1px solid rgba(167, 139, 250, 0.16);
 }
 
+/* 关闭前的确认条：贴在页脚上方，和页脚一样不随内容滚动。 */
+.drawer-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 18px 10px;
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+  color: #fcd34d;
+  background: rgba(251, 191, 36, 0.09);
+  border: 1px solid rgba(251, 191, 36, 0.22);
+}
+
 .drawer-issues > span {
   font-weight: 600;
   letter-spacing: 0.06em;
