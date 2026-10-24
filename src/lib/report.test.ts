@@ -69,6 +69,37 @@ describe('report builders', () => {
     expect(markdown).not.toContain('（1 处）')
   })
 
+  it('prints the same labelled totals in markdown, html and json, even with a disabled rule', () => {
+    // 停用两条规则：规则总数 ≠ 启用数，两个数字才分得清谁是谁。
+    const disabled = new Set(DEFAULT_PACK.rules.slice(0, 2).map((rule) => rule.id))
+    const pack = {
+      ...DEFAULT_PACK,
+      rules: DEFAULT_PACK.rules.map((rule) => (disabled.has(rule.id) ? { ...rule, enabled: false } : rule)),
+    }
+    const input = { entries, pack, generatedAt: new Date('2026-10-22T12:00:00Z'), locale: 'zh-CN' as const }
+    const totals = reportTotals(entries, pack)
+    expect(totals.enabledRules).toBe(DEFAULT_PACK.rules.length - 2)
+
+    const markdown = buildMarkdownReport(input)
+    const html = buildHtmlReport(input)
+    const json = JSON.parse(buildJsonReport(input))
+
+    // 按带标签的整句断言，而不是找一个数字：单个数字出现在报告里任何地方都能蒙混过关。
+    const rulePackLine = `规则包：${pack.name}（${totals.enabledRules} 条启用）`
+    expect(markdown).toContain(rulePackLine)
+    expect(html).toContain(rulePackLine)
+    expect(markdown).toContain(`会话数：${totals.sessions}`)
+    expect(markdown).toContain(`总步数：${totals.steps}`)
+    expect(markdown).toContain(`平均分：${totals.average}`)
+
+    // JSON 是同一份 reportTotals，键名稳定。
+    expect(json.totals).toEqual(totals)
+    expect(json.rulePack.enabledRules).toBe(totals.enabledRules)
+    // `rules` 仍是规则总数（含停用的）：这个键名是 CI 的契约，含义不改。
+    expect(json.rulePack.rules).toBe(DEFAULT_PACK.rules.length)
+    expect(json.rulePack.rules).not.toBe(json.rulePack.enabledRules)
+  })
+
   it('writes a machine-readable json report', () => {
     const json = JSON.parse(
       buildJsonReport({

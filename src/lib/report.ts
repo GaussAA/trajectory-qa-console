@@ -195,11 +195,21 @@ export function buildMarkdownReport({ entries, pack, generatedAt, locale }: Repo
 }
 
 export function buildJsonReport({ entries, pack, generatedAt, locale }: ReportInput): string {
+  const totals = reportTotals(entries, pack)
   return JSON.stringify(
     {
       generatedAt: generatedAt.toISOString(),
       locale,
-      rulePack: { name: pack.name, version: pack.version, rules: pack.rules.length },
+      // `rules` 是规则总数（含停用的），键名是给 CI 的契约，含义不改；
+      // Markdown / HTML 打印的「N 条启用」是 `enabledRules`，两个数字都给，读者不会再拿它们对不上。
+      rulePack: {
+        name: pack.name,
+        version: pack.version,
+        rules: pack.rules.length,
+        enabledRules: totals.enabledRules,
+      },
+      // 与 Markdown / HTML 汇总行同一份 `reportTotals`：三种产物的数字在结构上不会分叉。
+      totals,
       sessions: entries.map(({ trajectory, card }) => ({
         id: trajectory.id,
         label: trajectory.label,
