@@ -213,8 +213,22 @@ export function createPersistence(store: StorageLike | null, telemetry?: Telemet
     }
   }
 
+  /** 读到过「更新版本写的」数据的键。这些键本次会话里只读不写。
+   *
+   *  读到未来版本时我们降级成默认值（不能把看不懂的东西当 v1 读），而界面挂载后的保存副作用
+   *  会立刻把这份默认值写回同一个键——新版本写下的东西就这样被旧版本抹掉了。
+   *  只拒绝读取不够，还得拒绝覆盖。普通的损坏数据不在此列：那不是别人的数据，覆盖它是对的。 */
+  const locked = new Set<string>()
+  const lockIfFuture = (key: string, error: unknown): void => {
+    if (error instanceof FutureSchemaVersionError) locked.add(key)
+  }
+
   const write = (key: string, value: string): boolean => {
     if (!store) return false
+    if (locked.has(key)) {
+      telemetry?.emit('storage:write-blocked', { key, reason: 'newer-schema' }, 'warn')
+      return false
+    }
     try {
       store.setItem(key, value)
       return true
@@ -236,6 +250,7 @@ export function createPersistence(store: StorageLike | null, telemetry?: Telemet
         }
         return result.pack
       } catch (error) {
+        lockIfFuture(STORAGE_KEYS.pack, error)
         telemetry?.emit('storage:pack-corrupt', { error: String(error) }, 'warn')
         return DEFAULT_PACK
       }
@@ -253,6 +268,7 @@ export function createPersistence(store: StorageLike | null, telemetry?: Telemet
         if (!Array.isArray(data)) return []
         return data.filter(isAnnotation)
       } catch (error) {
+        lockIfFuture(STORAGE_KEYS.annotations, error)
         telemetry?.emit('storage:annotations-corrupt', { error: String(error) }, 'warn')
         return []
       }
@@ -270,6 +286,7 @@ export function createPersistence(store: StorageLike | null, telemetry?: Telemet
         if (!Array.isArray(data)) return []
         return data.filter(isSessionNote)
       } catch (error) {
+        lockIfFuture(STORAGE_KEYS.sessionNotes, error)
         telemetry?.emit('storage:notes-corrupt', { error: String(error) }, 'warn')
         return []
       }
@@ -287,6 +304,7 @@ export function createPersistence(store: StorageLike | null, telemetry?: Telemet
         if (!Array.isArray(data)) return []
         return data.filter(isPackVariant)
       } catch (error) {
+        lockIfFuture(STORAGE_KEYS.packVariants, error)
         telemetry?.emit('storage:variants-corrupt', { error: String(error) }, 'warn')
         return []
       }
