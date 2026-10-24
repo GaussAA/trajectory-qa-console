@@ -19,6 +19,9 @@ export const en: Record<MessageKey, string> = {
   'common.emptyValue': '(empty)',
   'common.emptyList': 'None',
   'common.unknownError': 'Unknown render error',
+  'rules.confirmClose': 'The draft has changes that were not applied. Closing will lose them.',
+  'rules.keepEditing': 'Keep editing',
+  'rules.discardAndClose': 'Discard changes and close',
   'common.dismiss': 'Got it',
 
   'role.system': 'System',

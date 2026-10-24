@@ -62,22 +62,50 @@ export function RuleDrawer({
 
   useFocusTrap(panelRef, open)
 
+  /** 正在问「放弃未保存的修改吗」。 */
+  const [confirmClose, setConfirmClose] = useState(false)
+
   useEffect(() => {
     if (!open) return
     setDraft(JSON.stringify(pack, null, 2))
     setErrors([])
     setStatus('')
+    setConfirmClose(false)
   }, [open, pack])
+
+  /** 草稿相对当前生效的包有没有改动。按内容比，不按文本：只是缩进变了不算改动；
+   *  解析不了（改到一半的 JSON）一定算改动。 */
+  const isDirty = (): boolean => {
+    try {
+      return JSON.stringify(JSON.parse(draft)) !== JSON.stringify(pack)
+    } catch {
+      return true
+    }
+  }
+
+  /** 「可能是手滑」的关闭路径（点遮罩、Esc、右上角 ✕）：草稿有改动就先问一句。
+   *  这些路径关掉的不只是抽屉——下次打开，草稿会被当前规则包覆盖，改了一半的 JSON 就没了。
+   *  页脚的「取消」是明确的放弃，不在此列。 */
+  const requestClose = () => {
+    if (isDirty()) setConfirmClose(true)
+    else onClose()
+  }
 
   useEffect(() => {
     if (!open) return
     const onKey = (event: KeyboardEvent) => {
       // 里面的控件已经处理过这次 Esc（比如取消重命名）：不要再把抽屉也关了。
-      if (event.key === 'Escape' && !event.defaultPrevented) onClose()
+      if (event.key !== 'Escape' || event.defaultPrevented) return
+      // 已经在问了，再按 Esc 是「算了，不关了」，而不是「确认丢弃」：
+      // 否则连按两下 Esc 就等于没有确认。
+      if (confirmClose) setConfirmClose(false)
+      else requestClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose])
+    // requestClose 每次渲染都是新函数，读的是最新的 draft / pack / confirmClose；依赖它们即可。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, onClose, draft, pack, confirmClose])
 
   // 试跑跟着草稿走，但用 deferred 值：大轨迹下敲字不会被重算卡住。
   const deferredDraft = useDeferredValue(draft)
@@ -234,7 +262,7 @@ export function RuleDrawer({
     })
 
   return (
-    <div className="drawer-backdrop" onMouseDown={onClose}>
+    <div className="drawer-backdrop" onMouseDown={requestClose}>
       <div
         className="drawer rules-drawer glass"
         ref={panelRef}
@@ -251,7 +279,7 @@ export function RuleDrawer({
           <button
             type="button"
             className="icon-btn"
-            onClick={onClose}
+            onClick={requestClose}
             title={t('rules.closeHint')}
             aria-label={t('common.close')}
           >
@@ -656,6 +684,19 @@ export function RuleDrawer({
             <p className="hint">{t('rules.templateHint')}</p>
           </details>
         </div>
+
+        {confirmClose && (
+          <div className="drawer-confirm" role="alertdialog" aria-label={t('rules.confirmClose')}>
+            <span>{t('rules.confirmClose')}</span>
+            <span className="grow" />
+            <button type="button" className="btn ghost sm" autoFocus onClick={() => setConfirmClose(false)}>
+              {t('rules.keepEditing')}
+            </button>
+            <button type="button" className="btn ghost sm danger" onClick={onClose}>
+              {t('rules.discardAndClose')}
+            </button>
+          </div>
+        )}
 
         <footer className="drawer-foot">
           <input

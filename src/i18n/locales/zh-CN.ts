@@ -5,6 +5,9 @@ export const zhCN = {
   'app.subtitle': 'Trajectory QA Console',
 
   'common.cancel': '取消',
+  'rules.confirmClose': '草稿里有未应用的修改，关掉会丢失。',
+  'rules.keepEditing': '继续编辑',
+  'rules.discardAndClose': '放弃修改并关闭',
   'common.close': '关闭',
   'common.import': '导入',
   'common.export': '导出',
