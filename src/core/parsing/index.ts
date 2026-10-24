@@ -95,18 +95,19 @@ export function parseLoose(text: string): Result<unknown> {
   try {
     return ok(JSON.parse(trimmed))
   } catch {
-    const lines = trimmed
+    // 先带上行号、再丢空行：报错要指向用户编辑器里看到的那一行，
+    // 而不是过滤掉空行之后的下标（空行在前时会少数）。
+    const lines = text
       .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean)
+      .map((content, index) => ({ content: content.trim(), line: index + 1 }))
+      .filter((entry) => entry.content !== '')
     if (lines.length <= 1) return fail('invalid-json', '不是合法的 JSON')
     const parsed: unknown[] = []
-    for (let i = 0; i < lines.length; i += 1) {
-      const line = lines[i] as string
+    for (const entry of lines) {
       try {
-        parsed.push(JSON.parse(line))
+        parsed.push(JSON.parse(entry.content))
       } catch {
-        return fail('invalid-json', `JSONL 第 ${i + 1} 行不是合法 JSON`, { line: i + 1 })
+        return fail('invalid-json', `JSONL 第 ${entry.line} 行不是合法 JSON`, { line: entry.line })
       }
     }
     return ok(parsed)

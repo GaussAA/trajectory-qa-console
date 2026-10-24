@@ -37,6 +37,32 @@ describe('expression evaluation', () => {
     expect(evaluatePredicate('5 != 6', {})).toBe(true)
   })
 
+  it('refuses a chained comparison instead of silently evaluating it as (a < b) < c', () => {
+    // `10 < stepCount < 40` 看起来是「在 10 与 40 之间」，实际是 (10 < stepCount) < 40：
+    // 括号里的布尔被当成 0/1 再去比 40，所以 stepCount 是 100 和 5 时结果都是 true。
+    for (const source of ['10 < stepCount < 40', 'a < b <= c', 'a >= b > c', '1 < 2 > 0']) {
+      expect(() => compileExpression(source), source).toThrow(ExprError)
+    }
+    try {
+      compileExpression('10 < stepCount < 40')
+    } catch (error) {
+      expect((error as ExprError).message).toContain('and')
+    }
+  })
+
+  it('still allows the comparisons people actually mean', () => {
+    // 用 and 连接是正确写法
+    expect(evaluatePredicate('stepCount > 10 and stepCount < 40', { stepCount: 20 })).toBe(true)
+    expect(evaluatePredicate('stepCount > 10 and stepCount < 40', { stepCount: 100 })).toBe(false)
+    // 比较的结果再和 == 比较是合法的（运算符优先级不同），不属于链式比较
+    expect(evaluatePredicate('(1 < 2) == true', {})).toBe(true)
+    expect(evaluatePredicate('1 < 2 == true', {})).toBe(true)
+    // 括号显式表达意图时放行
+    expect(evaluatePredicate('(1 < 2) < 3', {})).toBe(true)
+    // 算术里的比较不受影响
+    expect(evaluatePredicate('a + 1 < b * 2', { a: 1, b: 5 })).toBe(true)
+  })
+
   it('exposes a whitelist of functions only', () => {
     expect(evaluatePredicate('includes(text, "失败")', { text: '工具失败' })).toBe(true)
     expect(evaluateExpression('sum([1, 2, 3])', {})).toBe(6)
