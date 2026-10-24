@@ -62,6 +62,7 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
       persistence.loadAnnotations(),
       [],
       persistence.loadSessionNotes(),
+      persistence.loadPackVariants(),
     )
   }
   const [state, dispatch] = useReducer(workspaceReducer, initialRef.current)
@@ -99,6 +100,10 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
   useEffect(() => {
     persistence.saveSessionNotes(state.notes)
   }, [state.notes, persistence])
+
+  useEffect(() => {
+    persistence.savePackVariants(state.variants)
+  }, [state.variants, persistence])
 
   useEffect(() => {
     if (!toast) return

@@ -145,6 +145,51 @@ describe('adoptProposal', () => {
   })
 })
 
+describe('pack variants survive a reload', () => {
+  function mount(storage: ReturnType<typeof createMemoryStorage>) {
+    return renderHook(
+      () =>
+        useWorkspaceController({
+          analyzer: createSyncAnalyzer(),
+          persistence: createPersistence(storage),
+          telemetry: createTelemetry(),
+        }),
+      { wrapper: ({ children }) => <I18nProvider initialLocale="zh-CN">{children}</I18nProvider> },
+    )
+  }
+
+  it('restores a saved variant when the controller is mounted again', () => {
+    const storage = createMemoryStorage()
+
+    const first = mount(storage)
+    act(() => {
+      first.result.current.actions.saveVariant('严格口径', first.result.current.state.pack)
+    })
+    expect(first.result.current.state.variants).toHaveLength(1)
+    first.unmount()
+
+    const second = mount(storage)
+    expect(second.result.current.state.variants).toHaveLength(1)
+    expect(second.result.current.state.variants[0]?.name).toBe('严格口径')
+  })
+
+  it('does not resurrect a variant that was removed before the reload', () => {
+    const storage = createMemoryStorage()
+
+    const first = mount(storage)
+    let id = ''
+    act(() => {
+      id = first.result.current.actions.saveVariant('临时', first.result.current.state.pack)?.id ?? ''
+    })
+    act(() => {
+      first.result.current.actions.removeVariant(id)
+    })
+    first.unmount()
+
+    expect(mount(storage).result.current.state.variants).toHaveLength(0)
+  })
+})
+
 describe('exportAgentReport', () => {
   const RUN = {
     ok: true,
