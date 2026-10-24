@@ -8,6 +8,7 @@
 import { comparePacks, type PackCompareSession, type PackComparison } from '../core/pack-compare'
 import { formatDateTime, translate, type Locale, type MessageKey } from '../i18n/core'
 import type { RulePack } from '../core/model'
+import { mdCell, mdInline } from './markdown'
 
 export interface PackCompareSide {
   name: string
@@ -27,10 +28,6 @@ export interface PackCompareReport {
   json: string
 }
 
-function escapeCell(text: string): string {
-  return text.replace(/\|/g, '\\|').replace(/\n+/g, ' ')
-}
-
 /** The comparison, computed once and shared by both artifacts.
  *
  *  `comparePacks` re-runs every rule under both packs for every session, so
@@ -47,8 +44,8 @@ export function renderPackCompareMarkdown(input: PackCompareReportInput, compari
   lines.push(`# ${t('report.packCompare.title')}`)
   lines.push('')
   lines.push(`- ${t('report.generatedAt', { time: formatDateTime(input.locale, input.generatedAt) })}`)
-  lines.push(`- ${t('report.packCompare.base', { name: input.base.name })}`)
-  lines.push(`- ${t('report.packCompare.target', { name: input.target.name })}`)
+  lines.push(`- ${t('report.packCompare.base', { name: mdInline(input.base.name) })}`)
+  lines.push(`- ${t('report.packCompare.target', { name: mdInline(input.target.name) })}`)
   lines.push('')
 
   if (comparison.identical) {
@@ -65,7 +62,7 @@ export function renderPackCompareMarkdown(input: PackCompareReportInput, compari
   lines.push('| --- | ---: | ---: | ---: |')
   for (const row of comparison.rows) {
     const delta = row.delta > 0 ? `+${row.delta}` : String(row.delta)
-    lines.push(`| ${escapeCell(row.label)} | ${row.base} | ${row.target} | ${delta} |`)
+    lines.push(`| ${mdCell(row.label)} | ${row.base} | ${row.target} | ${delta} |`)
   }
   const avgDelta = comparison.targetAverage - comparison.baseAverage
   lines.push(

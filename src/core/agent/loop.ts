@@ -153,6 +153,9 @@ export async function runAgent(
       apiKey: options.apiKey,
       maxTokens: budget.maxTokens,
       timeoutMs: budget.timeoutMs,
+      // 这一回合（含重试）不得越过总时长：否则「单次 90 秒」加一次重试，
+      // 最坏就是 180 秒，套在 180 秒的总预算里等于没有预算。
+      totalTimeoutMs: budget.maxDurationMs - (sentAt - started),
       retryDelayMs: options.retryDelayMs,
       tools: toolSpecs(),
       signal: options.signal,
@@ -160,6 +163,12 @@ export async function runAgent(
     trace.rounds = round
 
     if (!reply.ok) {
+      // 预算在这一回合里用完：不是端点的错，按「未收敛」交代，不报成故障。
+      if (reply.error.detail?.budgetExhausted === true) {
+        trace.truncated = true
+        trace.stopReason = 'duration'
+        return done()
+      }
       // 端点级失败：这一轮什么都没发生，继续循环只会重复烧配额。
       error = reply.error
       return done()
@@ -181,6 +190,13 @@ export async function runAgent(
 
     if (turn.toolCalls.length === 0) {
       answer = turn.content
+      if (turn.finishReason === 'length') {
+        // 输出被 max_tokens 截断：这不是「模型说完了」。推理型模型尤其容易把额度花在思考上，
+        // 留下半句话。半截的话照样交出去，但必须标成未收敛，读者才知道这是未完稿。
+        trace.truncated = true
+        trace.stopReason = 'output-limit'
+        return done()
+      }
       // 既没有文本也没有调用 = 模型什么都没说。算收尾，但要标出来。
       if (answer.trim() === '') trace.truncated = true
       trace.stopReason = 'answered'

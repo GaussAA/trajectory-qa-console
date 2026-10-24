@@ -140,7 +140,7 @@ td .num, .delta-cell { font-variant-numeric: tabular-nums; }
   display: inline-block;
   padding: 1px 8px;
   border-radius: 999px;
-  font-size: 10.5px;
+  font-size:$211px;
   border: 1px solid rgba(148, 163, 184, 0.2);
   color: var(--mute);
 }
@@ -165,7 +165,7 @@ export function renderComparisonHtml(input: ComparisonInput, model: ComparisonMo
   const t: Translate = (key, params) => translate(input.locale, key, params)
   const { base, target, generatedAt, locale } = input
 
-  const { cardDiff, findingDiff, rows, summary } = model
+  const { cardDiff, findingDiff, changedRows, stepLimit, summary } = model
 
   const dimensionRows = cardDiff.dimensions
     .map((dimension) => {
@@ -194,8 +194,7 @@ export function renderComparisonHtml(input: ComparisonInput, model: ComparisonMo
           .join('\n')}</ol>`
       : ''
 
-  const changedRows = rows.filter((row) => row.status !== 'same')
-  const limit = 40
+  const limit = stepLimit
   const stepsSection =
     changedRows.length === 0
       ? `<p class="empty">${escapeHtml(t('report.compare.noDifferences'))}</p>`

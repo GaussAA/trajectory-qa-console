@@ -8,8 +8,9 @@
  */
 
 import { formatTokens } from '../core/estimate'
-import type { ScoreCard } from '../core/analysis'
+import { gradeKeyOf, type ScoreCard } from '../core/analysis'
 import { alignSteps, compareCards, diffFindings, summarizeAlignment, type AlignStatus } from '../core/compare'
+import { mdCell, mdInline } from './markdown'
 import { buildAdvice } from '../core/rules/advice'
 import type { RulePack, Severity, Trajectory } from '../core/model'
 import {
@@ -69,10 +70,6 @@ const SEVERITY_KEY: Record<Severity, MessageKey> = {
   info: 'severity.info',
 }
 
-function escapeCell(text: string): string {
-  return text.replace(/\|/g, '\\|').replace(/\n+/g, ' ')
-}
-
 function severityText(t: Translate, severity: Severity): string {
   const key = SEVERITY_KEY[severity]
   return key ? t(key) : severity
@@ -87,7 +84,7 @@ export function buildMarkdownReport({ entries, pack, generatedAt, locale }: Repo
   lines.push(`- ${t('report.generatedAt', { time: formatDateTime(locale, generatedAt) })}`)
   const totals = reportTotals(entries, pack)
 
-  lines.push(`- ${t('report.rulePack', { name: pack.name, count: totals.enabledRules })}`)
+  lines.push(`- ${t('report.rulePack', { name: mdInline(pack.name), count: totals.enabledRules })}`)
   lines.push(`- ${t('report.sessionCount', { count: totals.sessions })}`)
   lines.push(`- ${t('report.totalSteps', { count: totals.steps })}`)
   lines.push(`- ${t('report.estimatedTokens', { tokens: formatTokens(totals.tokens) })}`)
@@ -104,7 +101,7 @@ export function buildMarkdownReport({ entries, pack, generatedAt, locale }: Repo
   lines.push('| --- | ---: | ---: | ---: | :---: | ---: | ---: | ---: |')
   for (const { trajectory, card } of entries) {
     lines.push(
-      `| ${escapeCell(trajectory.label)} | ${trajectory.steps.length} | ${formatTokens(
+      `| ${mdCell(trajectory.label)} | ${trajectory.steps.length} | ${formatTokens(
         trajectory.meta.totalTokens,
       )} | ${card.overall} | ${card.grade} | ${card.counts.error} | ${card.counts.warn} | ${card.counts.info} |`,
     )
@@ -112,13 +109,13 @@ export function buildMarkdownReport({ entries, pack, generatedAt, locale }: Repo
   lines.push('')
 
   entries.forEach(({ trajectory, card }, index) => {
-    lines.push(`## ${index + 1}. ${trajectory.label}`)
+    lines.push(`## ${index + 1}. ${mdInline(trajectory.label)}`)
     lines.push('')
     lines.push(
       `**${t('report.totalScore', {
         score: card.overall,
         grade: card.grade,
-        label: labelFor(locale, 'grade', card.grade, card.gradeLabel),
+        label: labelFor(locale, 'grade', gradeKeyOf(card), card.gradeLabel),
       })}**`,
     )
     lines.push('')
@@ -126,7 +123,7 @@ export function buildMarkdownReport({ entries, pack, generatedAt, locale }: Repo
       lines.push(`> ${t('report.cappedNote', { raw: card.rawOverall, score: card.overall })}`)
       lines.push('')
     }
-    if (trajectory.meta.model) lines.push(`- ${t('report.model', { model: trajectory.meta.model })}`)
+    if (trajectory.meta.model) lines.push(`- ${t('report.model', { model: mdInline(trajectory.meta.model) })}`)
     if (trajectory.meta.estimatedTokens) lines.push(`- ${t('report.estimatedNote')}`)
     lines.push('')
 
@@ -137,7 +134,7 @@ export function buildMarkdownReport({ entries, pack, generatedAt, locale }: Repo
     )
     lines.push('| --- | ---: | ---: | ---: |')
     for (const dimension of card.dimensions) {
-      const name = labelFor(locale, 'dimension', dimension.id, dimension.label)
+      const name = mdCell(labelFor(locale, 'dimension', dimension.id, dimension.label))
       lines.push(`| ${name} | ${dimension.score} | ${dimension.lost} | ${dimension.findings} |`)
     }
     lines.push('')
@@ -154,10 +151,10 @@ export function buildMarkdownReport({ entries, pack, generatedAt, locale }: Repo
       const location =
         finding.stepIndex !== undefined ? ` · ${t('report.stepAt', { index: finding.stepIndex + 1 })}` : ''
       lines.push(
-        `${findingIndex + 1}. **${severityText(t, finding.severity)}** · **${finding.ruleTitle}**${location}`,
+        `${findingIndex + 1}. **${severityText(t, finding.severity)}** · **${mdInline(finding.ruleTitle)}**${location}`,
       )
-      lines.push(`   - ${t('report.detail', { text: escapeCell(finding.message) })}`)
-      if (finding.evidence) lines.push(`   - ${t('report.evidence', { text: escapeCell(finding.evidence) })}`)
+      lines.push(`   - ${t('report.detail', { text: mdCell(finding.message) })}`)
+      if (finding.evidence) lines.push(`   - ${t('report.evidence', { text: mdCell(finding.evidence) })}`)
     })
     lines.push('')
 
@@ -167,7 +164,7 @@ export function buildMarkdownReport({ entries, pack, generatedAt, locale }: Repo
       lines.push('')
       advice.forEach((item, adviceIndex) => {
         // 只出现一次就不必标「1 处」——那是噪音。
-        const suffix = item.count > 1 ? `（${t('report.adviceCount', { count: item.count })}）` : ''
+        const suffix = item.count > 1 ? t('report.adviceSuffix', { text: t('report.adviceCount', { count: item.count }) }) : ''
         lines.push(`${adviceIndex + 1}. ${item.text}${suffix}`)
       })
       lines.push('')
@@ -183,7 +180,7 @@ export function buildMarkdownReport({ entries, pack, generatedAt, locale }: Repo
         const key = `${issue.ruleId}:${issue.message}`
         if (seen.has(key)) continue
         seen.add(key)
-        lines.push(`- ${t('report.ruleIssueItem', { id: issue.ruleId, message: issue.message })}`)
+        lines.push(`- ${t('report.ruleIssueItem', { id: mdInline(issue.ruleId), message: mdInline(issue.message) })}`)
       }
     }
     lines.push('')
@@ -198,11 +195,21 @@ export function buildMarkdownReport({ entries, pack, generatedAt, locale }: Repo
 }
 
 export function buildJsonReport({ entries, pack, generatedAt, locale }: ReportInput): string {
+  const totals = reportTotals(entries, pack)
   return JSON.stringify(
     {
       generatedAt: generatedAt.toISOString(),
       locale,
-      rulePack: { name: pack.name, version: pack.version, rules: pack.rules.length },
+      // `rules` 是规则总数（含停用的），键名是给 CI 的契约，含义不改；
+      // Markdown / HTML 打印的「N 条启用」是 `enabledRules`，两个数字都给，读者不会再拿它们对不上。
+      rulePack: {
+        name: pack.name,
+        version: pack.version,
+        rules: pack.rules.length,
+        enabledRules: totals.enabledRules,
+      },
+      // 与 Markdown / HTML 汇总行同一份 `reportTotals`：三种产物的数字在结构上不会分叉。
+      totals,
       sessions: entries.map(({ trajectory, card }) => ({
         id: trajectory.id,
         label: trajectory.label,
@@ -213,7 +220,7 @@ export function buildJsonReport({ entries, pack, generatedAt, locale }: ReportIn
         score: card.overall,
         rawScore: card.rawOverall,
         grade: card.grade,
-        gradeLabel: labelFor(locale, 'grade', card.grade, card.gradeLabel),
+        gradeLabel: labelFor(locale, 'grade', gradeKeyOf(card), card.gradeLabel),
         dimensions: card.dimensions.map((dimension) => ({
           ...dimension,
           label: labelFor(locale, 'dimension', dimension.id, dimension.label),
@@ -255,13 +262,13 @@ function signed(value: number): string {
 function clip(text: string, limit = 60): string {
   const flat = text.trim().replace(/\s+/g, ' ')
   const short = flat.length <= limit ? flat : `${flat.slice(0, limit)}…`
-  return escapeCell(short)
+  return mdCell(short)
 }
 
 function stepPreview(step: { text: string; toolCalls: { name: string }[] } | undefined): string {
   if (!step) return '—'
   if (step.text.trim()) return clip(step.text)
-  if (step.toolCalls.length > 0) return escapeCell(step.toolCalls.map((call) => call.name).join(', '))
+  if (step.toolCalls.length > 0) return mdCell(step.toolCalls.map((call) => call.name).join(', '))
   return '—'
 }
 
@@ -272,7 +279,16 @@ export function buildComparisonModel(input: ComparisonInput) {
   const cardDiff = compareCards(input.base, input.target)
   const findingDiff = diffFindings(input.base.card.findings, input.target.card.findings)
   const rows = alignSteps(input.base.trajectory.steps, input.target.trajectory.steps)
-  return { cardDiff, findingDiff, rows, summary: summarizeAlignment(rows) }
+  return {
+    cardDiff,
+    findingDiff,
+    rows,
+    // 「哪些行算变化」与「最多写几行」只在这里定一次：Markdown 与 HTML 各算各的，
+    // HTML 曾把上限写死成 40，调用方传的 maxStepRows 对它无效。
+    changedRows: rows.filter((row) => row.status !== 'same'),
+    stepLimit: input.maxStepRows ?? 40,
+    summary: summarizeAlignment(rows),
+  }
 }
 
 /** The comparison, computed once. Rendering takes it as an argument so a
@@ -281,14 +297,14 @@ export type ComparisonModel = ReturnType<typeof buildComparisonModel>
 
 export function renderComparisonMarkdown(input: ComparisonInput, model: ComparisonModel): string {
   const t: Translate = (key, params) => translate(input.locale, key, params)
-  const { cardDiff, findingDiff, rows, summary } = model
+  const { cardDiff, findingDiff, changedRows, stepLimit, summary } = model
   const lines: string[] = []
 
   lines.push(`# ${t('report.compare.title')}`)
   lines.push('')
   lines.push(`- ${t('report.generatedAt', { time: formatDateTime(input.locale, input.generatedAt) })}`)
-  lines.push(`- ${t('report.compare.base', { label: input.base.trajectory.label })}`)
-  lines.push(`- ${t('report.compare.target', { label: input.target.trajectory.label })}`)
+  lines.push(`- ${t('report.compare.base', { label: mdInline(input.base.trajectory.label) })}`)
+  lines.push(`- ${t('report.compare.target', { label: mdInline(input.target.trajectory.label) })}`)
   lines.push('')
 
   lines.push(`## ${t('report.compare.scoreSection')}`)
@@ -326,7 +342,7 @@ export function renderComparisonMarkdown(input: ComparisonInput, model: Comparis
   )
   lines.push('| --- | ---: | ---: | ---: |')
   for (const dimension of cardDiff.dimensions) {
-    const name = labelFor(input.locale, 'dimension', dimension.id, dimension.label)
+    const name = mdCell(labelFor(input.locale, 'dimension', dimension.id, dimension.label))
     lines.push(`| ${name} | ${dimension.before} | ${dimension.after} | ${signed(dimension.delta)} |`)
   }
   lines.push('')
@@ -350,9 +366,9 @@ export function renderComparisonMarkdown(input: ComparisonInput, model: Comparis
       const location =
         finding.stepIndex !== undefined ? ` · ${t('report.stepAt', { index: finding.stepIndex + 1 })}` : ''
       lines.push(
-        `${index + 1}. **${severityText(t, finding.severity)}** · **${finding.ruleTitle}**${location}`,
+        `${index + 1}. **${severityText(t, finding.severity)}** · **${mdInline(finding.ruleTitle)}**${location}`,
       )
-      lines.push(`   - ${t('report.detail', { text: escapeCell(finding.message) })}`)
+      lines.push(`   - ${t('report.detail', { text: mdCell(finding.message) })}`)
     })
     lines.push('')
   }
@@ -366,7 +382,7 @@ export function renderComparisonMarkdown(input: ComparisonInput, model: Comparis
     lines.push(`### ${t('report.compare.advice')}`)
     lines.push('')
     advice.forEach((item, adviceIndex) => {
-      const suffix = item.count > 1 ? `（${t('report.adviceCount', { count: item.count })}）` : ''
+      const suffix = item.count > 1 ? t('report.adviceSuffix', { text: t('report.adviceCount', { count: item.count }) }) : ''
       lines.push(`${adviceIndex + 1}. ${item.text}${suffix}`)
     })
     lines.push('')
@@ -378,8 +394,8 @@ export function renderComparisonMarkdown(input: ComparisonInput, model: Comparis
     `${summary.changed} ${t('compare.changed')} · ${summary.added + summary.removed} ${t('compare.structural')}`,
   )
   lines.push('')
-  const limit = input.maxStepRows ?? 40
-  const changed = rows.filter((row) => row.status !== 'same')
+  const limit = stepLimit
+  const changed = changedRows
   if (changed.length === 0) {
     lines.push(t('report.compare.noDifferences'))
     lines.push('')
@@ -404,22 +420,18 @@ export function renderComparisonMarkdown(input: ComparisonInput, model: Comparis
     }
   }
 
+  // 页脚讲评分口径，和 HTML 版、逐会话报告一致。此前这里把「问题变化」一节里的汇总行
+  // 原样再印了一遍，评分口径在对比的 Markdown 里根本没出现过。
   lines.push('---')
   lines.push('')
-  lines.push(
-    t('report.compare.findingsSummary', {
-      added: findingDiff.added.length,
-      resolved: findingDiff.resolved.length,
-      persisted: findingDiff.persisted.length,
-    }),
-  )
+  lines.push(t('report.footer'))
   lines.push('')
 
   return lines.join('\n')
 }
 
 export function renderComparisonJson(input: ComparisonInput, model: ComparisonModel): string {
-  const { cardDiff, findingDiff, rows, summary } = model
+  const { cardDiff, findingDiff, changedRows, summary } = model
   return JSON.stringify(
     {
       generatedAt: input.generatedAt.toISOString(),
@@ -435,13 +447,12 @@ export function renderComparisonJson(input: ComparisonInput, model: ComparisonMo
         resolvedItems: findingDiff.resolved,
       },
       steps: summary,
-      changedSteps: rows
-        .filter((row) => row.status !== 'same')
-        .map((row) => ({
-          status: row.status,
-          baseStep: row.before ? row.before.index + 1 : null,
-          targetStep: row.after ? row.after.index + 1 : null,
-        })),
+      // JSON 给机器读，不按 maxStepRows 截断：悄悄少几行，下游会以为变化更少。
+      changedSteps: changedRows.map((row) => ({
+        status: row.status,
+        baseStep: row.before ? row.before.index + 1 : null,
+        targetStep: row.after ? row.after.index + 1 : null,
+      })),
     },
     null,
     2,

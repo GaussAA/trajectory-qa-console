@@ -16,21 +16,30 @@ import { computeMetrics, type SessionAnalysis } from '../core/analysis'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
 import { validatePack } from '../core/rules/contract'
 import { runAgent } from '../core/agent'
+import { AGENT_BUDGET } from '../core/agent/types'
 import { fetchTransport, type LlmTransport } from '../core/llm/transport'
 import type { RulePack, Step, Trajectory, TrajectoryMeta } from '../core/model'
 import type { Locale } from '../i18n/core'
+import { hostnameOfHostHeader, isLoopbackHost } from '../lib/loopback'
 import type { SemanticConfig } from './llm-config'
 
 export interface ServeConfig {
   llm: SemanticConfig
-  /** 鉴权 token；null 表示不校验（仅本机、且用户明确关掉时）。 */
+  /** 鉴权 token；null 表示不校验（仅本机、且用户明确关掉时）。
+   *  null 时 `Origin: null`（file:// 与沙箱页面）也被拒绝：要从双击打开的页面用，必须设 token。 */
   token: string | null
+  /** 只接受 `Host` 为回环名的请求，挡掉 DNS 重绑定。默认 true；显式绑到非回环地址时由调用方关掉。 */
+  loopbackOnly?: boolean
   transport?: LlmTransport
   locale?: Locale
   /** 单次诊断最多几条会话。 */
   maxSessions?: number
   /** 请求体字节上限。 */
   maxBytes?: number
+  /** 同时在跑的诊断数；超出的请求拿 429。默认 2。 */
+  maxConcurrent?: number
+  /** 轮次上限。客户端可以要更少，不能要更多；默认是智能体自己的默认预算。 */
+  maxRounds?: number
   now?: () => number
   /** 重试间隔：测试置 0，免得为一个 500 真等 800ms。 */
   retryDelayMs?: number
@@ -38,6 +47,10 @@ export interface ServeConfig {
 
 const DEFAULT_MAX_SESSIONS = 20
 const DEFAULT_MAX_BYTES = 8 * 1024 * 1024
+/** 同时在跑的诊断数。每一次最多烧满一份预算，N 个并行就是 N 倍；2 够一个人开两个标签页。 */
+const DEFAULT_MAX_CONCURRENT = 2
+/** 自由文本任务的长度上限：它进的是 user 消息，会逐轮重复发给模型，长度直接乘进成本。 */
+const MAX_TASK_CHARS = 2000
 
 /** 行协议：一行一个 JSON。`type` 是判别式，前端按它分派。 */
 export type ServeEvent =
@@ -48,24 +61,22 @@ export type ServeEvent =
 
 // ---------- 工具函数 ----------
 
-/** 只有 `file://`（Origin: null）与本机 http 页面能读到响应。 */
-export function allowOrigin(origin: string | undefined): string | null {
+/** 只有 `file://`（Origin: null）与本机 http 页面能读到响应。
+ *
+ *  `Origin: null` 不只来自 `file://`：沙箱 iframe、`data:` 页面也是它，浏览器里分不出来。
+ *  所以没有 token 时 `allowNull` 为 false——放行 null 等于放行任何能造出沙箱 iframe 的网页。 */
+export function allowOrigin(origin: string | undefined, allowNull = true): string | null {
   if (origin === undefined || origin === '') return null
-  if (origin === 'null') return 'null'
+  if (origin === 'null') return allowNull ? 'null' : null
   try {
-    const url = new URL(origin)
-    const host = url.hostname
-    if (host === '127.0.0.1' || host === 'localhost' || host === '::1' || host === '[::1]') {
-      return origin
-    }
+    return isLoopbackHost(new URL(origin).hostname) ? origin : null
   } catch {
     return null
   }
-  return null
 }
 
-function corsHeaders(origin: string | undefined): Record<string, string> {
-  const allowed = allowOrigin(origin)
+function corsHeaders(origin: string | undefined, allowNull: boolean): Record<string, string> {
+  const allowed = allowOrigin(origin, allowNull)
   if (!allowed) return { vary: 'origin' }
   return {
     'access-control-allow-origin': allowed,
@@ -91,20 +102,37 @@ function sendJson(
   response.end(body)
 }
 
-async function readBody(request: IncomingMessage, limitBytes: number): Promise<string | null> {
-  const chunks: Buffer[] = []
-  let total = 0
-  for await (const chunk of request) {
-    const buffer = chunk as Buffer
-    total += buffer.length
-    if (total > limitBytes) {
-      // 超限要立刻断开：继续读完等于替攻击者把内存吃掉。
-      request.destroy()
-      return null
-    }
-    chunks.push(buffer)
-  }
-  return Buffer.concat(chunks).toString('utf8')
+/** 读请求体，超限返回 null。
+ *
+ *  超限时**不能**销毁请求：`IncomingMessage.destroy()` 会连带销毁底层 socket，
+ *  随后要写的 413 就写到一条死连接上，客户端看到的是连接重置而不是 413。
+ *  这里的做法是：超限就停止缓冲（内存不再增长）、立刻返回 null，让调用方写 413 并带上
+ *  `Connection: close`——响应送出之后 Node 会自己收掉连接，没读完的数据被丢弃。 */
+function readBody(request: IncomingMessage, limitBytes: number): Promise<string | null> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = []
+    let total = 0
+    let over = false
+    request.on('data', (chunk: Buffer) => {
+      if (over) return
+      total += chunk.length
+      if (total > limitBytes) {
+        over = true
+        chunks.length = 0
+        resolve(null)
+        return
+      }
+      chunks.push(chunk)
+    })
+    request.on('end', () => {
+      if (!over) resolve(Buffer.concat(chunks).toString('utf8'))
+    })
+    // 客户端读到一半走了：不处理的话这个 Promise 永远不落地，请求处理函数就挂在那里。
+    request.on('error', reject)
+    request.on('close', () => {
+      if (!over && !request.complete) reject(new Error('request aborted'))
+    })
+  })
 }
 
 // ---------- 请求体 ----------
@@ -181,6 +209,10 @@ function readPayload(raw: unknown, maxSessions: number): DiagnosePayload | { err
     pack = validation.pack
   }
 
+  if (typeof raw.task === 'string' && raw.task.length > MAX_TASK_CHARS) {
+    return { error: 'task is too long: max ' + MAX_TASK_CHARS + ' characters' }
+  }
+
   return {
     sessions: parsed,
     pack,
@@ -197,8 +229,13 @@ function readPayload(raw: unknown, maxSessions: number): DiagnosePayload | { err
 export function createAgentServer(config: ServeConfig): Server {
   const maxSessions = config.maxSessions ?? DEFAULT_MAX_SESSIONS
   const maxBytes = config.maxBytes ?? DEFAULT_MAX_BYTES
+  const maxConcurrent = config.maxConcurrent ?? DEFAULT_MAX_CONCURRENT
+  const maxRounds = config.maxRounds ?? AGENT_BUDGET.maxRounds
+  let active = 0
   const transport = config.transport ?? fetchTransport
   const locale = config.locale ?? 'zh-CN'
+  const loopbackOnly = config.loopbackOnly ?? true
+  const allowNull = config.token !== null
 
   const server = createServer((request, response) => {
     handle(request, response).catch((error: unknown) => {
@@ -211,13 +248,23 @@ export function createAgentServer(config: ServeConfig): Server {
         response,
         500,
         { error: error instanceof Error ? error.message : String(error) },
-        corsHeaders(request.headers.origin),
+        corsHeaders(request.headers.origin, allowNull),
       )
     })
   })
 
   async function handle(request: IncomingMessage, response: ServerResponse): Promise<void> {
-    const cors = corsHeaders(request.headers.origin)
+    // DNS 重绑定：恶意域名把解析改到 127.0.0.1 后，浏览器认为它与本服务同源，CORS 形同虚设。
+    // 它发来的 Host 仍是那个域名，所以在最前面按 Host 拦下，且不回任何 CORS 头。
+    if (loopbackOnly) {
+      const hostname = hostnameOfHostHeader(request.headers.host)
+      if (hostname === null || !isLoopbackHost(hostname)) {
+        sendJson(response, 403, { error: 'host not allowed' })
+        return
+      }
+    }
+
+    const cors = corsHeaders(request.headers.origin, allowNull)
     const url = new URL(request.url ?? '/', 'http://127.0.0.1')
 
     if (request.method === 'OPTIONS') {
@@ -250,6 +297,12 @@ export function createAgentServer(config: ServeConfig): Server {
     response: ServerResponse,
     cors: Record<string, string>,
   ): Promise<void> {
+    // 没有 token 时 CORS 不放行 null；这里再在服务端拒一次，不单靠浏览器的预检来兜底。
+    if (!allowNull && request.headers.origin === 'null') {
+      sendJson(response, 403, { error: 'origin null requires --token' }, cors)
+      return
+    }
+
     // 鉴权放在读 body 之前：未授权的请求不该有机会让服务端解析几个 MB。
     if (config.token !== null) {
       const provided = request.headers['x-tqa-token']
@@ -265,9 +318,18 @@ export function createAgentServer(config: ServeConfig): Server {
       return
     }
 
-    const raw = await readBody(request, maxBytes)
+    let raw: string | null
+    try {
+      raw = await readBody(request, maxBytes)
+    } catch {
+      // 客户端读到一半走了：没人在等回复，不用写。
+      return
+    }
     if (raw === null) {
-      if (!response.headersSent) sendJson(response, 413, { error: 'body too large' }, cors)
+      // `Connection: close`：响应送出后由 Node 收掉连接，没读完的数据被丢弃。
+      if (!response.headersSent) {
+        sendJson(response, 413, { error: 'body too large' }, { ...cors, connection: 'close' })
+      }
       return
     }
 
@@ -301,6 +363,35 @@ export function createAgentServer(config: ServeConfig): Server {
       return
     }
 
+    // 并发名额：走到这里才占，前面的校验失败不占名额；占与检查之间没有 await，所以不会被并发请求穿过。
+    // 429 带上 Connection: close，免得被拒的连接在 keep-alive 里挂着。
+    if (active >= maxConcurrent) {
+      sendJson(
+        response,
+        429,
+        { error: 'too many diagnoses running: max ' + maxConcurrent },
+        { ...cors, connection: 'close', 'retry-after': '5' },
+      )
+      return
+    }
+    active += 1
+    let released = false
+    const release = (): void => {
+      if (released) return
+      released = true
+      active -= 1
+    }
+
+    // 客户端中途走掉（关页面、点取消）：连接断开时响应还没写完，就让这次运行停下。
+    // 否则服务端会继续往模型发请求，最多烧满预算，而没有任何人在看结果。
+    // 正常写完 `end()` 之后也会触发 close，所以要看 `writableFinished` 区分两种情形。
+    const abort = new AbortController()
+    response.once('close', () => {
+      if (!response.writableFinished) abort.abort()
+      // 无论怎么结束（跑完、断连、出错）名额都要还：一次断连不能把服务永久占满。
+      release()
+    })
+
     response.writeHead(200, {
       'content-type': 'application/x-ndjson; charset=utf-8',
       // 不要缓冲：进度要立刻可见。
@@ -328,7 +419,9 @@ export function createAgentServer(config: ServeConfig): Server {
         apiKey: config.llm.apiKey,
         locale,
         task: payload.task,
-        budget: payload.rounds === undefined ? undefined : { maxRounds: payload.rounds },
+        signal: abort.signal,
+        // 客户端可以要更少的轮次，不能要更多：上限归运行服务的人定，不归发请求的页面定。
+        budget: { maxRounds: Math.min(payload.rounds ?? maxRounds, maxRounds) },
         now: config.now,
         retryDelayMs: config.retryDelayMs,
         onEvent: (event) => write({ type: 'progress', event }),

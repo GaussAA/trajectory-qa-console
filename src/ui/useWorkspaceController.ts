@@ -5,7 +5,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
-import type { ScoreCard, SessionAnalysis } from '../core/analysis'
+import { NOTHING_TO_SCORE, type ScoreCard, type SessionAnalysis } from '../core/analysis'
 import type { Annotation, PackVariant, RulePack, SessionNote, Severity } from '../core/model'
 import { useI18n, useT, type MessageKey, type TranslateParams } from '../i18n'
 import { buildStressTrace } from '../core/sample'
@@ -62,6 +62,7 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
       persistence.loadAnnotations(),
       [],
       persistence.loadSessionNotes(),
+      persistence.loadPackVariants(),
     )
   }
   const [state, dispatch] = useReducer(workspaceReducer, initialRef.current)
@@ -99,6 +100,10 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
   useEffect(() => {
     persistence.saveSessionNotes(state.notes)
   }, [state.notes, persistence])
+
+  useEffect(() => {
+    persistence.savePackVariants(state.variants)
+  }, [state.variants, persistence])
 
   useEffect(() => {
     if (!toast) return
@@ -198,9 +203,10 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
             message: t('ingest.sessionFailed', {
               index: issue.index + 1,
               label: issue.label,
-              message: issue.message,
+              // core 的文案不本地化：「没东西可评」有专属字典条目，别把中文原文漏进英文界面。
+              message: issue.message === NOTHING_TO_SCORE ? t('error.nothing-to-score') : issue.message,
             }),
-            code: 'analysis-failed',
+            code: issue.message === NOTHING_TO_SCORE ? 'nothing-to-score' : 'analysis-failed',
           })
           telemetry.emit('ingest:session-failed', { file: input.name, index: issue.index }, 'error')
         }

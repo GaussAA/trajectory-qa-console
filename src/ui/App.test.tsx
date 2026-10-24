@@ -297,6 +297,37 @@ describe('App smoke', () => {
     await waitFor(() => expect(selected()).toBe(before))
   })
 
+  it('stops at the last and first step instead of dropping the selection', async () => {
+    const { user } = setup()
+    await loadSamples(user)
+
+    const rows = () => document.querySelectorAll('.step-row')
+    const selected = () => document.querySelector('.step-row.selected')?.id ?? null
+    const total = rows().length
+    expect(total).toBeGreaterThan(2)
+
+    // 一路按到底再多按几下：停在最后一步，不能变成「没选中」（检视器会清空，再按一下又跳回第 1 步）
+    for (let i = 0; i < total + 3; i += 1) fireEvent.keyDown(window, { key: 'ArrowDown' })
+    await waitFor(() => expect(selected()).toBe(`step-row-${total - 1}`))
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    expect(selected()).toBe(`step-row-${total - 1}`)
+
+    // 往回按到头再多按几下：停在第一步
+    for (let i = 0; i < total + 3; i += 1) fireEvent.keyDown(window, { key: 'ArrowUp' })
+    await waitFor(() => expect(selected()).toBe('step-row-0'))
+    fireEvent.keyDown(window, { key: 'ArrowUp' })
+    expect(selected()).toBe('step-row-0')
+  })
+
+  it('marks the selected step for assistive technology', async () => {
+    const { user } = setup()
+    await loadSamples(user)
+
+    const current = document.querySelectorAll('.step-row[aria-current="step"]')
+    // 恰好一个，且就是视觉上选中的那个
+    expect(current).toHaveLength(1)
+    expect(current[0]?.classList.contains('selected')).toBe(true)
+  })
   it('does not steal arrow keys while typing in a field', async () => {
     const { user } = setup()
     await loadSamples(user)

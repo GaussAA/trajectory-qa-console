@@ -1,8 +1,8 @@
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, parse } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { collectFiles } from './collect'
+import { collectFiles, isInside } from './collect'
 
 const roots: string[] = []
 
@@ -71,6 +71,64 @@ describe('collectFiles', () => {
 
     expect(result.value.files.map((file) => file.split(/[\\/]/).pop())).toEqual(['keep.json'])
     expect(result.value.skipped).toContainEqual({ path: linked, reason: 'outside-root' })
+  })
+
+  it('does not walk into a symlinked directory that leads outside the root', (ctx) => {
+    const root = tempRoot()
+    const outside = tempRoot()
+    touch(root, 'keep.json')
+    for (let index = 0; index < 5; index += 1) touch(outside, `secret${index}.json`, '{"role":"user"}')
+    const linked = join(root, 'linked-dir')
+    try {
+      // junction 在 Windows 上不需要管理员权限；其它平台它等同于普通目录符号链接
+      symlinkSync(outside, linked, 'junction')
+    } catch {
+      ctx.skip()
+      return
+    }
+
+    const result = collectFiles([root], { maxFiles: 10 })
+    if (!result.ok) throw new Error(result.error.code)
+
+    expect(result.value.files.map((file) => file.split(/[\\/]/).pop())).toEqual(['keep.json'])
+    // 整个目录记一条，而不是里面每个文件各记一条（一条指向 `/` 的链接会记出几十万条）
+    const outsideEntries = result.value.skipped.filter((entry) => entry.reason === 'outside-root')
+    expect(outsideEntries).toEqual([{ path: linked, reason: 'outside-root' }])
+  })
+
+  it('still follows a symlinked directory that stays inside the root', (ctx) => {
+    const root = tempRoot()
+    touch(root, 'real/inner.json')
+    try {
+      symlinkSync(join(root, 'real'), join(root, 'alias'), 'junction')
+    } catch {
+      ctx.skip()
+      return
+    }
+
+    const result = collectFiles([root], { maxFiles: 10 })
+    if (!result.ok) throw new Error(result.error.code)
+
+    // 链到根内的目录没越界；按 realpath 去重后同一个文件只出现一次
+    expect(result.value.files).toHaveLength(1)
+    expect(result.value.skipped).toEqual([])
+  })
+
+  it('does not treat every file as outside when the root itself is a filesystem root', () => {
+    // 根目录的 realpath 本身以分隔符结尾（`C:\` 或 `/`），再拼一个分隔符就永远匹配不上。
+    const fsRoot = parse(tmpdir()).root
+    expect(isInside(fsRoot, join(fsRoot, 'anything.json'))).toBe(true)
+    expect(isInside(fsRoot, join(fsRoot, 'a', 'b', 'c.json'))).toBe(true)
+
+    // 用 join 拼路径，Windows 和 POSIX 都成立
+    const base = join(fsRoot, 'a', 'b')
+    expect(isInside(base, join(base, 'c.json'))).toBe(true)
+    expect(isInside(base, base)).toBe(true)
+    // 兄弟目录不能因为前缀相同就算在里面
+    expect(isInside(base, join(fsRoot, 'a', 'bc', 'c.json'))).toBe(false)
+    expect(isInside(base, join(fsRoot, 'a', 'c.json'))).toBe(false)
+    // 名字以两个点开头的文件不是「往上走」
+    expect(isInside(base, join(base, '..hidden.json'))).toBe(true)
   })
 
   it('still accepts a file the user named explicitly', () => {

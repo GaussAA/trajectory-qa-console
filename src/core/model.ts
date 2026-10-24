@@ -13,6 +13,7 @@ export type ErrorCode =
   | 'unrecognized-structure'
   | 'too-large'
   | 'too-many-steps'
+  | 'nothing-to-score'
   | 'invalid-pack'
   | 'analysis-failed'
   | 'read-failed'

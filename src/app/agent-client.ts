@@ -10,6 +10,7 @@
 import type { SessionAnalysis } from '../core/analysis'
 import type { RulePack, Step } from '../core/model'
 import type { AgentEvent, AgentRun } from '../core/agent/types'
+import { isLoopbackHost } from '../lib/loopback'
 
 export interface AgentTarget {
   /** 形如 `http://127.0.0.1:7788`，末尾不带斜杠。 */
@@ -17,13 +18,25 @@ export interface AgentTarget {
   token: string | null
 }
 
-/** `?agent=http://127.0.0.1:7788&agentToken=xxx`；没有 `agent` 就视为未配置。 */
+/** `?agent=http://127.0.0.1:7788&agentToken=xxx`；没有 `agent` 就视为未配置。
+ *
+ *  **只接受回环地址**。这个参数来自 URL，别人发来的链接也能带上它；若不限制，
+ *  点开 `?agent=https://evil.example` 再按「诊断」，整条轨迹（含工具返回里的内容）就发出去了。
+ *  非回环、非 http(s)、解析不了的一律当作未配置，诊断按钮保持禁用。 */
 export function readAgentTarget(search: string): AgentTarget | null {
   const params = new URLSearchParams(search)
   const endpoint = params.get('agent')
   if (!endpoint) return null
   const trimmed = endpoint.trim().replace(/\/+$/, '')
-  return trimmed === '' ? null : { endpoint: trimmed, token: params.get('agentToken') }
+  if (trimmed === '') return null
+  try {
+    const url = new URL(trimmed)
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null
+    if (!isLoopbackHost(url.hostname)) return null
+  } catch {
+    return null
+  }
+  return { endpoint: trimmed, token: params.get('agentToken') }
 }
 
 function stripStep(step: Step): Omit<Step, 'raw'> {

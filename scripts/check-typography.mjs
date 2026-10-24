@@ -21,6 +21,9 @@ import { join } from 'node:path'
 
 const STYLE_ROOTS = ['src/styles']
 const TSX_ROOTS = ['src/ui', 'src/app']
+// src/lib 的导出报告（HTML）内嵌着自己的样式表，用的是裸 px，不走 var(--fs-*)：
+// 它是独立文件，拿不到应用的 CSS 变量。所以这里不要求走标度，只守住同一条 11px 下限。
+const LIB_ROOTS = ['src/lib']
 const SCALE = ['--fs-xs', '--fs-sm', '--fs-base', '--fs-md', '--fs-lg', '--fs-xl']
 const FLOOR_PX = 11
 
@@ -75,6 +78,18 @@ for (const file of TSX_ROOTS.flatMap((root) => walk(root, /\.tsx?$/))) {
   source.split('\n').forEach((line, index) => {
     if (/fontSize\s*:\s*['"`]?[0-9.]+px/.test(line)) {
       problems.push(`${file}:${index + 1}  ${line.trim()}`)
+    }
+  })
+}
+
+/** 5：导出报告的内嵌样式守住 11px 下限（pt 按 4/3 换成 px）。 */
+for (const file of LIB_ROOTS.flatMap((root) => walk(root, /\.ts$/))) {
+  if (/\.test\.ts$/.test(file)) continue
+  const source = readFileSync(file, 'utf8')
+  source.split('\n').forEach((line, index) => {
+    for (const match of line.matchAll(/font-size\s*:\s*([0-9.]+)(px|pt)/g)) {
+      const px = match[2] === 'pt' ? Number(match[1]) * (4 / 3) : Number(match[1])
+      if (px < FLOOR_PX) problems.push(`${file}:${index + 1}  ${match[0]}（低于下限 ${FLOOR_PX}px）`)
     }
   })
 }

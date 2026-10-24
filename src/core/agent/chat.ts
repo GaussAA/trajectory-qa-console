@@ -4,6 +4,7 @@
  *  任何重试逻辑，测试用假 transport 就能把每一轮钉死。
  */
 
+import { redactJsonText, redactSecrets } from '../analysis/privacy'
 import { fail, ok, type Result } from '../model'
 import { complete } from '../llm/complete'
 import { extractContent } from '../llm/response'
@@ -17,6 +18,8 @@ export interface ChatOptions {
   apiKey: string
   maxTokens: number
   timeoutMs: number
+  /** 这一回合（含重试）最多还能花多久；由循环按剩余的墙钟预算算出。 */
+  totalTimeoutMs?: number
   retries?: number
   retryDelayMs?: number
   tools: ToolSpec[]
@@ -25,22 +28,28 @@ export interface ChatOptions {
 
 /** assistant 的 `tool_calls` 与 tool 的 `tool_call_id` 是 OpenAI 的线格式，
  *  改名会让每接一个新供应商都多一层翻译。 */
+/** 每条要发出去的消息都在这里过一遍脱敏：这是智能体往第三方端点送东西的唯一出口。
+ *  工具返回值与工具参数是 JSON 文本，按结构脱敏（见 `redactJsonText`）；其余是纯文本。 */
 function toWire(message: AgentMessage): Record<string, unknown> {
   if (message.role === 'assistant' && message.toolCalls && message.toolCalls.length > 0) {
     return {
       role: 'assistant',
-      content: message.content,
+      content: redactSecrets(message.content),
       tool_calls: message.toolCalls.map((call) => ({
         id: call.id,
         type: 'function',
-        function: { name: call.name, arguments: call.arguments },
+        function: { name: call.name, arguments: redactJsonText(call.arguments) },
       })),
     }
   }
   if (message.role === 'tool') {
-    return { role: 'tool', tool_call_id: message.toolCallId ?? '', content: message.content }
+    return {
+      role: 'tool',
+      tool_call_id: message.toolCallId ?? '',
+      content: redactJsonText(message.content),
+    }
   }
-  return { role: message.role, content: message.content }
+  return { role: message.role, content: redactSecrets(message.content) }
 }
 
 interface RawToolCall {
@@ -138,6 +147,7 @@ export async function chat(messages: AgentMessage[], options: ChatOptions): Prom
     apiKey: options.apiKey,
     body: JSON.stringify(body),
     timeoutMs: options.timeoutMs,
+    totalTimeoutMs: options.totalTimeoutMs,
     retries: options.retries,
     retryDelayMs: options.retryDelayMs,
     signal: options.signal,
@@ -156,6 +166,7 @@ export async function chat(messages: AgentMessage[], options: ChatOptions): Prom
     return fail(failure.kind === 'aborted' ? 'aborted' : 'analysis-failed', message, {
       kind: failure.kind,
       ...(failure.kind === 'http' ? { status: failure.status } : {}),
+      ...(failure.kind === 'timeout' && failure.budgetExhausted ? { budgetExhausted: true } : {}),
     })
   }
 

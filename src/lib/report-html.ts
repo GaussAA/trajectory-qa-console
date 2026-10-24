@@ -10,7 +10,7 @@
  */
 
 import { formatTokens } from '../core/estimate'
-import type { ScoreCard } from '../core/analysis'
+import { gradeKeyOf, type ScoreCard } from '../core/analysis'
 import { buildAdvice } from '../core/rules/advice'
 import type { Severity } from '../core/model'
 import {
@@ -94,7 +94,7 @@ function renderDimensions(card: ScoreCard, t: Translate, locale: Locale): string
 function renderSession(entry: ReportEntry, index: number, t: Translate, locale: Locale): string {
   const { trajectory, card } = entry
   const tone = toneOf(card.overall)
-  const gradeLabel = labelFor(locale, 'grade', card.grade, card.gradeLabel)
+  const gradeLabel = labelFor(locale, 'grade', gradeKeyOf(card), card.gradeLabel)
   const model = trajectory.meta.model
     ? `<span class="chip">${escapeHtml(t('report.model', { model: trajectory.meta.model }))}</span>`
     : ''

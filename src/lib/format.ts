@@ -1,14 +1,5 @@
 import type { Role, Severity } from '../core/model'
 
-export const ROLE_LABEL: Record<Role, string> = {
-  system: '系统',
-  developer: '开发',
-  user: '用户',
-  assistant: '助手',
-  tool: '工具',
-  unknown: '未知',
-}
-
 export const ROLE_COLOR: Record<Role, string> = {
   system: '#94a3b8',
   developer: '#94a3b8',
