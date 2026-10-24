@@ -71,6 +71,12 @@ const PATHS: Record<string, ReactNode> = {
       <circle cx="12" cy="12" r="3.2" />
     </>
   ),
+  compare: (
+    <>
+      <rect x="3" y="4" width="7" height="16" rx="1.5" />
+      <rect x="14" y="4" width="7" height="16" rx="1.5" />
+    </>
+  ),
   chevron: <path d="m9 6 6 6-6 6" />,
   plus: (
     <>

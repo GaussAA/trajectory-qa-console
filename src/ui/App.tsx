@@ -250,6 +250,7 @@ export default function App({
             aria-pressed={compareOpen}
             title={canCompare ? t('compare.title') : t('compare.needTwo')}
           >
+            <Icon name="compare" size={13} />
             {t('action.compare')}
           </button>
           {agentTarget && (
@@ -266,6 +267,7 @@ export default function App({
             </button>
           )}
           <button type="button" className="btn ghost sm" onClick={() => setDiagnosticsOpen(true)}>
+            <Icon name="alert" size={13} />
             {t('action.diagnostics')}
           </button>
           <span className="topbar-sep" aria-hidden="true" />
@@ -287,7 +289,6 @@ export default function App({
             onClick={actions.exportMarkdown}
             disabled={!hasData}
           >
-            <Icon name="download" size={13} />
             {t('action.exportReport')}
           </button>
         </div>

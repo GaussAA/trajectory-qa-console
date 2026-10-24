@@ -95,6 +95,10 @@
   display: flex;
   gap: 8px;
   padding: 10px 12px 12px;
+  /* 会话少时列表下方会空出一块。没有这道分隔线，那块空白看着像没画完；
+     有了它，空白就读作「列表区」，按钮读作「页脚」。 */
+  border-top: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent);
 }
 
 .session-foot .btn {

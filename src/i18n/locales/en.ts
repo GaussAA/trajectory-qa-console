@@ -95,6 +95,7 @@ export const en: Record<MessageKey, string> = {
 
   'common.save': 'Save',
 
+  'session.errorBadge': '{count} critical issues',
   'session.rename': 'Rename session',
   'session.tags': 'Tags (comma separated)',
   'session.tagsPlaceholder': 'e.g. regression, prompt-v3',
