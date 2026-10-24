@@ -67,16 +67,21 @@ export function ComparePanel({ sessions, cards, notes = [], initialBaseId, onClo
     )
   }, [base, target, cards])
 
-  const findingDiff = useMemo(() => {
-    if (!base || !target) return null
-    return diffFindings(cards.get(base.id)?.findings ?? [], cards.get(target.id)?.findings ?? [])
-  }, [base, target, cards])
-
   const alignment = useMemo(() => {
     if (!base || !target) return null
     const rows = alignSteps(base.trajectory.steps, target.trajectory.steps)
     return { rows, summary: summarizeAlignment(rows) }
   }, [base, target])
+
+  // 问题的增删要拿对齐结果换算步号，所以排在对齐之后（与导出的对比报告同一口径）。
+  const findingDiff = useMemo(() => {
+    if (!base || !target || !alignment) return null
+    return diffFindings(
+      cards.get(base.id)?.findings ?? [],
+      cards.get(target.id)?.findings ?? [],
+      alignment.rows,
+    )
+  }, [base, target, cards, alignment])
 
   // 只有一条轨迹时不能「自己跟自己比」——那不是对比，只是看起来像。
   if (sessions.length < 2 || !base || !target || !diff || !findingDiff || !alignment) {
@@ -251,6 +256,11 @@ export function ComparePanel({ sessions, cards, notes = [], initialBaseId, onClo
               <span className="compare-chip persisted">
                 {t('compare.persisted', { count: findingDiff.persisted.length })}
               </span>
+              {findingDiff.changed.length > 0 && (
+                <span className="compare-chip persisted" title={t('compare.changedHint')}>
+                  {t('compare.changedFindings', { count: findingDiff.changed.length })}
+                </span>
+              )}
             </div>
             {findingDiff.added.length === 0 && findingDiff.resolved.length === 0 ? (
               <p className="hint">{t('compare.none')}</p>
