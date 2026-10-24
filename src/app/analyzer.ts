@@ -93,6 +93,7 @@ export function createWorkerAnalyzer(
           resolve(
             fail('analysis-failed', 'Worker could not start', {
               reason: error instanceof Error ? error.message : String(error),
+              workerFault: true,
             }),
           )
           return
@@ -106,7 +107,7 @@ export function createWorkerAnalyzer(
           finish(event.data.result)
         }
         const onError = (event: ErrorEvent) => {
-          finish(fail('analysis-failed', event.message || 'Worker failed'))
+          finish(fail('analysis-failed', event.message || 'Worker failed', { workerFault: true }))
         }
         const onAbort = () => {
           finish(fail('aborted', 'Cancelled'))
@@ -133,7 +134,7 @@ export function createWorkerAnalyzer(
         signal?.addEventListener('abort', onAbort, { once: true })
 
         const watchdog = setTimeout(() => {
-          finish(fail('analysis-failed', `No response within ${timeoutMs}ms; degraded`))
+          finish(fail('analysis-failed', `No response within ${timeoutMs}ms; degraded`, { workerFault: true }))
         }, timeoutMs)
         disposers.push(() => clearTimeout(watchdog))
 
@@ -167,7 +168,11 @@ export function createAnalyzer(options: AnalyzerOptions = {}): AnalyzerPort {
       if (worker && workerHealthy && request.text.length > threshold) {
         const result = await worker.analyze(request, signal)
         // Degrade rather than fail: a worker problem must not cost the user data.
-        if (!result.ok && result.error.code === 'analysis-failed') {
+        // Only a *worker* fault (could not start, crashed, went silent) counts. An
+        // `analysis-failed` that came back from analyze() itself — every session threw —
+        // is about the data: the main thread would fail the same way, and writing the
+        // worker off for the rest of the page's life over one bad file is wrong.
+        if (!result.ok && result.error.detail?.workerFault === true) {
           // Remember the failure so the next file does not pay the timeout again.
           workerHealthy = false
           return sync.analyze(request, signal)

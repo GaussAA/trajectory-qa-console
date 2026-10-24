@@ -103,19 +103,24 @@ export default function App({
       }
       if (drawerOpen || compareOpen || agentOpen || diagnosticsOpen) return
 
+      // 在两头停住，不要越界：reducer 对越界的下标返回 null，于是到底再按一下选中就没了
+      // （检视器清空），再按一下又从第 1 步重新开始。
+      const count = session?.trajectory.steps.length ?? 0
+      if (count === 0) return
       const current = state.selectedStep ?? -1
       if (event.key === 'ArrowDown' || event.key === 'j') {
         event.preventDefault()
-        chooseStep(current + 1)
+        chooseStep(Math.min(current + 1, count - 1))
       } else if (event.key === 'ArrowUp' || event.key === 'k') {
         event.preventDefault()
-        chooseStep(current - 1)
+        chooseStep(Math.max(current - 1, 0))
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [
     state.sessions.length,
+    session,
     state.selectedStep,
     drawerOpen,
     compareOpen,

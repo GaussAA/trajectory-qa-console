@@ -106,3 +106,67 @@ describe('Timeline virtualization', () => {
     expect(container.querySelector('.timeline-virtual')).toBeNull()
   })
 })
+
+describe('Timeline scrolling respects reduced motion', () => {
+  function withMotionPreference(reduce: boolean) {
+    const original = window.matchMedia
+    window.matchMedia = ((query: string) => ({
+      matches: reduce && query.includes('prefers-reduced-motion'),
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      onchange: null,
+      dispatchEvent: () => false,
+    })) as typeof window.matchMedia
+    return () => {
+      window.matchMedia = original
+    }
+  }
+
+  function scrollBehaviourFor(reduce: boolean, compact: boolean): ScrollBehavior | undefined {
+    const restore = withMotionPreference(reduce)
+    const calls: (ScrollIntoViewOptions | ScrollToOptions | undefined)[] = []
+    const originalInto = Element.prototype.scrollIntoView
+    const originalTo = Element.prototype.scrollTo
+    Element.prototype.scrollIntoView = function (arg?: boolean | ScrollIntoViewOptions) {
+      calls.push(typeof arg === 'object' ? arg : undefined)
+    }
+    Element.prototype.scrollTo = function (arg?: unknown) {
+      calls.push(typeof arg === 'object' ? (arg as ScrollToOptions) : undefined)
+    } as typeof Element.prototype.scrollTo
+    try {
+      // 紧凑模式（>400 步）走 scrollTo，普通模式走 scrollIntoView
+      const trajectory = syntheticTrajectory(compact ? 450 : 6)
+      renderTimeline(
+        <Timeline
+          trajectory={trajectory}
+          card={scoreTrajectory([], DIMENSIONS)}
+          selectedStep={3}
+          onSelectStep={() => undefined}
+        />,
+      )
+      return (calls.at(-1) as { behavior?: ScrollBehavior } | undefined)?.behavior
+    } finally {
+      Element.prototype.scrollIntoView = originalInto
+      Element.prototype.scrollTo = originalTo
+      restore()
+    }
+  }
+
+  it.each([
+    ['ordinary rows', false],
+    ['the compact virtual list', true],
+  ])('scrolls smoothly in %s by default', (_name, compact) => {
+    expect(scrollBehaviourFor(false, compact)).toBe('smooth')
+  })
+
+  it.each([
+    ['ordinary rows', false],
+    ['the compact virtual list', true],
+  ])('jumps instead of animating in %s when the user asked for reduced motion', (_name, compact) => {
+    // CSS 的 prefers-reduced-motion 管不到 JS 触发的 smooth 滚动，要自己查
+    expect(scrollBehaviourFor(true, compact)).toBe('auto')
+  })
+})
