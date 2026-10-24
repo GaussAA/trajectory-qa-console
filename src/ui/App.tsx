@@ -71,6 +71,49 @@ export default function App({
     if (params.has('compare')) setCompareOpen(true)
   }, [])
 
+  // 稳定引用：actions 每次渲染都是新对象，直接依赖它会让监听器反复重挂。
+  const chooseStep = actions.chooseStep
+
+  // 键位导航：↑/↓（或 j/k）逐步查看。64 步的轨迹一格格点，
+  // 审一遍要点十几分钟——这是效率上最大的一处欠账。
+  useEffect(() => {
+    if (state.sessions.length === 0) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return
+      const target = event.target as HTMLElement | null
+      // 输入框里按方向键要能移动光标，不能抢；抽屉开着时也别抢。
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      ) {
+        return
+      }
+      if (drawerOpen || compareOpen || agentOpen || diagnosticsOpen) return
+
+      const current = state.selectedStep ?? -1
+      if (event.key === 'ArrowDown' || event.key === 'j') {
+        event.preventDefault()
+        chooseStep(current + 1)
+      } else if (event.key === 'ArrowUp' || event.key === 'k') {
+        event.preventDefault()
+        chooseStep(current - 1)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [
+    state.sessions.length,
+    state.selectedStep,
+    drawerOpen,
+    compareOpen,
+    agentOpen,
+    diagnosticsOpen,
+    chooseStep,
+  ])
+
   useEffect(() => {
     const hash = window.location.hash
     const demo = /^#demo(?::(\d+))?$/.exec(hash)

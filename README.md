@@ -57,6 +57,7 @@ pnpm verify           # typecheck + lint + coverage + 文案扫描 + 构建 + �
 ```
 
 界面：打开 `dist/index.html`，拖入轨迹文件（`.json` / `.jsonl`），或点「示例轨迹」。
+键盘：`↑` / `↓`（或 `j` / `k`）逐步查看轨迹；窄屏（≤1279px）时左栏收起，会话改用顶部下拉切换。
 调试深链：`#demo:N` 载入示例、`#stress:N` 生成 N 步合成轨迹、`?drawer=1` / `?diag=1` / `?compare`；
 `?agent=http://127.0.0.1:7788` 启用「AI 诊断」按钮（需先起 `serve`，有 token 时再加 `&agentToken=`）。
 

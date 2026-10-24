@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createSyncAnalyzer } from '../app/analyzer'
@@ -264,6 +264,37 @@ describe('App smoke', () => {
     const events = telemetry.snapshot().map((event) => event.name)
     expect(events).toContain('ingest:done')
     expect(events).toContain('ingest:file')
+  })
+
+  it('moves between steps with the arrow keys', async () => {
+    const { user } = setup()
+    await loadSamples(user)
+
+    // 64 步的轨迹一格格点太慢；↑/↓ 是最基本的键盘导航。
+    const selected = () => document.querySelector('.step-row.selected')?.textContent ?? ''
+    const before = selected()
+    expect(before).not.toBe('')
+
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    await waitFor(() => expect(selected()).not.toBe(before))
+
+    fireEvent.keyDown(window, { key: 'ArrowUp' })
+    await waitFor(() => expect(selected()).toBe(before))
+  })
+
+  it('does not steal arrow keys while typing in a field', async () => {
+    const { user } = setup()
+    await loadSamples(user)
+
+    const selected = () => document.querySelector('.step-row.selected')?.textContent ?? ''
+    const before = selected()
+    const field = screen.getByPlaceholderText(/结论无引用/)
+    await user.click(field)
+    fireEvent.keyDown(field, { key: 'ArrowDown' })
+
+    // 输入框里的方向键要能移动光标，不能被全局快捷键抢走。
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(selected()).toBe(before)
   })
 
   it('offers a session picker for narrow layouts, and it actually switches', async () => {
