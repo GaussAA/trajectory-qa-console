@@ -19,12 +19,16 @@ import { runAgent } from '../core/agent'
 import { fetchTransport, type LlmTransport } from '../core/llm/transport'
 import type { RulePack, Step, Trajectory, TrajectoryMeta } from '../core/model'
 import type { Locale } from '../i18n/core'
+import { hostnameOfHostHeader, isLoopbackHost } from '../lib/loopback'
 import type { SemanticConfig } from './llm-config'
 
 export interface ServeConfig {
   llm: SemanticConfig
-  /** 鉴权 token；null 表示不校验（仅本机、且用户明确关掉时）。 */
+  /** 鉴权 token；null 表示不校验（仅本机、且用户明确关掉时）。
+   *  null 时 `Origin: null`（file:// 与沙箱页面）也被拒绝：要从双击打开的页面用，必须设 token。 */
   token: string | null
+  /** 只接受 `Host` 为回环名的请求，挡掉 DNS 重绑定。默认 true；显式绑到非回环地址时由调用方关掉。 */
+  loopbackOnly?: boolean
   transport?: LlmTransport
   locale?: Locale
   /** 单次诊断最多几条会话。 */
@@ -48,24 +52,22 @@ export type ServeEvent =
 
 // ---------- 工具函数 ----------
 
-/** 只有 `file://`（Origin: null）与本机 http 页面能读到响应。 */
-export function allowOrigin(origin: string | undefined): string | null {
+/** 只有 `file://`（Origin: null）与本机 http 页面能读到响应。
+ *
+ *  `Origin: null` 不只来自 `file://`：沙箱 iframe、`data:` 页面也是它，浏览器里分不出来。
+ *  所以没有 token 时 `allowNull` 为 false——放行 null 等于放行任何能造出沙箱 iframe 的网页。 */
+export function allowOrigin(origin: string | undefined, allowNull = true): string | null {
   if (origin === undefined || origin === '') return null
-  if (origin === 'null') return 'null'
+  if (origin === 'null') return allowNull ? 'null' : null
   try {
-    const url = new URL(origin)
-    const host = url.hostname
-    if (host === '127.0.0.1' || host === 'localhost' || host === '::1' || host === '[::1]') {
-      return origin
-    }
+    return isLoopbackHost(new URL(origin).hostname) ? origin : null
   } catch {
     return null
   }
-  return null
 }
 
-function corsHeaders(origin: string | undefined): Record<string, string> {
-  const allowed = allowOrigin(origin)
+function corsHeaders(origin: string | undefined, allowNull: boolean): Record<string, string> {
+  const allowed = allowOrigin(origin, allowNull)
   if (!allowed) return { vary: 'origin' }
   return {
     'access-control-allow-origin': allowed,
@@ -199,6 +201,8 @@ export function createAgentServer(config: ServeConfig): Server {
   const maxBytes = config.maxBytes ?? DEFAULT_MAX_BYTES
   const transport = config.transport ?? fetchTransport
   const locale = config.locale ?? 'zh-CN'
+  const loopbackOnly = config.loopbackOnly ?? true
+  const allowNull = config.token !== null
 
   const server = createServer((request, response) => {
     handle(request, response).catch((error: unknown) => {
@@ -211,13 +215,23 @@ export function createAgentServer(config: ServeConfig): Server {
         response,
         500,
         { error: error instanceof Error ? error.message : String(error) },
-        corsHeaders(request.headers.origin),
+        corsHeaders(request.headers.origin, allowNull),
       )
     })
   })
 
   async function handle(request: IncomingMessage, response: ServerResponse): Promise<void> {
-    const cors = corsHeaders(request.headers.origin)
+    // DNS 重绑定：恶意域名把解析改到 127.0.0.1 后，浏览器认为它与本服务同源，CORS 形同虚设。
+    // 它发来的 Host 仍是那个域名，所以在最前面按 Host 拦下，且不回任何 CORS 头。
+    if (loopbackOnly) {
+      const hostname = hostnameOfHostHeader(request.headers.host)
+      if (hostname === null || !isLoopbackHost(hostname)) {
+        sendJson(response, 403, { error: 'host not allowed' })
+        return
+      }
+    }
+
+    const cors = corsHeaders(request.headers.origin, allowNull)
     const url = new URL(request.url ?? '/', 'http://127.0.0.1')
 
     if (request.method === 'OPTIONS') {
@@ -250,6 +264,12 @@ export function createAgentServer(config: ServeConfig): Server {
     response: ServerResponse,
     cors: Record<string, string>,
   ): Promise<void> {
+    // 没有 token 时 CORS 不放行 null；这里再在服务端拒一次，不单靠浏览器的预检来兜底。
+    if (!allowNull && request.headers.origin === 'null') {
+      sendJson(response, 403, { error: 'origin null requires --token' }, cors)
+      return
+    }
+
     // 鉴权放在读 body 之前：未授权的请求不该有机会让服务端解析几个 MB。
     if (config.token !== null) {
       const provided = request.headers['x-tqa-token']

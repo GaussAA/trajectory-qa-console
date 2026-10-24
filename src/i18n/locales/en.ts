@@ -465,7 +465,7 @@ export const en: Record<MessageKey, string> = {
   'cli.optAgentTask': '--agent-task <text>      focus the diagnosis on one question',
   'cli.serveReady': 'Diagnosis service listening on {url}',
   'cli.serveHint': 'Append ?agent={origin} to the console URL to enable the Diagnose button',
-  'cli.serveNoToken': 'No --token: any local page can call it (fine for personal use, not for shared machines)',
+  'cli.serveNoToken': 'No --token: any local http page can call it, and file:// pages are refused (add --token to use them)',
   'cli.serveWithToken': 'Token enabled: the console needs ?agentToken=<token>',
   'cli.servePublicHost': 'Warning: --host {host} is not a loopback address; other machines on the LAN can reach it',
   'cli.err.serveListen': 'Cannot listen on {host}:{port}: {message}',
