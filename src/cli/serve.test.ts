@@ -105,6 +105,39 @@ describe('allowOrigin', () => {
   })
 })
 
+describe('agent server request timeout', () => {
+  type Done = { type: string; run?: { ok: boolean; error?: { message: string } } }
+
+  async function runWith(overrides: Partial<ServeConfig>) {
+    const server = await start(overrides)
+    try {
+      const response = await fetch(`${server.base}/api/diagnose`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ sessions: [session()] }),
+      })
+      const lines = (await response.text())
+        .split('\n')
+        .filter((line) => line.trim() !== '')
+        .map((line) => JSON.parse(line) as Done)
+      return lines.find((line) => line.type === 'done')?.run
+    } finally {
+      await server.close()
+    }
+  }
+
+  it('gives up on a hung endpoint after the configured --llm-timeout', async () => {
+    const run = await runWith({ timeoutMs: 40, transport: () => new Promise(() => undefined) })
+    expect(run?.ok).toBe(false)
+    expect(run?.error?.message).toContain('超时')
+  })
+
+  it('still answers normally when the timeout is generous', async () => {
+    const run = await runWith({ timeoutMs: 5_000 })
+    expect(run?.ok).toBe(true)
+  })
+})
+
 describe('agent server', () => {
   it('answers /health without leaking the key or the endpoint path', async () => {
     const server = await start()

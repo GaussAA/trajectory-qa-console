@@ -31,6 +31,8 @@ export interface CliOptions {
   llmModel: string | null
   /** 单次运行最多复核多少个会话，兜住成本。 */
   semanticLimit: number
+  /** 单次模型请求的超时（毫秒）；null 表示各功能用自己的默认值（语义 60s、智能体 90s）。 */
+  llmTimeoutMs: number | null
   /** 只打印将要发送的提示词，不调用模型。 */
   semanticDryRun: boolean
   /** 智能体诊断（调用端点并多轮使用工具），默认关闭。 */
@@ -124,6 +126,7 @@ export function parseArgs(argv: string[], parseOptions: ParseOptions = {}): Pars
     llmUrl: null,
     llmModel: null,
     semanticLimit: 20,
+    llmTimeoutMs: null,
     semanticDryRun: false,
     agent: false,
     agentDryRun: false,
@@ -276,6 +279,16 @@ export function parseArgs(argv: string[], parseOptions: ParseOptions = {}): Pars
         const parsed = parseInteger(value, flag, 1, 10_000)
         if (typeof parsed !== 'number') return { ok: false, error: parsed }
         options.semanticLimit = parsed
+        index += 1
+        break
+      }
+      case '--llm-timeout': {
+        const value = takeValue(inline, flag)
+        if (typeof value !== 'string') return { ok: false, error: value }
+        // 命令行按秒给，内部统一用毫秒；下限 5 秒是为了挡住把 60 写成 0.6 之类的手误。
+        const parsed = parseInteger(value, flag, 5, 600)
+        if (typeof parsed !== 'number') return { ok: false, error: parsed }
+        options.llmTimeoutMs = parsed * 1000
         index += 1
         break
       }

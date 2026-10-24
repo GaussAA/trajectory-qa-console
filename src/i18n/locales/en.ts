@@ -544,6 +544,8 @@ export const en: Record<MessageKey, string> = {
   'cli.optLlmUrl': '--llm-url <url>          OpenAI-compatible chat/completions URL',
   'cli.optLlmModel': '--llm-model <model>      model name',
   'cli.optSemanticLimit': '--semantic-limit <n>     max sessions to review per run (default: 20)',
+  'cli.optLlmTimeout':
+    '--llm-timeout <sec>      per-request model timeout (5-600; default: semantic 60, agent 90); a whole agent run is still capped at 180s',
 
   'report.packCompare.title': 'Pack Comparison Report',
   'report.packCompare.base': 'Baseline pack: {name}',
