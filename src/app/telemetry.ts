@@ -165,7 +165,16 @@ export function createTelemetry(options: TelemetryOptions = {}): Telemetry {
   return telemetry
 }
 
-/** Captures uncaught errors and unhandled rejections. Returns an uninstall fn. */
+/** Captures uncaught errors and unhandled rejections. Returns an uninstall fn.
+ *
+ *  Everything emitted here passes through the same `redact` as any other event,
+ *  because redaction lives inside `emit` rather than at each call site — that
+ *  is deliberate, so a new caller cannot forget it.
+ *
+ *  The stack is kept (clipped to the same 120 chars) rather than dropped the
+ *  way `serializeError` drops it: this is the last-resort path, where a frame
+ *  or two is often the only clue. The clip keeps absolute paths and code text
+ *  out of the export. */
 export function installGlobalErrorHandlers(
   telemetry: Telemetry,
   target: Pick<Window, 'addEventListener' | 'removeEventListener'> = window,
