@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -374,6 +374,97 @@ describe('compare mode', () => {
 
     const relaxed = capture()
     expect(await main([dir, '--compare', '--fail-below', '10', '--quiet'], relaxed.io)).toBe(EXIT.ok)
+  })
+})
+
+describe('compare mode: the printed verdict and the exit code agree', () => {
+  it('does not print a failing gate for the baseline when the candidate passes', async () => {
+    const dir = tempDir()
+    // 基准是坏的（54），对照是好的（100）：对照达标，整体应当「通过」，退出码 0。
+    trace(dir, 'a.json', BROKEN)
+    trace(dir, 'b.json', CLEAN)
+    const { io, chunks } = capture()
+
+    const code = await main([dir, '--compare', '--fail-below', '80'], io)
+
+    expect(code).toBe(EXIT.ok)
+    // 之前的门禁行统计了所有会话（含基准），会印出「未通过」而退出码却是 0。
+    expect(chunks.out).not.toContain('未通过')
+    expect(chunks.out).toContain('通过')
+  })
+
+  it('prints a failing gate naming only the candidate when the candidate fails', async () => {
+    const dir = tempDir()
+    trace(dir, 'a.json', CLEAN)
+    trace(dir, 'b.json', BROKEN)
+    const { io, chunks } = capture()
+
+    const code = await main([dir, '--compare', '--fail-below', '80'], io)
+
+    expect(code).toBe(EXIT.gate)
+    expect(chunks.out).toContain('未通过（1 个会话）')
+    // 只点对照的名字，基准（达标）不该出现在违规清单里
+    expect(chunks.out).toMatch(/· b\.json/)
+    expect(chunks.out).not.toMatch(/· a\.json/)
+  })
+})
+
+describe('validation happens before anything that costs money', () => {
+  const ENV = { TQA_LLM_BASE_URL: 'https://llm.test/v1', TQA_LLM_MODEL: 'm', TQA_LLM_API_KEY: 'k' }
+
+  it('rejects a bad --pack-compare file before making a single --semantic call', async () => {
+    const dir = tempDir()
+    trace(dir, 'clean.json', CLEAN)
+    let calls = 0
+    const { io, chunks } = capture()
+
+    const code = await main([dir, '--semantic', '--pack-compare', join(dir, 'nope.pack.json')], io, {
+      env: ENV,
+      transport: async () => {
+        calls += 1
+        return { ok: true, status: 200, text: JSON.stringify({ choices: [{ message: { content: '{"findings":[]}' } }] }) }
+      },
+    })
+
+    expect(code).toBe(EXIT.error)
+    expect(chunks.err).toContain('规则包')
+    // 之前是先把额度烧完，再告诉你规则包路径写错了
+    expect(calls).toBe(0)
+  })
+})
+
+describe('an unwritable --out is an error message, not a stack trace', () => {
+  function blockedOut(dir: string): string {
+    // 把 --out 指到一个已存在的**文件**上：mkdir 必然失败。
+    const blocker = join(dir, 'blocker')
+    writeFileSync(blocker, 'x')
+    return join(blocker, 'sub')
+  }
+
+  it('in the plain report branch', async () => {
+    const dir = tempDir()
+    trace(dir, 'a.json', CLEAN)
+    const { io, chunks } = capture()
+    const input = join(dir, 'a.json')
+    expect(await main([input, '--out', blockedOut(dir)], io)).toBe(EXIT.error)
+    expect(chunks.err).toContain('写入')
+  })
+
+  it('in the --compare branch', async () => {
+    const dir = tempDir()
+    trace(dir, 'a.json', CLEAN)
+    trace(dir, 'b.json', BROKEN)
+    const { io, chunks } = capture()
+    expect(await main([join(dir, 'a.json'), join(dir, 'b.json'), '--compare', '--out', blockedOut(dir)], io)).toBe(EXIT.error)
+    expect(chunks.err).toContain('写入')
+  })
+
+  it('in the --pack-compare branch', async () => {
+    const dir = tempDir()
+    trace(dir, 'a.json', CLEAN)
+    const { io, chunks } = capture()
+    expect(await main([join(dir, 'a.json'), '--pack-compare', 'en', '--out', blockedOut(dir)], io)).toBe(EXIT.error)
+    expect(chunks.err).toContain('写入')
   })
 })
 
@@ -824,6 +915,47 @@ describe('agent diagnosis', () => {
     expect(code).toBe(EXIT.ok)
     expect(chunks.err).toContain('--out')
     expect(chunks.err).toContain('规则包提案')
+  })
+
+  it('does not throw when --out is unwritable, and still prints the diagnosis it paid for', async () => {
+    const dir = tempDir()
+    trace(dir, 'clean.json', CLEAN)
+    const out = join(dir, 'out')
+    // 普通报告（report.*）先写、能写成功；只有 agent.md 是个目录，写它必然失败。
+    // （--out 整个不可写时，普通报告分支先失败并直接返回，智能体根本不会跑，也就没花钱。）
+    mkdirSync(join(out, 'agent.md'), { recursive: true })
+    const { io, chunks } = capture()
+
+    const code = await main([join(dir, 'clean.json'), '--agent', '--out', out], io, {
+      env: LLM_ENV,
+      transport: async () => ({ ok: true, status: 200, text: SUBMITTED }),
+    })
+
+    // 之前这里会让 main() 带着一份栈 reject；现在是退出码 2 加一条写盘错误
+    expect(code).toBe(EXIT.error)
+    expect(chunks.err).toContain('写入')
+    // 诊断已经花了钱：结论不能因为 agent.md 写不进去就丢掉
+    expect(chunks.out).toContain('# 轨迹诊断报告')
+  })
+
+  it('never starts the paid diagnosis when --out cannot be written at all', async () => {
+    const dir = tempDir()
+    trace(dir, 'clean.json', CLEAN)
+    const blocker = join(dir, 'blocker')
+    writeFileSync(blocker, 'x')
+    const { io } = capture()
+    let calls = 0
+
+    const code = await main([join(dir, 'clean.json'), '--agent', '--out', join(blocker, 'sub')], io, {
+      env: LLM_ENV,
+      transport: async () => {
+        calls += 1
+        return { ok: true, status: 200, text: SUBMITTED }
+      },
+    })
+
+    expect(code).toBe(EXIT.error)
+    expect(calls).toBe(0)
   })
 
   it('exits 2 when the endpoint fails, after still writing the report', async () => {

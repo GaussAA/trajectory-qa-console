@@ -8,7 +8,7 @@
  */
 
 import { readdirSync, realpathSync, statSync } from 'node:fs'
-import { extname, join, resolve, sep } from 'node:path'
+import { extname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 
 export const TRACE_EXTENSIONS = ['.json', '.jsonl', '.txt'] as const
 
@@ -61,8 +61,18 @@ function isTraceFile(path: string): boolean {
  *  A symlink planted inside a scanned tree can otherwise drag in files the user
  *  never pointed at — and, with `--semantic` enabled, send them somewhere. */
 function escapesRoot(path: string, root: string): boolean {
-  const real = safeRealpath(path)
-  return real !== root && !real.startsWith(root + sep)
+  return !isInside(root, safeRealpath(path))
+}
+
+/** `path` 是否在 `root` 之内（含 root 本身）。
+ *
+ *  用 `relative` 而不是字符串前缀：根目录是 `C:\` 或 `/` 时，它自己已经以分隔符结尾，
+ *  再拼一个分隔符就永远匹配不上，整棵树都会被当成越界；而纯前缀比较又分不出
+ *  `/a/b` 与 `/a/bc`。 */
+export function isInside(root: string, path: string): boolean {
+  const rel = relative(root, path)
+  if (rel === '') return true
+  return rel !== '..' && !rel.startsWith(`..${sep}`) && !isAbsolute(rel)
 }
 
 function safeRealpath(path: string): string {
@@ -113,6 +123,12 @@ export function collectFiles(inputs: string[], options: CollectOptions): Collect
       }
       if (stats.isDirectory()) {
         if (SKIP_DIRS.has(name)) continue
+        // 链到根外的目录整个不进：此前只在文件上查越界，一条指向 `/` 的链接会被完整遍历，
+        // 里面每个轨迹文件各记一条 outside-root，而每一条都会让退出码变成 2。
+        if (escapesRoot(child, root)) {
+          skipped.push({ path: child, reason: 'outside-root' })
+          continue
+        }
         walk(child, root)
         continue
       }
