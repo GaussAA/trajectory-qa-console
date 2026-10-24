@@ -72,7 +72,8 @@ export function RuleDrawer({
   useEffect(() => {
     if (!open) return
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
+      // 里面的控件已经处理过这次 Esc（比如取消重命名）：不要再把抽屉也关了。
+      if (event.key === 'Escape' && !event.defaultPrevented) onClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -356,7 +357,11 @@ export function RuleDrawer({
                             onChange={(event) => setRenameDraft(event.target.value)}
                             onKeyDown={(event) => {
                               if (event.key === 'Enter') commitRename()
-                              if (event.key === 'Escape') setRenamingId(null)
+                              if (event.key === 'Escape') {
+                                // 只取消重命名：抽屉里可能还有没存的 JSON 草稿，别让这一下 Esc 把整个抽屉带走。
+                                event.preventDefault()
+                                setRenamingId(null)
+                              }
                             }}
                             onBlur={commitRename}
                           />
