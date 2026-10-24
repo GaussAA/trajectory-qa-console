@@ -13,6 +13,7 @@ function result(overrides: Partial<BatchResult> = {}): BatchResult {
       { trajectory: { label: 'b' }, card: { overall: 54 } },
       { trajectory: { label: 'c' }, card: { overall: 54 } },
     ] as unknown as BatchResult['entries'],
+    sessions: [],
     markdown: '# md',
     json: '{}',
     html: '<!doctype html>',

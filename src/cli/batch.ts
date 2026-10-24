@@ -56,6 +56,8 @@ export interface BatchOptions {
 export interface BatchResult {
   files: FileOutcome[]
   entries: ReportEntry[]
+  /** 原始会话（含 id 与 metrics）：智能体诊断要用它们，报告层只要 trajectory + card。 */
+  sessions: SessionAnalysis[]
   markdown: string
   json: string
   html: string
@@ -119,6 +121,7 @@ export async function runBatch(files: string[], options: BatchOptions): Promise<
   const started = Date.now()
   const outcomes: FileOutcome[] = []
   const entries: ReportEntry[] = []
+  const sessions: SessionAnalysis[] = []
   const semantic = options.semantic ? { sessions: 0, findings: 0, issues: [] as SemanticIssue[] } : null
 
   for (const [index, file] of files.entries()) {
@@ -156,6 +159,7 @@ export async function runBatch(files: string[], options: BatchOptions): Promise<
       }
       const card: ScoreCard = scoreSession(session, options.pack, [], extra)
       cards.push(card)
+      sessions.push(session)
       entries.push({ trajectory: session.trajectory, card })
     }
 
@@ -217,6 +221,7 @@ export async function runBatch(files: string[], options: BatchOptions): Promise<
   return {
     files: outcomes,
     entries,
+    sessions,
     markdown: buildMarkdownReport(report),
     json: buildJsonReport(report),
     html: buildHtmlReport(report),

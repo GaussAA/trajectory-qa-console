@@ -33,6 +33,14 @@ export interface CliOptions {
   semanticLimit: number
   /** 只打印将要发送的提示词，不调用模型。 */
   semanticDryRun: boolean
+  /** 智能体诊断（调用端点并多轮使用工具），默认关闭。 */
+  agent: boolean
+  /** 只打印系统提示与工具清单，不调用模型。 */
+  agentDryRun: boolean
+  /** 智能体轮次上限；null 表示用 `AGENT_BUDGET` 的默认值。 */
+  agentRounds: number | null
+  /** 把完整调用轨迹写成 JSON 文件；null 表示不写。 */
+  agentTrace: string | null
   /** 对比模式：把两份轨迹对照成一份报告（第一份为基准）。 */
   compare: boolean
   /** 口径对比：与另一套规则包（别名或文件）在本次轨迹上对跑。 */
@@ -104,6 +112,10 @@ export function parseArgs(argv: string[]): ParseResult {
     llmModel: null,
     semanticLimit: 20,
     semanticDryRun: false,
+    agent: false,
+    agentDryRun: false,
+    agentRounds: null,
+    agentTrace: null,
     compare: false,
     packCompare: null,
     quiet: false,
@@ -255,6 +267,33 @@ export function parseArgs(argv: string[]): ParseResult {
         const parsed = parseInteger(value, flag, 1, 2 ** 31)
         if (typeof parsed !== 'number') return { ok: false, error: parsed }
         options.maxFileBytes = parsed
+        index += 1
+        break
+      }
+      case '--agent':
+        options.agent = true
+        index += 1
+        break
+      case '--agent-dry-run':
+        options.agent = true
+        options.agentDryRun = true
+        index += 1
+        break
+      case '--agent-rounds': {
+        const value = takeValue(inline, flag)
+        if (typeof value !== 'string') return { ok: false, error: value }
+        const parsed = parseInteger(value, flag, 2, 40)
+        if (typeof parsed !== 'number') return { ok: false, error: parsed }
+        options.agent = true
+        options.agentRounds = parsed
+        index += 1
+        break
+      }
+      case '--agent-trace': {
+        const value = takeValue(inline, flag)
+        if (typeof value !== 'string') return { ok: false, error: value }
+        options.agent = true
+        options.agentTrace = value
         index += 1
         break
       }

@@ -21,6 +21,15 @@ import {
   renderPackCompareMarkdown,
 } from '../lib/pack-compare-report'
 import { renderComparisonHtml } from '../lib/comparison-html'
+import {
+  buildAgentReportModel,
+  endpointHost,
+  renderAgentJson,
+  renderAgentMarkdown,
+} from '../lib/agent-report'
+import { runAgent } from '../core/agent'
+import { buildSystemPrompt } from '../core/agent/prompt'
+import { toolSpecs } from '../core/agent/tools'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
 import { BUILTIN_PACK_EN } from '../core/rules/builtin-pack-en'
 import { validatePack } from '../core/rules/contract'
@@ -186,16 +195,29 @@ export interface SemanticConfig {
   apiKey: string
 }
 
+/** 把「版本化 base」补成完整端点：`https://host/v1` → `https://host/v1/chat/completions`。
+ *
+ *  只认 `/v1`、`/v1beta` 这类版本尾巴——其余一律原样返回。
+ *  不这么做的话，本地代理那种自带路径的地址（`http://127.0.0.1:18880/api/chat`）
+ *  会被拼成 `.../api/chat/chat/completions`，等于把一个能用的配置改坏。 */
+export function chatCompletionsUrl(raw: string): string {
+  const trimmed = raw.trim().replace(/\/+$/, '')
+  if (trimmed === '') return ''
+  if (/\/chat\/completions$/.test(trimmed)) return trimmed
+  if (/\/v\d+[a-z]*$/i.test(trimmed)) return `${trimmed}/chat/completions`
+  return trimmed
+}
+
 /** 密钥只从环境变量读：不落盘、不进命令行历史、不进日志。 */
 export function resolveSemantic(
   options: CliOptions,
   env: Record<string, string | undefined>,
 ): { ok: true; config: SemanticConfig } | { ok: false; missing: string[] } {
-  const url = options.llmUrl ?? env.TQA_LLM_URL ?? ''
+  const url = chatCompletionsUrl(options.llmUrl ?? env.TQA_LLM_URL ?? env.TQA_LLM_BASE_URL ?? '')
   const model = options.llmModel ?? env.TQA_LLM_MODEL ?? ''
   const apiKey = env.TQA_LLM_API_KEY ?? ''
   const missing: string[] = []
-  if (!url) missing.push('--llm-url / TQA_LLM_URL')
+  if (!url) missing.push('--llm-url / TQA_LLM_URL / TQA_LLM_BASE_URL')
   if (!model) missing.push('--llm-model / TQA_LLM_MODEL')
   if (!apiKey) missing.push('TQA_LLM_API_KEY')
   return missing.length > 0 ? { ok: false, missing } : { ok: true, config: { url, model, apiKey } }
@@ -234,6 +256,18 @@ export async function main(
   // 用法错误会先把 API 额度烧完才告诉你参数错了。
   if (options.packCompare && options.compare) {
     stderr(`✗ ${t('cli.err.packCompareConflict')}\n`)
+    return EXIT.error
+  }
+
+  // 智能体诊断只对「一批轨迹」有意义：对比与口径对比各有自己的产物，混进来只会互相打架。
+  if (options.agent && (options.compare || options.packCompare)) {
+    const other = options.compare ? '--compare' : '--pack-compare'
+    stderr(`✗ ${t('cli.err.agentConflict', { other })}\n`)
+    return EXIT.error
+  }
+  // 两者都烧配额，而且诊断结论不该混进评分维度（agent 不参与打分）。
+  if (options.agent && options.semantic) {
+    stderr(`✗ ${t('cli.err.agentConflict', { other: '--semantic' })}\n`)
     return EXIT.error
   }
 
@@ -298,7 +332,6 @@ export async function main(
           ...semanticConfig,
           transport,
           maxFindings: 8,
-          timeoutMs: 20_000,
         })
         if (!result.ok) throw new Error(result.error.message)
         return toFindings(result.value, locale, session.id)
@@ -440,6 +473,95 @@ export async function main(
       return EXIT.error
     }
     for (const path of written) stdout(`${t('cli.wrote', { path })}\n`)
+  }
+
+  // 智能体诊断：只解释分数，不改分数。产物与 report.* 分开写。
+  if (options.agent) {
+    if (options.agentDryRun) {
+      // 试跑零成本：审计提示词与工具清单，确认要发什么给外部端点。
+      stdout(`${t('cli.agentDryRun')}\n\n`)
+      stdout(`${buildSystemPrompt(locale)}\n\n`)
+      stdout(`${JSON.stringify(toolSpecs(), null, 2)}\n`)
+      return EXIT.ok
+    }
+
+    const resolved = resolveSemantic(options, env)
+    if (!resolved.ok) {
+      stderr(`✗ ${t('cli.err.agentConfig', { missing: resolved.missing.join(' / ') })}\n`)
+      return EXIT.error
+    }
+    const config = resolved.config
+
+    // 隐私提示走 stderr 且不受 --quiet 影响：把轨迹内容发到外部端点这件事，
+    // 不该因为用户要「只看结论」就被静默省略。
+    stderr(
+      `${t('cli.agentTarget', {
+        host: endpointHost(config.url),
+        sessions: result.sessions.length,
+      })}\n`,
+    )
+
+    const agentStarted = Date.now()
+    const run = await runAgent(
+      { sessions: result.sessions, pack, annotations: [] },
+      {
+        transport,
+        url: config.url,
+        model: config.model,
+        apiKey: config.apiKey,
+        locale,
+        budget: options.agentRounds === null ? undefined : { maxRounds: options.agentRounds },
+      },
+    )
+
+    const reportInput = {
+      run,
+      sessions: result.sessions,
+      pack,
+      model: config.model,
+      endpoint: config.url,
+      generatedAt: new Date(),
+      locale,
+    }
+    const reportModel = buildAgentReportModel(reportInput)
+    const markdown = renderAgentMarkdown(reportInput, reportModel)
+    const json = renderAgentJson(reportInput, reportModel)
+
+    if (options.out) {
+      const written = writeArtifacts(resolve(options.out), 'agent', ['md', 'json'], { md: markdown, json })
+      for (const path of written) stdout(`${t('cli.wrote', { path })}\n`)
+    } else {
+      stdout(`${markdown}\n`)
+    }
+
+    // trace 与 agent.json 同源：这里另存一份，是为了让 --agent-trace 指到
+    // 任意路径时不必再想「跟 --out 什么关系」。
+    if (options.agentTrace) {
+      const path = resolve(options.agentTrace)
+      writeFileSync(path, json, 'utf8')
+      stdout(`${t('cli.wrote', { path })}\n`)
+    }
+
+    stdout(
+      `${t('cli.agentSummary', {
+        rounds: run.trace.rounds,
+        tools: run.trace.toolCalls,
+        tokens: run.usage.prompt + run.usage.completion,
+        ms: Date.now() - agentStarted,
+      })}\n`,
+    )
+
+    if (run.trace.truncated) {
+      stderr(
+        `${t('cli.agentIncomplete', {
+          reason: t(`agent.stop.${run.trace.stopReason}` as MessageKey),
+        })}\n`,
+      )
+    }
+    if (!run.ok) {
+      stderr(`✗ ${t('cli.agentFailed', { message: run.error?.message ?? '' })}\n`)
+      return EXIT.error
+    }
   }
 
   if (incomplete()) return EXIT.error

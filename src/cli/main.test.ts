@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
 import { BUILTIN_PACK_EN } from '../core/rules/builtin-pack-en'
-import { EXIT, loadPack, main, resolvePackAlias } from './main'
+import { EXIT, chatCompletionsUrl, loadPack, main, resolvePackAlias } from './main'
 import { CLI_VERSION } from './version'
 
 const roots: string[] = []
@@ -378,6 +378,46 @@ describe('compare mode', () => {
 })
 
 describe('semantic review', () => {
+  it('completes a versioned base url but leaves custom proxy paths alone', () => {
+    expect(chatCompletionsUrl('https://token.sensenova.cn/v1')).toBe(
+      'https://token.sensenova.cn/v1/chat/completions',
+    )
+    expect(chatCompletionsUrl('https://token.sensenova.cn/v1/')).toBe(
+      'https://token.sensenova.cn/v1/chat/completions',
+    )
+    expect(chatCompletionsUrl('https://host/v1/chat/completions')).toBe(
+      'https://host/v1/chat/completions',
+    )
+    // 本地代理自带路径：拼一层就成了 .../api/chat/chat/completions，等于把能用的配置改坏。
+    expect(chatCompletionsUrl('http://127.0.0.1:18880/api/chat')).toBe('http://127.0.0.1:18880/api/chat')
+    expect(chatCompletionsUrl('   ')).toBe('')
+  })
+
+  it('takes the base url from TQA_LLM_BASE_URL when no full url is given', async () => {
+    const dir = tempDir()
+    trace(dir, 'clean.json', CLEAN)
+    const urls: string[] = []
+    const { io } = capture()
+
+    await main([dir, '--semantic', '--quiet'], io, {
+      env: {
+        TQA_LLM_BASE_URL: 'https://token.sensenova.cn/v1',
+        TQA_LLM_MODEL: 'm',
+        TQA_LLM_API_KEY: 'k',
+      },
+      transport: async (request) => {
+        urls.push(request.url)
+        return {
+          ok: true,
+          status: 200,
+          text: JSON.stringify({ choices: [{ message: { content: '{"findings":[]}' } }] }),
+        }
+      },
+    })
+
+    expect(urls).toEqual(['https://token.sensenova.cn/v1/chat/completions'])
+  })
+
   const JUDGEMENT = JSON.stringify({
     choices: [
       {
@@ -532,5 +572,148 @@ describe('cli contract', () => {
 
   it('points the bin entry at the built bundle', async () => {
     expect(pkg.bin['trajectory-qa']).toBe('dist-cli/qa.mjs')
+  })
+})
+
+describe('agent diagnosis', () => {
+  const SUBMITTED = JSON.stringify({
+    choices: [
+      {
+        message: {
+          content: '',
+          tool_calls: [
+            {
+              id: 'c1',
+              type: 'function',
+              function: {
+                name: 'submit_diagnosis',
+                arguments: JSON.stringify({
+                  verdict: '整体可用，短板在错误恢复。',
+                  rootCauses: [{ cause: '工具报错后放弃', evidence: '第 2 步' }],
+                  actions: [{ action: '提高扣分', ruleId: 'exec-tool-error' }],
+                }),
+              },
+            },
+          ],
+        },
+        finish_reason: 'tool_calls',
+      },
+    ],
+    usage: { prompt_tokens: 12, completion_tokens: 6 },
+  })
+
+  const LLM_ENV = { TQA_LLM_BASE_URL: 'https://llm.test/v1', TQA_LLM_MODEL: 'm', TQA_LLM_API_KEY: 'k' }
+
+  it('refuses to run without configuration', async () => {
+    const dir = tempDir()
+    trace(dir, 'clean.json', CLEAN)
+    const { io, chunks } = capture()
+
+    expect(await main([dir, '--agent'], io, { env: {} })).toBe(EXIT.error)
+    expect(chunks.err).toContain('诊断缺少配置')
+    expect(chunks.err).toContain('TQA_LLM_API_KEY')
+  })
+
+  it('refuses to combine with --semantic', async () => {
+    const dir = tempDir()
+    trace(dir, 'clean.json', CLEAN)
+    const { io, chunks } = capture()
+    let calls = 0
+
+    const code = await main([dir, '--agent', '--semantic'], io, {
+      env: LLM_ENV,
+      transport: async () => {
+        calls += 1
+        return { ok: true, status: 200, text: SUBMITTED }
+      },
+    })
+
+    expect(code).toBe(EXIT.error)
+    expect(chunks.err).toContain('--semantic')
+    // 冲突要在烧配额之前被发现
+    expect(calls).toBe(0)
+  })
+
+  it('refuses to combine with --compare', async () => {
+    const dir = tempDir()
+    trace(dir, 'a.json', CLEAN)
+    trace(dir, 'b.json', CLEAN)
+    const { io } = capture()
+
+    expect(await main([dir, '--agent', '--compare'], io, { env: LLM_ENV })).toBe(EXIT.error)
+  })
+
+  it('prints the prompt and tool list on a dry run, calling nothing', async () => {
+    const dir = tempDir()
+    trace(dir, 'clean.json', CLEAN)
+    const { io, chunks } = capture()
+    let calls = 0
+
+    const code = await main([dir, '--agent-dry-run'], io, {
+      env: {},
+      transport: async () => {
+        calls += 1
+        return { ok: true, status: 200, text: SUBMITTED }
+      },
+    })
+
+    expect(code).toBe(EXIT.ok)
+    expect(calls).toBe(0)
+    expect(chunks.out).toContain('submit_diagnosis')
+    expect(chunks.out).toContain('数字只能来自工具')
+  })
+
+  it('writes agent.md and agent.json next to the report', async () => {
+    const dir = tempDir()
+    trace(dir, 'clean.json', CLEAN)
+    const out = join(dir, 'out')
+    const { io, chunks } = capture()
+
+    const code = await main([dir, '--agent', '--out', out, '--quiet'], io, {
+      env: LLM_ENV,
+      transport: async () => ({ ok: true, status: 200, text: SUBMITTED }),
+    })
+
+    expect(code).toBe(EXIT.ok)
+    const markdown = readFileSync(join(out, 'agent.md'), 'utf8')
+    const json = JSON.parse(readFileSync(join(out, 'agent.json'), 'utf8')) as { stopReason: string }
+    expect(markdown).toContain('轨迹诊断报告')
+    expect(markdown).toContain('整体可用')
+    expect(json.stopReason).toBe('submitted')
+    // 隐私提示走 stderr，且不被 --quiet 吞掉
+    expect(chunks.err).toContain('llm.test')
+    expect(chunks.out).toContain('1 次工具调用')
+  })
+
+  it('saves the trace to the requested path', async () => {
+    const dir = tempDir()
+    trace(dir, 'clean.json', CLEAN)
+    const tracePath = join(dir, 'trace.json')
+    const { io } = capture()
+
+    const code = await main([dir, '--agent', '--agent-trace', tracePath, '--quiet'], io, {
+      env: LLM_ENV,
+      transport: async () => ({ ok: true, status: 200, text: SUBMITTED }),
+    })
+
+    expect(code).toBe(EXIT.ok)
+    expect(existsSync(tracePath)).toBe(true)
+  })
+
+  it('exits 2 when the endpoint fails, after still writing the report', async () => {
+    const dir = tempDir()
+    trace(dir, 'clean.json', CLEAN)
+    const out = join(dir, 'out')
+    const { io, chunks } = capture()
+
+    const code = await main([dir, '--agent', '--out', out, '--quiet'], io, {
+      env: LLM_ENV,
+      transport: async () => ({ ok: false, status: 500, text: 'boom' }),
+    })
+
+    expect(code).toBe(EXIT.error)
+    expect(chunks.err).toContain('诊断失败')
+    // 失败也得留下证据：报告照写。
+    expect(existsSync(join(out, 'agent.md'))).toBe(true)
   })
 })

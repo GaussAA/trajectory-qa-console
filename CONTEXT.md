@@ -30,16 +30,23 @@
 4. 持久化数据一律带 `schemaVersion`，读取时迁移；损坏数据降级为默认值并记录事件。版本判定在 `persistence.ts`：未来版本（`FutureSchemaVersionError`）拒绝而非误读，迁移链是 `MIGRATIONS` 表——新增版本只加一条，不逐个改 loader。
 5. 单条坏轨迹、单条坏规则、单个面板崩溃都不得影响其余部分。坏轨迹由 `analyze` **会话级**隔离：跳过并记入 `issues` 上报，不静默；只有**全部**会话都失败才算这个文件失败。
 6. 估算 token 必须带 `estimated: true`，报告中要注明。
+7. **智能体诊断不参与打分。** 它的结论只进 `agent.md/json`，不进 `ScoreCard`、不进语义维度、
+   不进 `ReportBundle`。分数永远只由 `buildCard` 从「轨迹 + 指标 + 规则包 + 标注」派生——
+   接了模型之后这条更要有，否则模型输出的漂移会污染分数，invariant 3 就成了口号。
 
 ## 模块地图
 
 ```
-src/core/     纯领域：model / expr / parsing / rules / analysis / sample
+src/core/     纯领域：model / expr / parsing / rules / analysis / sample / semantic / agent
+src/core/llm/ LLM 底座：transport（可注入）/ complete（超时+重试）/ response（取内容、看形状）
 src/app/      编排：telemetry / persistence / ingest / workspace / analyzer / exporters
 src/ui/       表现：App + panels + drawers + ErrorBoundary + controller hook
 src/workers/  分析线程（Vite ?worker&inline，单文件内联）
 src/lib/      格式化与报告文本
 ```
+
+`core/llm` 单独存在的理由：语义复核与智能体是同一端点、同一密钥、同一套脱敏纪律。
+超时/重试/响应解析各只有一份——这个项目已经为「同一件事算两遍」付过四次代价。
 
 ### 命令行（`src/cli`）
 
@@ -99,6 +106,8 @@ node dist-cli/qa.mjs examples --pack en --locale en --out ./qa-out   # 全英文
 
 ```bash
 export TQA_LLM_URL=https://api.example.com/v1/chat/completions
+# 或只给 base（`…/v1` 这类版本尾巴会自动补 /chat/completions；自带路径的代理地址原样使用）
+export TQA_LLM_BASE_URL=https://token.sensenova.cn/v1
 export TQA_LLM_MODEL=your-model
 export TQA_LLM_API_KEY=...            # 只从环境变量读，不接受 --api-key
 
@@ -112,6 +121,36 @@ node dist-cli/qa.mjs traces --semantic --fail-below 80
   优先保留工具出错/未配对的步。
 - 失败降级：单次调用失败只记 issue，整批继续、退出码不变。
 - **界面不接模型**：守住离线承诺、CORS 与密钥托管三条线（ADR-0011）。
+
+### 智能体诊断（可选，仅命令行，ADR-0019）
+
+`src/core/agent/`：`prompt`（系统提示）、`chat`（一回合）、`tools`（工具集）、`loop`（循环+预算）、
+`types`（消息/工具/trace/结论）。出口只有 `runAgent`，报告在 `lib/agent-report.ts`。
+
+```bash
+node dist-cli/qa.mjs traces --agent                       # 诊断，产物 agent.md / agent.json
+node dist-cli/qa.mjs traces --agent-dry-run               # 只打印系统提示与工具清单，零成本
+node dist-cli/qa.mjs traces --agent --agent-rounds 4 --agent-trace ./trace.json
+```
+
+- **模型只解释分数，不改分数**：结论进 `agent.*`，与 `report.*` 分开写；不进 `ScoreCard`。
+- **数字只能来自工具**：12 个工具全部映射既有纯函数（`buildCard` / `compareCards` /
+  `scoreUnderPack` 的同源 `buildCard` / `numericLiterals` / `replaceLiteral` / `validatePack`）。
+  报告把「结论（模型归纳，未核验）」与「调用记录（工具产出）」分成两节。
+- **步号一律 1 基**：工具参数、工具返回、报告、语义提示词同一个口径。
+- **预算硬上限**：8 轮 / 24 次调用 / 180s 墙钟 / 单次 90s / 4096 token。撞上限即停，
+  `trace.truncated = true`，报告写「未收敛」并指明是哪个上限——不假装那是完整诊断。
+- **失败保留 trace**：`AgentRun` 不用 `Result` 包装，失败原因(`error`) 与证据(`trace`) 一起返回。
+- **工具失败不终止循环**：未知工具、参数不是合法 JSON、工具抛异常，都以 tool 消息回灌，
+  模型还有机会纠正；只有端点级失败才终止。
+- **互斥**：`--agent` 不能与 `--semantic`（两者都烧配额，诊断不该混进评分）、
+  `--compare`、`--pack-compare`（各有自己的产物）同用。
+- **隐私前置**：开启时向 stderr 打印「将把 N 条轨迹的摘要发送至 host」，不受 `--quiet` 抑制。
+- **端点实测（2026-10-24）**：支持 function calling；推理型模型的思考**关不掉**
+  （`reasoning_effort` / `thinking` / `enable_thinking` 全无效），so 提示词里压思考
+  （实测 10.5s → 3.4s）；`max_tokens` 给小了会让 reasoning 吃光额度、`content` 空串。
+- **P1 只开「读」**：`propose_pack` 留到 P3。`simulate_pack` 只算不改——草稿包只存在于那次调用，
+  且必须过 `validatePack`。
 
 ### 对比报告
 

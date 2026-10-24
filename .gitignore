@@ -6,3 +6,7 @@ dist-cli/
 .vite/
 .workbuddy/
 coverage/
+.env
+.env.*
+!.env.example
+

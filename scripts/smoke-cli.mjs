@@ -63,6 +63,22 @@ const noKey = run(['examples', '--semantic'])
 check('缺配置时退出码 2', noKey.code === 2, `实际 ${noKey.code}`)
 check('缺配置给出变量名', noKey.stderr.includes('TQA_LLM_API_KEY'))
 
+// 智能体试跑：零成本，但能验证参数接线、系统提示与工具清单真的打进了产物。
+const agentDry = run(['examples', '--agent-dry-run'])
+check('--agent-dry-run 退出码 0', agentDry.code === 0, `实际 ${agentDry.code}`)
+check(
+  '试跑列出工具与纪律',
+  agentDry.stdout.includes('submit_diagnosis') && agentDry.stdout.includes('数字只能来自工具'),
+)
+check('试跑不打印诊断摘要', !agentDry.stdout.includes('次工具调用'))
+
+const agentConflict = run(['examples', '--agent', '--semantic'])
+check('--agent 与 --semantic 互斥退出码 2', agentConflict.code === 2, `实际 ${agentConflict.code}`)
+
+const agentNoKey = run(['examples', '--agent'])
+check('智能体缺配置退出码 2', agentNoKey.code === 2, `实际 ${agentNoKey.code}`)
+check('智能体缺配置给出变量名', agentNoKey.stderr.includes('TQA_LLM_API_KEY'))
+
 const outDir = mkdtempSync(join(tmpdir(), 'tqa-smoke-'))
 try {
   const written = run(['examples', '--out', outDir, '--quiet'])
@@ -150,4 +166,6 @@ if (problems.length > 0) {
   process.exit(1)
 }
 
-console.log('✓ CLI 冒烟通过：help / 通过 / 门禁 / 用法错误 / 英文 / 英文包 / 语义试跑 / 对比 / HTML / 落盘')
+console.log(
+  '✓ CLI 冒烟通过：help / 通过 / 门禁 / 用法错误 / 英文 / 英文包 / 语义试跑 / 智能体试跑与互斥 / 对比 / HTML / 落盘',
+)
