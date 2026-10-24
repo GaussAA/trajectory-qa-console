@@ -101,6 +101,7 @@
   .app {
     height: auto;
     min-height: 100vh;
+    min-height: 100dvh;
   }
 
   .main-grid {
@@ -127,8 +128,28 @@
     max-width: none;
   }
 
+  /* 每块面板各自封顶、内部自己滚。
+     堆叠布局里 .col 变成 block，.session-panel 的 flex:1 就失效了，
+     而它没有高度上限——会话列表于是随文件数无限长高，
+     内部滚动条永远不出现，下面的时间线被顶到屏幕外。
+     时间线本来就有 68vh 的上限，所以只有它幸免。 */
+  /* 会话列表按「行数」封顶，不按屏高比例：
+     30vh 在 600px 高的窗口里只有 1.5 行，4 条会话反而被切掉一半。
+     300px ≈ 5 行——常见场景（4~5 条）整份露全，再多才自己滚。 */
+  .session-list {
+    max-height: 300px;
+  }
+
   .timeline-panel {
-    max-height: 68vh;
+    max-height: 62vh;
+  }
+
+  .inspector {
+    max-height: 60vh;
+  }
+
+  .findings-panel {
+    max-height: 40vh;
   }
 
   /* 按钮多的时候允许顶栏换行，宁可两行也不截断——被截掉的「导出报告」比丑更糟。 */

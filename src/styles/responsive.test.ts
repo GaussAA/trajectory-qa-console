@@ -53,6 +53,15 @@ describe('响应式体系', () => {
     expect(responsive).toContain('display: block')
   })
 
+  it('堆叠布局：每块面板都有高度上限，内部自己滚', () => {
+    // 用户实测报出来的坑：堆叠态里 .col 变成 block，flex:1 失效，
+    // 会话列表于是随文件数无限长高、内部滚动条永不出现，还把页面撑到够不着。
+    for (const selector of ['.session-list', '.timeline-panel', '.inspector', '.findings-panel']) {
+      const pattern = new RegExp(`${selector.replace('.', '\\.')}\\s*\\{[^}]*max-height`)
+      expect(responsive, `${selector} 缺少 max-height`).toMatch(pattern)
+    }
+  })
+
   it('大屏有内容上限：带鱼屏上不该摊出一行 2734px 的长文', () => {
     expect(layout).toMatch(/max-width:\s*1\d{3}px/)
   })
