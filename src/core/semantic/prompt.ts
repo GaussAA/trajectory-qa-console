@@ -55,7 +55,9 @@ export function pickSteps(steps: Step[], maxSteps: number): number[] {
   return [...chosen].sort((a, b) => a - b).slice(0, maxSteps)
 }
 
-function renderStep(step: Step, options: DigestOptions): string {
+/** 单步渲染。导出是给智能体用的：它读的是同一份轨迹摘要，
+ *  两处各写一个「步怎么压成一行」的版本，迟早一处先改了而另一处没改。 */
+export function renderStep(step: Step, options: DigestOptions): string {
   const lines: string[] = []
   const label = `${step.role}#${step.index + 1}`
   if (step.text.trim()) lines.push(`${label}: ${clip(step.text, options.textChars)}`)
@@ -117,7 +119,9 @@ export const SYSTEM_PROMPT = `你是 Agent 轨迹质检员，只做语义层面�
 - 只依据轨迹里出现的内容，不脑补。
 - step 是轨迹里标注的序号（1 基），必须真实存在。
 - 没有问题就输出 {"findings":[]}；宁缺勿滥，最多 12 条。
-- reason 用中文，一句话，不超过 80 字；quote 必须是轨迹原文的连续片段，不超过 120 字。`
+- reason 用中文，一句话，不超过 80 字；quote 必须是轨迹原文的连续片段，不超过 120 字。
+- 直接给结论，不要展开思考过程。推理型模型会把输出预算先花在思考上，
+  实测同一提示词因此慢三倍，且长轨迹容易被截断成空内容。`
 
 export function buildMessages(
   trajectory: Trajectory,

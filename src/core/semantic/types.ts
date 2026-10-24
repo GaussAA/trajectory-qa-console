@@ -21,32 +21,7 @@ export interface SemanticFinding {
   reason: string
 }
 
-export interface LlmRequest {
-  url: string
-  model: string
-  apiKey: string
-  body: string
-  signal?: AbortSignal
-}
-
-export interface LlmResponse {
-  ok: boolean
-  status: number
-  text: string
-}
-
-/** 传输层可注入：测试用假实现，运行时用 fetch。 */
-export type LlmTransport = (request: LlmRequest) => Promise<LlmResponse>
-
-export const fetchTransport: LlmTransport = async (request) => {
-  const response = await fetch(request.url, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      authorization: `Bearer ${request.apiKey}`,
-    },
-    body: request.body,
-    signal: request.signal,
-  })
-  return { ok: response.ok, status: response.status, text: await response.text() }
-}
+/** 传输层已抽到 `core/llm`：语义复核与智能体共用同一套超时/重试纪律，
+ *  这里只做转发，保持既有 import 路径可用。 */
+export type { LlmRequest, LlmResponse, LlmTransport } from '../llm/transport'
+export { fetchTransport } from '../llm/transport'

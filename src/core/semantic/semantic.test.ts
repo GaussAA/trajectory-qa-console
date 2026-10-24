@@ -4,8 +4,10 @@ import type { Trajectory } from '../model'
 import {
   buildDigest,
   categoryLabel,
+  DEFAULT_MAX_TOKENS,
   extractContent,
   extractJson,
+  inspectResponse,
   judgeTrajectory,
   parseJudgement,
   pickSteps,
@@ -134,6 +136,17 @@ describe('extractContent', () => {
     expect(extractContent('不是 JSON 的一段话')).toBe('不是 JSON 的一段话')
     expect(extractContent('')).toBeNull()
   })
+
+  it('reads the response shape for failure diagnosis', () => {
+    expect(
+      inspectResponse(
+        JSON.stringify({ choices: [{ message: { content: 'ok', reasoning: '想一想' }, finish_reason: 'stop' }] }),
+      ),
+    ).toEqual({ content: 'ok', finishReason: 'stop', reasoningChars: 3 })
+
+    // 非 JSON：finish_reason 无从谈起，但内容仍按代理直返文本处理。
+    expect(inspectResponse('裸文本')).toEqual({ content: '裸文本', finishReason: null, reasoningChars: 0 })
+  })
 })
 
 describe('judgeTrajectory', () => {
@@ -220,6 +233,70 @@ describe('judgeTrajectory', () => {
       transport: () => new Promise(() => undefined),
     })
     expect(result.ok).toBe(false)
+  })
+
+  it('sends an explicit max_tokens (reasoning models eat the budget first)', async () => {
+    const bodies: string[] = []
+    await judgeTrajectory(trajectory(), {
+      ...baseOptions,
+      transport: async (request) => {
+        bodies.push(request.body)
+        return {
+          ok: true,
+          status: 200,
+          text: JSON.stringify({ choices: [{ message: { content: '{"findings":[]}' } }] }),
+        }
+      },
+    })
+    expect(JSON.parse(bodies[0]!).max_tokens).toBe(DEFAULT_MAX_TOKENS)
+
+    await judgeTrajectory(trajectory(), {
+      ...baseOptions,
+      maxTokens: 512,
+      transport: async (request) => {
+        bodies.push(request.body)
+        return {
+          ok: true,
+          status: 200,
+          text: JSON.stringify({ choices: [{ message: { content: '{"findings":[]}' } }] }),
+        }
+      },
+    })
+    expect(JSON.parse(bodies[1]!).max_tokens).toBe(512)
+  })
+
+  it('blames the token budget when thinking swallowed the whole response', async () => {
+    const result = await judgeTrajectory(trajectory(), {
+      ...baseOptions,
+      maxTokens: 128,
+      transport: async () => ({
+        ok: true,
+        status: 200,
+        text: JSON.stringify({
+          choices: [{ message: { content: '', reasoning: '思考'.repeat(40) }, finish_reason: 'length' }],
+        }),
+      }),
+    })
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    // 「被截断」与「模型什么都没说」必须能分辨：前者只需调大预算。
+    expect(result.error.message).toContain('截断')
+    expect(result.error.detail?.finishReason).toBe('length')
+    expect(result.error.detail?.reasoningChars).toBe(80)
+  })
+
+  it('reports a plain empty response without blaming the budget', async () => {
+    const result = await judgeTrajectory(trajectory(), {
+      ...baseOptions,
+      transport: async () => ({
+        ok: true,
+        status: 200,
+        text: JSON.stringify({ choices: [{ message: { content: '' }, finish_reason: 'stop' }] }),
+      }),
+    })
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.error.message).toBe('模型响应里没有可用内容')
   })
 })
 
