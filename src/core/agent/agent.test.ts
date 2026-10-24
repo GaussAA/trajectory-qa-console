@@ -5,7 +5,7 @@ import type { LlmRequest, LlmTransport } from '../llm/transport'
 import { parseReply } from './chat'
 import { runAgent } from './loop'
 import { parseDiagnosis, TOOLS, toolByName, toolSpecs } from './tools'
-import type { ToolContext } from './types'
+import type { PackProposal, ToolContext } from './types'
 
 // ---------- fixtures ----------
 
@@ -301,6 +301,28 @@ describe('runAgent', () => {
     expect(run.trace.stopReason).toBe('duration')
   })
 
+  it('collects proposals into the run without touching the caller context', async () => {
+    const { transport } = scripted([
+      turn({
+        calls: [
+          {
+            name: 'propose_pack',
+            args: { rationale: '执行维扣分偏轻', edits: [{ ruleId: 'exec-dead-loop', scoreImpact: 30 }] },
+          },
+        ],
+      }),
+      turn({ content: '提案已提交。' }),
+    ])
+
+    const context = contextWith()
+    const run = await runAgent(context, { ...BASE, transport })
+
+    expect(run.proposals).toHaveLength(1)
+    expect(run.proposals[0]?.id).toBe('p1')
+    // 收集器挂在本次运行自己的上下文上，调用方传进来的对象不该被塞东西。
+    expect(context.proposals).toBeUndefined()
+  })
+
   it('never leaks the api key into a failure', async () => {
     const transport: LlmTransport = async () => ({ ok: false, status: 401, text: 'bad key' })
     const run = await runAgent(contextWith(), { ...BASE, transport })
@@ -474,6 +496,75 @@ describe('tools', () => {
     const payload = JSON.parse(diff?.content ?? '{}') as { overall: { delta: number } }
     expect(diff?.ok).toBe(true)
     expect(typeof payload.overall.delta).toBe('number')
+  })
+
+  it('records a proposal without touching the active pack', () => {
+    const context = { ...contextWith(), proposals: [] as PackProposal[] }
+    const outcome = toolByName('propose_pack')?.run(
+      {
+        rationale: '执行维扣分偏轻：死循环只降 25 分',
+        edits: [{ ruleId: 'exec-dead-loop', severity: 'error', scoreImpact: 30 }],
+      },
+      context,
+    )
+    const payload = JSON.parse(outcome?.content ?? '{}') as {
+      accepted: boolean
+      appliedToWorkspace: boolean
+      averageBefore: number
+    }
+
+    expect(payload.accepted).toBe(true)
+    // 明确告诉模型「没生效」：否则它会在结论里写「已修复」。
+    expect(payload.appliedToWorkspace).toBe(false)
+    expect(payload.averageBefore).toBeGreaterThan(0)
+
+    const proposal = context.proposals[0]
+    if (!proposal) throw new Error('proposal not collected')
+    expect(proposal.id).toBe('p1')
+    expect(proposal.pack.name).toContain('提案 1')
+    expect(proposal.pack.rules.find((rule) => rule.id === 'exec-dead-loop')?.scoreImpact).toBe(30)
+    expect(proposal.applied[0]?.effectiveImpact).toBe(30)
+    // 生效包不能被悄悄改掉
+    expect(DEFAULT_PACK.rules.find((rule) => rule.id === 'exec-dead-loop')?.scoreImpact).not.toBe(30)
+  })
+
+  it('numbers proposals in order', () => {
+    const context = { ...contextWith(), proposals: [] as PackProposal[] }
+    const run = toolByName('propose_pack')
+    run?.run({ rationale: 'a', edits: [{ ruleId: 'exec-dead-loop', scoreImpact: 20 }] }, context)
+    run?.run({ rationale: 'b', edits: [{ ruleId: 'exec-dead-loop', scoreImpact: 40 }] }, context)
+    expect(context.proposals?.map((proposal) => proposal.id)).toEqual(['p1', 'p2'])
+  })
+
+  it('refuses a proposal without a rationale', () => {
+    const context = { ...contextWith(), proposals: [] as PackProposal[] }
+    const outcome = toolByName('propose_pack')?.run(
+      { edits: [{ ruleId: 'exec-dead-loop', scoreImpact: 20 }] },
+      context,
+    )
+    expect(outcome?.ok).toBe(false)
+    expect(context.proposals).toHaveLength(0)
+  })
+
+  it('refuses a proposal that breaks the contract, and records nothing', () => {
+    const context = { ...contextWith(), proposals: [] as PackProposal[] }
+    const outcome = toolByName('propose_pack')?.run(
+      { rationale: 'r', edits: [{ ruleId: 'exec-dead-loop', expr: 'this is not an expression' }] },
+      context,
+    )
+    expect(outcome?.ok).toBe(false)
+    expect(outcome?.content).toContain('契约校验')
+    expect(context.proposals).toHaveLength(0)
+  })
+
+  it('refuses a proposal for an unknown rule', () => {
+    const context = { ...contextWith(), proposals: [] as PackProposal[] }
+    const outcome = toolByName('propose_pack')?.run(
+      { rationale: 'r', edits: [{ ruleId: 'ghost', scoreImpact: 20 }] },
+      context,
+    )
+    expect(outcome?.ok).toBe(false)
+    expect(outcome?.content).toContain('missing')
   })
 
   it('rejects a diagnosis without a verdict', () => {

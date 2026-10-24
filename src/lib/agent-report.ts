@@ -162,6 +162,31 @@ export function renderAgentMarkdown(input: AgentReportInput, model?: AgentReport
     lines.push('')
   }
 
+  // 提案单列一节：它不会自动生效，必须让人看清「这是候选」再决定要不要试。
+  if (run.proposals.length > 0) {
+    lines.push(`## ${t(locale, 'agent.report.proposals')}`, '')
+    lines.push(`> ${t(locale, 'agent.report.proposalNote')}`, '')
+    for (const proposal of run.proposals) {
+      lines.push(`### ${proposal.id} · ${proposal.rationale}`, '')
+      for (const applied of proposal.applied) {
+        lines.push(
+          `- \`${applied.ruleId}\` → ${applied.severity} · ${t(locale, 'agent.report.proposalImpact', {
+            impact: applied.effectiveImpact,
+          })}`,
+        )
+      }
+      lines.push(
+        '',
+        `- ${t(locale, 'agent.report.proposalDelta', {
+          before: proposal.averageBefore,
+          after: proposal.averageAfter,
+          delta: proposal.delta > 0 ? `+${proposal.delta}` : String(proposal.delta),
+        })}`,
+        '',
+      )
+    }
+  }
+
   lines.push(`## ${t(locale, 'agent.report.trace')}`, '')
   if (built.traceRows.length === 0) {
     lines.push(t(locale, 'agent.report.noTrace'), '')
@@ -209,6 +234,18 @@ export function renderAgentJson(input: AgentReportInput, model?: AgentReportMode
       status: built.status,
       conclusion: input.run.diagnosis,
       answer: input.run.answer,
+      // 完整候选包另存 proposal.pack.json（可直接 --pack）；这里只放摘要，避免同一份数据两处漂移。
+      proposals: input.run.proposals.map((proposal) => ({
+        id: proposal.id,
+        rationale: proposal.rationale,
+        edits: proposal.edits,
+        applied: proposal.applied,
+        packName: proposal.pack.name,
+        averageBefore: proposal.averageBefore,
+        averageAfter: proposal.averageAfter,
+        delta: proposal.delta,
+        rows: proposal.rows,
+      })),
       trace: input.run.trace.entries,
       usage: input.run.usage,
     },

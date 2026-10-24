@@ -411,6 +411,7 @@ export const en: Record<MessageKey, string> = {
   'cli.optAgentDryRun': '--agent-dry-run          print the system prompt and tool list, call nothing',
   'cli.optAgentRounds': '--agent-rounds <n>       max diagnosis rounds (default: 8, range 2-40)',
   'cli.optAgentTrace': '--agent-trace <file>     save the full tool-call trace as JSON',
+  'cli.optAgentTask': '--agent-task <text>      focus the diagnosis on one question',
   'cli.agentDryRun': 'About to send this system prompt and tool list (no model call):',
   'cli.agentTarget': 'Diagnosis: sending a digest of {sessions} trajectory(ies) to {host}',
   'cli.agentSummary': 'Diagnosis: {rounds} round(s) · {tools} tool call(s) · {tokens} tokens · {ms}ms',
@@ -455,6 +456,14 @@ export const en: Record<MessageKey, string> = {
   'agent.report.stats.tokens': 'Tokens',
   'agent.report.stats.tokensDetail': '{prompt} in / {completion} out',
   'agent.report.stats.duration': 'Total time',
+  'agent.report.proposals': 'Rule pack proposals',
+  'agent.report.proposalNote':
+    'Proposals never take effect on their own; the CLI writes the first one to proposal.pack.json so you can try it with --pack.',
+  'agent.report.proposalImpact': 'effective penalty {impact}',
+  'agent.report.proposalDelta': 'average {before} → {after} ({delta})',
+
+  'cli.agentProposal': 'Wrote a candidate rule pack to {path} (try it with --pack)',
+  'cli.agentProposalNoOut': '{count} rule pack proposal(s) captured; add --out to save a usable pack',
   'cli.optSemantic': '--semantic               run the semantic pass (needs TQA_LLM_API_KEY)',
   'cli.optSemanticDryRun': '--semantic-dry-run       print the prompt instead of calling the model',
   'cli.optLlmUrl': '--llm-url <url>          OpenAI-compatible chat/completions URL',

@@ -22,6 +22,7 @@ import type {
   AgentRun,
   AgentTrace,
   Diagnosis,
+  PackProposal,
   ToolContext,
   ToolOutcome,
 } from './types'
@@ -74,8 +75,14 @@ function badArgs(raw: string): ToolOutcome {
   }
 }
 
-export async function runAgent(context: ToolContext, options: AgentOptions): Promise<AgentRun> {
+export async function runAgent(
+  toolContext: ToolContext,
+  options: AgentOptions,
+): Promise<AgentRun> {
   const budget: AgentBudget = { ...AGENT_BUDGET, ...options.budget }
+  // 提案收集器挂在本次运行自己的上下文上，不污染调用方传进来的对象。
+  const proposals: PackProposal[] = []
+  const context: ToolContext = { ...toolContext, proposals }
   const now = options.now ?? (() => Date.now())
   const started = now()
 
@@ -108,6 +115,7 @@ export async function runAgent(context: ToolContext, options: AgentOptions): Pro
     // 撞预算而停时，模型很可能已经写了判断。把它交出去并保留 truncated 标记，
     // 读者看得到「这是未完稿」——比显示「模型没有给出结论」有用得多。
     answer: answer === '' && trace.truncated ? lastText : answer,
+    proposals,
     trace,
     usage,
   })

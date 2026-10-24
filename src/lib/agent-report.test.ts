@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { analyze } from '../core/analysis'
-import type { AgentRun } from '../core/agent/types'
+import type { AgentRun, PackProposal } from '../core/agent/types'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
 import {
   buildAgentReportModel,
@@ -19,6 +19,7 @@ function run(overrides: Partial<AgentRun> = {}): AgentRun {
       actions: [{ action: '提高扣分', rationale: '试跑后均值下降', ruleId: 'exec-tool-error' }],
     },
     answer: '整体可用，短板在错误恢复。',
+    proposals: [],
     trace: {
       entries: [
         { kind: 'model', round: 1, content: '', toolCalls: 1, reasoningChars: 12, ms: 300 },
@@ -40,6 +41,18 @@ function run(overrides: Partial<AgentRun> = {}): AgentRun {
     usage: { prompt: 10, completion: 5 },
     ...overrides,
   }
+}
+
+const PROPOSAL: PackProposal = {
+  id: 'p1',
+  rationale: '执行维扣分偏轻：死循环只降 25 分',
+  edits: [{ ruleId: 'exec-dead-loop', severity: 'error', scoreImpact: 30 }],
+  applied: [{ ruleId: 'exec-dead-loop', severity: 'error', scoreImpact: 30, effectiveImpact: 30 }],
+  pack: { ...DEFAULT_PACK, name: '内置规则包 · v1 · 提案 1' },
+  averageBefore: 76,
+  averageAfter: 63.1,
+  delta: -12.9,
+  rows: [{ sessionId: 's-1', label: 'a.json', before: 74, after: 60, delta: -14 }],
 }
 
 function input(overrides: Partial<AgentReportInput> = {}): AgentReportInput {
@@ -145,6 +158,35 @@ describe('renderAgentMarkdown', () => {
   })
 })
 
+describe('proposals in the report', () => {
+  it('shows a proposal section with its simulated numbers', () => {
+    const markdown = renderAgentMarkdown(input({ run: run({ proposals: [PROPOSAL] }) }))
+
+    expect(markdown).toContain('规则包提案')
+    // 必须让人看见「这是候选」，不能读成「已经改了」。
+    expect(markdown).toContain('提案不会自动生效')
+    expect(markdown).toContain('执行维扣分偏轻')
+    expect(markdown).toContain('`exec-dead-loop` → error')
+    expect(markdown).toContain('平均分 76 → 63.1（-12.9）')
+  })
+
+  it('omits the section entirely when nothing was proposed', () => {
+    const markdown = renderAgentMarkdown(input())
+    expect(markdown).not.toContain('规则包提案')
+  })
+
+  it('keeps proposals in JSON without duplicating the whole pack', () => {
+    const json = JSON.parse(renderAgentJson(input({ run: run({ proposals: [PROPOSAL] }) }))) as {
+      proposals: { id: string; packName: string; delta: number; pack?: unknown }[]
+    }
+    expect(json.proposals).toHaveLength(1)
+    expect(json.proposals[0]?.packName).toContain('提案 1')
+    expect(json.proposals[0]?.delta).toBe(-12.9)
+    // 完整包另存文件，避免同一份数据两处漂移
+    expect(json.proposals[0]?.pack).toBeUndefined()
+  })
+})
+
 describe('renderAgentJson', () => {
   it('keeps stable keys and only localises values', () => {
     const json = JSON.parse(renderAgentJson(input())) as Record<string, unknown>
@@ -160,6 +202,7 @@ describe('renderAgentJson', () => {
         'model',
         'ok',
         'pack',
+        'proposals',
         'sessionCount',
         'status',
         'stopReason',

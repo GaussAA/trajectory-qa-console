@@ -8,7 +8,7 @@
  *  / `role: 'tool'`。这些名字是事实标准，改名只会让对接新供应商时多一层翻译。
  */
 
-import type { Annotation, RulePack } from '../model'
+import type { Annotation, RulePack, Severity } from '../model'
 import type { ScoreCard, SessionAnalysis } from '../analysis'
 
 // ---------- 消息 ----------
@@ -63,6 +63,51 @@ export interface ToolContext {
   /** 一次诊断内复用评分卡：24 次工具调用不该把同一套规则跑 24 遍。
    *  规则包在整轮里不变，所以按会话 id 索引就够。 */
   cards?: Map<string, ScoreCard>
+  /** 提案收集器：`propose_pack` 把候选包放进来，运行结束后随结果交出。
+   *  用可变上下文而不是让工具返回 artifact，是为了让提案与模拟共用同一次计算。 */
+  proposals?: PackProposal[]
+}
+
+// ---------- 规则包提案 ----------
+
+/** 对单条规则的改动。与 `simulate_pack` 同一形状——提案就是「被采纳的模拟」。 */
+export interface RuleEdit {
+  ruleId: string
+  scoreImpact?: number
+  enabled?: boolean
+  severity?: Severity
+  expr?: string
+}
+
+/** 改完之后这条规则实际扣多少。由工具算，不让模型自己乘严重度系数。 */
+export interface AppliedEdit {
+  ruleId: string
+  severity: Severity
+  scoreImpact: number
+  effectiveImpact: number
+}
+
+export interface ProposalRow {
+  sessionId: string
+  label: string
+  before: number
+  after: number
+  delta: number
+}
+
+/** 一份候选规则包。**不会自动生效**：落不落地由人决定（CLI 写文件、界面走抽屉导入）。 */
+export interface PackProposal {
+  id: string
+  rationale: string
+  edits: RuleEdit[]
+  /** 改动生效后的实际严重度与扣分，由工具算好，报告直接引用。 */
+  applied: AppliedEdit[]
+  /** 完整候选包（已过 `validatePack`），可直接当 `--pack` 的参数。 */
+  pack: RulePack
+  averageBefore: number
+  averageAfter: number
+  delta: number
+  rows: ProposalRow[]
 }
 
 export interface Tool {
@@ -163,6 +208,8 @@ export interface AgentRun {
   diagnosis: Diagnosis | null
   /** 未调用终结工具时，模型最后的自由文本。 */
   answer: string
+  /** 模型提出的规则包候选。空数组表示它认为现有口径不必改。 */
+  proposals: PackProposal[]
   trace: AgentTrace
   usage: { prompt: number; completion: number }
 }

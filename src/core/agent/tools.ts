@@ -12,8 +12,17 @@ import { compareCards, diffFindings } from '../compare'
 import { formatPackErrors, validatePack } from '../rules/contract'
 import { numericLiterals, replaceLiteral } from '../rules/tuning'
 import { DIGEST_DEFAULTS, renderStep } from '../semantic/prompt'
-import { SEVERITY_FACTOR, type Severity, type Step } from '../model'
-import type { Diagnosis, Tool, ToolContext, ToolOutcome } from './types'
+import { SEVERITY_FACTOR, type RulePack, type Severity, type Step } from '../model'
+import type {
+  AppliedEdit,
+  Diagnosis,
+  PackProposal,
+  ProposalRow,
+  RuleEdit,
+  Tool,
+  ToolContext,
+  ToolOutcome,
+} from './types'
 
 /** 单个工具结果的上限：一次返回几千行步详情会把上下文一次烧光，
  *  之后所有轮次都在读不完整的信息里瞎猜。 */
@@ -106,6 +115,113 @@ function findingView(finding: {
     message: finding.message,
     evidence: finding.evidence ?? null,
     impact: finding.impact,
+  }
+}
+
+// ---------- 草稿包与试跑（simulate_pack 与 propose_pack 共用） ----------
+
+type DraftResult =
+  | { ok: true; pack: RulePack; applied: AppliedEdit[] }
+  | { ok: false; outcome: ToolOutcome }
+
+/** 把 edits 打到当前包的副本上，再交给契约校验。
+ *
+ *  校验是硬闸：模型可能写出语法合法但语义不对的表达式，`validatePack` 拦得住。
+ *  两个工具共用这一份，避免「模拟能过、提案不过」这种自相矛盾。 */
+function draftPack(context: ToolContext, edits: RuleEdit[]): DraftResult {
+  const draft = structuredClone(context.pack)
+  const missing: string[] = []
+  for (const edit of edits) {
+    const rule = draft.rules.find((item) => item.id === edit.ruleId)
+    if (!rule) {
+      missing.push(edit.ruleId)
+      continue
+    }
+    if (edit.scoreImpact !== undefined) rule.scoreImpact = edit.scoreImpact
+    if (edit.enabled !== undefined) rule.enabled = edit.enabled
+    if (edit.severity !== undefined) rule.severity = edit.severity
+    if (edit.expr !== undefined) rule.expr = edit.expr
+  }
+  if (missing.length > 0) {
+    return {
+      ok: false,
+      outcome: reject('这些规则 id 不存在', {
+        missing,
+        // 给前 20 个 id 让模型自己纠正，省一整轮
+        available: context.pack.rules.slice(0, 20).map((rule) => rule.id),
+      }),
+    }
+  }
+
+  const validation = validatePack(draft)
+  if (!validation.ok) {
+    return {
+      ok: false,
+      outcome: reject('草稿规则包未通过契约校验', {
+        errors: formatPackErrors(validation.errors).slice(0, 6),
+      }),
+    }
+  }
+
+  // 「改完之后实际扣多少」由工具算：实测模型会拿 scoreImpact 当有效扣分，
+  // 然后在结论里写一个编出来的数。
+  const applied = edits
+    .map((edit) => {
+      const rule = validation.pack.rules.find((item) => item.id === edit.ruleId)
+      if (!rule) return null
+      return {
+        ruleId: rule.id,
+        severity: rule.severity,
+        scoreImpact: rule.scoreImpact,
+        effectiveImpact: Math.round(rule.scoreImpact * SEVERITY_FACTOR[rule.severity] * 10) / 10,
+      }
+    })
+    .filter((item): item is AppliedEdit => item !== null)
+
+  return { ok: true, pack: validation.pack, applied }
+}
+
+interface Simulation {
+  rows: ProposalRow[]
+  averageBefore: number
+  averageAfter: number
+  delta: number
+  ruleIssues: { ruleId: string; message: string }[]
+}
+
+/** 真跑一遍草稿包。每条会话的「改后」卡片只算一次——既出分数又出规则异常，
+ *  早先版本为这两件事各算了一遍。 */
+function simulateOn(context: ToolContext, pack: RulePack): Simulation {
+  const rows: ProposalRow[] = []
+  const ruleIssues = new Map<string, string>()
+
+  for (const session of context.sessions) {
+    const before = cardOf(context, session)
+    const after = buildCard(session.trajectory, session.metrics, pack, context.annotations)
+    for (const issue of after.ruleIssues) ruleIssues.set(issue.ruleId, issue.message)
+    rows.push({
+      sessionId: session.id,
+      label: session.trajectory.label,
+      before: before.overall,
+      after: after.overall,
+      delta: after.overall - before.overall,
+    })
+  }
+
+  const average = (pick: 'before' | 'after') =>
+    rows.length === 0
+      ? 0
+      : Math.round((rows.reduce((sum, row) => sum + row[pick], 0) / rows.length) * 10) / 10
+  const averageBefore = average('before')
+  const averageAfter = average('after')
+
+  return {
+    rows,
+    averageBefore,
+    averageAfter,
+    delta: Math.round((averageAfter - averageBefore) * 10) / 10,
+    // 表达式出错不会让评分失败，只会让规则静默不生效——必须显式报出来。
+    ruleIssues: [...ruleIssues].map(([ruleId, message]) => ({ ruleId, message })),
   }
 }
 
@@ -378,14 +494,6 @@ const listRules: Tool = {
   },
 }
 
-interface RuleEdit {
-  ruleId: string
-  scoreImpact?: number
-  enabled?: boolean
-  severity?: Severity
-  expr?: string
-}
-
 function readEdits(args: Record<string, unknown>): RuleEdit[] | null {
   const raw = args.edits
   if (!Array.isArray(raw) || raw.length === 0) return null
@@ -437,82 +545,86 @@ const simulatePack: Tool = {
     const edits = readEdits(args)
     if (!edits) return reject('需要非空的 edits 数组，每项至少含 ruleId')
 
-    const draft = structuredClone(context.pack)
-    const missing: string[] = []
-    for (const edit of edits) {
-      const rule = draft.rules.find((item) => item.id === edit.ruleId)
-      if (!rule) {
-        missing.push(edit.ruleId)
-        continue
-      }
-      if (edit.scoreImpact !== undefined) rule.scoreImpact = edit.scoreImpact
-      if (edit.enabled !== undefined) rule.enabled = edit.enabled
-      if (edit.severity !== undefined) rule.severity = edit.severity
-      if (edit.expr !== undefined) rule.expr = edit.expr
-    }
-    if (missing.length > 0) {
-      return reject('这些规则 id 不存在', {
-        missing,
-        // 给前 20 个 id 让模型自己纠正，省一整轮
-        available: context.pack.rules.slice(0, 20).map((rule) => rule.id),
-      })
-    }
-
-    // 模型改出来的包必须先过契约校验：它可能写出语法合法但语义不对的表达式。
-    const validation = validatePack(draft)
-    if (!validation.ok) {
-      return reject('草稿规则包未通过契约校验', { errors: formatPackErrors(validation.errors).slice(0, 6) })
-    }
-
-    const rows = context.sessions.map((session) => {
-      const before = cardOf(context, session)
-      const after = buildCard(
-        session.trajectory,
-        session.metrics,
-        validation.pack,
-        context.annotations,
-      )
-      return {
-        sessionId: session.id,
-        label: session.trajectory.label,
-        before: before.overall,
-        after: after.overall,
-        delta: after.overall - before.overall,
-      }
-    })
-
-    const average = (pick: 'before' | 'after') =>
-      rows.length === 0 ? 0 : Math.round((rows.reduce((sum, row) => sum + row[pick], 0) / rows.length) * 10) / 10
-    const ruleIssues = new Map<string, string>()
-    for (const session of context.sessions) {
-      const card = buildCard(session.trajectory, session.metrics, validation.pack, context.annotations)
-      for (const issue of card.ruleIssues) ruleIssues.set(issue.ruleId, issue.message)
-    }
-
-    // 把「改完之后实际扣多少」直接算给它，别让模型自己乘严重度系数——
-    // 实测它会算错（把 scoreImpact 当成有效扣分），然后在结论里写一个编出来的数。
-    const applied = edits
-      .map((edit) => {
-        const rule = validation.pack.rules.find((item) => item.id === edit.ruleId)
-        if (!rule) return null
-        return {
-          ruleId: rule.id,
-          severity: rule.severity,
-          scoreImpact: rule.scoreImpact,
-          effectiveImpact: Math.round(rule.scoreImpact * SEVERITY_FACTOR[rule.severity] * 10) / 10,
-        }
-      })
-      .filter((item): item is NonNullable<typeof item> => item !== null)
+    const draft = draftPack(context, edits)
+    if (!draft.ok) return draft.outcome
+    const simulation = simulateOn(context, draft.pack)
 
     return wrap({
       valid: true,
-      applied,
-      averageBefore: average('before'),
-      averageAfter: average('after'),
-      delta: Math.round((average('after') - average('before')) * 10) / 10,
-      // 表达式出错不会让评分失败，只会让规则静默不生效——必须显式报出来。
-      ruleIssues: [...ruleIssues].map(([ruleId, message]) => ({ ruleId, message })),
-      rows,
+      applied: draft.applied,
+      averageBefore: simulation.averageBefore,
+      averageAfter: simulation.averageAfter,
+      delta: simulation.delta,
+      ruleIssues: simulation.ruleIssues,
+      rows: simulation.rows,
+    })
+  },
+}
+
+const proposePack: Tool = {
+  spec: {
+    name: 'propose_pack',
+    description:
+      '提交一份规则包提案（**不会生效**，要不要采用由人决定）。给出 edits 与理由，工具会自动试跑并记下改前/改后的平均分。只有你确实认为规则口径该调整时才用；多数情况下「不用改」才是正解。',
+    parameters: {
+      type: 'object',
+      properties: {
+        rationale: { type: 'string', description: '为什么该这么改，一句话' },
+        edits: {
+          type: 'array',
+          description: '要改的规则字段',
+          items: {
+            type: 'object',
+            properties: {
+              ruleId: { type: 'string' },
+              scoreImpact: { type: 'number' },
+              enabled: { type: 'boolean' },
+              severity: { type: 'string', enum: ['error', 'warn', 'info'] },
+              expr: { type: 'string' },
+            },
+            required: ['ruleId'],
+          },
+        },
+      },
+      required: ['rationale', 'edits'],
+    },
+  },
+  run: (args, context) => {
+    const edits = readEdits(args)
+    if (!edits) return reject('需要非空的 edits 数组，每项至少含 ruleId')
+    const rationale = readString(args, 'rationale')
+    if (!rationale) return reject('需要 rationale：一句话说明为什么该这么改')
+
+    const draft = draftPack(context, edits)
+    if (!draft.ok) return draft.outcome
+
+    const index = (context.proposals?.length ?? 0) + 1
+    const named: RulePack = { ...draft.pack, name: `${context.pack.name} · 提案 ${index}` }
+    const simulation = simulateOn(context, named)
+
+    const proposal: PackProposal = {
+      id: `p${index}`,
+      rationale,
+      edits,
+      applied: draft.applied,
+      // 存完整包：CLI 直接写成文件就能当 --pack 用，不必再由人拼一遍。
+      pack: named,
+      averageBefore: simulation.averageBefore,
+      averageAfter: simulation.averageAfter,
+      delta: simulation.delta,
+      rows: simulation.rows,
+    }
+    context.proposals?.push(proposal)
+
+    return wrap({
+      accepted: true,
+      id: proposal.id,
+      // 明确指出「还没生效」：模型据此在结论里不要说「已修复」。
+      appliedToWorkspace: false,
+      averageBefore: proposal.averageBefore,
+      averageAfter: proposal.averageAfter,
+      delta: proposal.delta,
+      ruleIssues: simulation.ruleIssues,
     })
   },
 }
@@ -699,6 +811,8 @@ export const TOOLS: Tool[] = [
   simulatePack,
   tuneLiteral,
   compareSessionsTool,
+  // 提案排在终结工具之前：模型先算、再提议、最后收尾，顺序与它的调用习惯一致。
+  proposePack,
   submitDiagnosis,
 ]
 
