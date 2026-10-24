@@ -151,11 +151,29 @@ export function fieldsForScope(scope: 'step' | 'trajectory'): FieldSpec[] {
 
 // ---------- schema ----------
 
+/** 维度颜色会被界面原样写进内联 `background`，所以它不是「一个字符串」，是一段 CSS。
+ *  `url(http://…)` 作为颜色会让浏览器在渲染时去取这个地址：导入一份规则包就能让页面
+ *  向外发请求，而这个工具对外的承诺是「文件不出本机」。因此只收下面几种写法：
+ *  - 十六进制 `#rgb` / `#rgba` / `#rrggbb` / `#rrggbbaa`；
+ *  - `rgb()` / `rgba()` / `hsl()` / `hsla()`，括号里只许数字、小数点、逗号、空白、`%`、`/`、`deg`；
+ *  括号内不含字母（除 `deg`），所以 `var()`、`url()`、`calc()` 之类的函数都进不来。
+ *  命名颜色（`red`）没有放行：内置包全是十六进制，宁可严一点。 */
+const HEX_COLOR = /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
+const FUNCTION_COLOR = /^(?:rgba?|hsla?)\(\s*[0-9.,%/\s]+(?:deg)?[0-9.,%/\s]*\)$/i
+
+export function isSafeCssColor(value: string): boolean {
+  const text = value.trim()
+  return text.length <= 64 && (HEX_COLOR.test(text) || FUNCTION_COLOR.test(text))
+}
+
 const dimensionSchema = z.object({
   id: z.string().min(1, '维度 id 不能为空'),
   label: z.string().min(1, '维度名不能为空'),
   weight: z.number().min(0, 'weight 不能为负').max(1, 'weight 不能大于 1'),
-  color: z.string().min(1, '缺少颜色'),
+  color: z
+    .string()
+    .min(1, '缺少颜色')
+    .refine(isSafeCssColor, '颜色只能是十六进制（#rrggbb）或 rgb()/hsl() 的数值写法'),
   description: z.string().default(''),
 })
 
