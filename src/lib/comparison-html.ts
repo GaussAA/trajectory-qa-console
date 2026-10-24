@@ -85,6 +85,24 @@ function renderFindings(
   return `<h3>${escapeHtml(title)}</h3><ul class="findings">${items}</ul>`
 }
 
+/** 同一个问题、程度变了：前后两句并排。 */
+function renderChanged(changed: ReturnType<typeof buildComparisonModel>['findingDiff']['changed'], t: Translate): string {
+  if (changed.length === 0) return ''
+  const items = changed
+    .map(
+      ({ before, after }) => `<li class="finding sev-${after.severity}">
+        <div class="finding-head">
+          <span class="sev">${escapeHtml(severityText(t, after.severity))}</span>
+          <span class="rule">${escapeHtml(after.ruleTitle)}</span>
+        </div>
+        <p class="finding-body">${escapeHtml(before.message)}</p>
+        <p class="finding-body">→ ${escapeHtml(after.message)}</p>
+      </li>`,
+    )
+    .join('\n')
+  return `<h3>${escapeHtml(t('report.compare.changedSection'))}</h3><ul class="findings">${items}</ul>`
+}
+
 function renderStepRows(rows: AlignedStep[], t: Translate): string {
   return rows
     .map((row) => {
@@ -290,6 +308,7 @@ ${dimensionRows}
     )}</p>
     ${renderFindings(t('report.compare.addedSection'), findingDiff.added, 'added', t)}
     ${renderFindings(t('report.compare.resolvedSection'), findingDiff.resolved, 'resolved', t)}
+    ${renderChanged(findingDiff.changed, t)}
     ${adviceHtml}
   </section>
 

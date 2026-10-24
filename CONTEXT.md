@@ -141,9 +141,15 @@ node dist-cli/qa.mjs examples --pack en --locale en --out ./qa-out   # 全英文
 顶栏「对比」（需 ≥2 条轨迹）进入对比模式：左侧会话列表保留，中右两列合并。
 
 - `core/compare.ts`：`compareCards`（分数/维度/步数/token 增量）、
-  `diffFindings`（新增 / 已修复 / 仍在）、`alignSteps`（按 `角色|工具名` 做 LCS 对齐，
+  `diffFindings`（新增 / 已修复 / 仍在 / 程度变了；**要先对齐再比**，见下）、`alignSteps`（按 `角色|工具名` 做 LCS 对齐，
   内容差异用 FNV-1a 指纹判定）、`summarizeAlignment`。
 - 对齐上限 `(n+1)(m+1) > 400_000` 时退化为按位置配对，**不假装对齐过**。
+- **问题变化要先对齐再比**：`diffFindings(before, after, rows)` 先把基准的步号按对齐换算到对照的步号，
+  再按「规则 + 对齐后的步」认同一条问题。改 prompt 后中间多出一步，后面所有逐步问题的步号都 +1，
+  不换算的话每一条都会显示成「已修复 + 新增」。消息文案**不进键**（里面嵌着步号和计数）；
+  同一个问题文案变了（重复次数 9 → 12）记在 `changed`，不是消失加出现。基准里被删掉的步上的问题
+  算已修复，键是 `规则#removed:N`，不会和对照里某个恰好同号的步撞上。不传 `rows` 就按原始步号比。
+  面板和导出的三种报告都走这条路径（`buildComparisonModel` / `ComparePanel` 先 `alignSteps`）。
 - 只有一条轨迹时不进对比，直接提示「至少两条」。
 - 深链：`?compare` 打开对比（配合 `#demo` 载入示例）。
 

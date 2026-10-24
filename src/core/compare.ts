@@ -35,6 +35,8 @@ export interface FindingDiff {
   added: Finding[]
   resolved: Finding[]
   persisted: Finding[]
+  /** `persisted` 里文案变了的那几条（比如重复次数 9 → 12）：同一个问题，只是程度变了。 */
+  changed: { before: Finding; after: Finding }[]
   /** 新增数 - 修复数。 */
   netChange: number
 }
@@ -96,20 +98,68 @@ export function compareCards(before: CompareSide, after: CompareSide): CardDiff 
   }
 }
 
-/** 同一规则落在同一步视为同一条问题；步号不同就算两条。 */
-export function findingKey(finding: Finding): string {
-  return `${finding.ruleId}#${finding.stepIndex ?? 'trajectory'}#${finding.message}`
+/** 基准的步号 → 对照里与它配对的那一步的步号。只有两边都在的行才有映射：
+ *  被删掉的步、新增的步都没有。大轨迹退化成按位置配对时，行里照样是成对的，这里照样成立。 */
+function stepMapping(rows: AlignedStep[]): Map<number, number> {
+  const mapping = new Map<number, number>()
+  for (const row of rows) {
+    if (row.before && row.after) mapping.set(row.before.index, row.after.index)
+  }
+  return mapping
 }
 
-export function diffFindings(before: Finding[], after: Finding[]): FindingDiff {
-  const beforeKeys = new Set(before.map(findingKey))
-  const afterKeys = new Set(after.map(findingKey))
+/** 一条问题在「对照的坐标系」里的身份：规则 + 步。
+ *
+ *  不含消息文案：文案里嵌着步号和计数（「第 7 步…」「连续 9 次」），步号一挪、计数一变，
+ *  键就变了，同一个问题被当成「一条消失、一条出现」。文案变了另外记（见 `changed`）。
+ *
+ *  `mapped` 为 undefined 表示没有对齐信息，直接用原始步号；为 null 表示这条问题所在的步
+ *  在对照里没有配对（被删了），给一个绝不会和对照侧撞上的键——它不是「还在」，是随那一步一起没了。 */
+function identity(finding: Finding, mapped: number | null | undefined): string {
+  if (finding.stepIndex === undefined) return `${finding.ruleId}#trajectory`
+  if (mapped === null) return `${finding.ruleId}#removed:${finding.stepIndex}`
+  return `${finding.ruleId}#${mapped ?? finding.stepIndex}`
+}
 
-  const added = after.filter((finding) => !beforeKeys.has(findingKey(finding)))
-  const resolved = before.filter((finding) => !afterKeys.has(findingKey(finding)))
-  const persisted = after.filter((finding) => beforeKeys.has(findingKey(finding)))
+/** 把文案里「这条问题自己的步号」抹掉再比较。插入一步后「第 4 步没有结果」变成「第 5 步没有结果」，
+ *  问题没变，只是步号跟着挪了，不该算文案变化；而「连续 9 次」→「连续 12 次」是真的变了。
+ *  这是启发式：计数恰好等于步号时会被一并抹掉，代价只是少标一个「变化」，不会影响增删判定。 */
+function textWithoutOwnStep(finding: Finding): string {
+  if (finding.stepIndex === undefined) return finding.message
+  const own = String(finding.stepIndex + 1)
+  return finding.message.replace(new RegExp(`(?<!\\d)${own}(?!\\d)`, 'g'), '#')
+}
 
-  return { added, resolved, persisted, netChange: added.length - resolved.length }
+/** 两条轨迹的问题变化。
+ *
+ *  传入 `rows`（`alignSteps` 的结果）时，基准的步号先按对齐换算到对照的步号再认同一条问题：
+ *  改 prompt 后中间多出一步，后面所有逐步问题的步号都 +1，不换算的话每一条都会显示成
+ *  「已修复 + 新增」，净变化为 0，却列出一长串假的增删。
+ *  不传就按原始步号比，行为与从前一致。 */
+export function diffFindings(before: Finding[], after: Finding[], rows?: AlignedStep[]): FindingDiff {
+  const mapping = rows ? stepMapping(rows) : undefined
+  const beforeIdentity = (finding: Finding): string => {
+    if (!mapping || finding.stepIndex === undefined) return identity(finding, undefined)
+    return identity(finding, mapping.get(finding.stepIndex) ?? null)
+  }
+
+  const beforeByKey = new Map<string, Finding>()
+  for (const finding of before) beforeByKey.set(beforeIdentity(finding), finding)
+  const afterByKey = new Map<string, Finding>()
+  for (const finding of after) afterByKey.set(identity(finding, undefined), finding)
+
+  const added = after.filter((finding) => !beforeByKey.has(identity(finding, undefined)))
+  const resolved = before.filter((finding) => !afterByKey.has(beforeIdentity(finding)))
+  const persisted = after.filter((finding) => beforeByKey.has(identity(finding, undefined)))
+
+  const changed = persisted.flatMap((finding) => {
+    const previous = beforeByKey.get(identity(finding, undefined))
+    return previous && textWithoutOwnStep(previous) !== textWithoutOwnStep(finding)
+      ? [{ before: previous, after: finding }]
+      : []
+  })
+
+  return { added, resolved, persisted, changed, netChange: added.length - resolved.length }
 }
 
 /** 结构签名：角色 + 工具名。文本变化不算结构变化。 */

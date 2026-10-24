@@ -277,8 +277,10 @@ function stepPreview(step: { text: string; toolCalls: { name: string }[] } | und
  *  per export was pure waste. */
 export function buildComparisonModel(input: ComparisonInput) {
   const cardDiff = compareCards(input.base, input.target)
-  const findingDiff = diffFindings(input.base.card.findings, input.target.card.findings)
+  // 先对齐、再比问题：基准的步号要按对齐结果换算到对照的步号，否则中间多出一步，
+  // 后面每条逐步问题都会显示成「已修复 + 新增」。
   const rows = alignSteps(input.base.trajectory.steps, input.target.trajectory.steps)
+  const findingDiff = diffFindings(input.base.card.findings, input.target.card.findings, rows)
   return {
     cardDiff,
     findingDiff,
@@ -376,6 +378,18 @@ export function renderComparisonMarkdown(input: ComparisonInput, model: Comparis
   writeFindings(t('report.compare.addedSection'), findingDiff.added)
   writeFindings(t('report.compare.resolvedSection'), findingDiff.resolved)
 
+  // 同一个问题、程度变了（重复次数 9 → 12）：既不是新增也不是已修复，单独列出前后两句。
+  if (findingDiff.changed.length > 0) {
+    lines.push(`### ${t('report.compare.changedSection')}`)
+    lines.push('')
+    findingDiff.changed.forEach(({ before, after }, index) => {
+      lines.push(`${index + 1}. **${severityText(t, after.severity)}** · **${mdInline(after.ruleTitle)}**`)
+      lines.push(`   - ${t('report.detail', { text: mdCell(before.message) })}`)
+      lines.push(`   - → ${t('report.detail', { text: mdCell(after.message) })}`)
+    })
+    lines.push('')
+  }
+
   // 建议只针对「对照」新增的问题：基准已经修过的东西不必再提。
   const advice = buildAdvice(findingDiff.added, input.locale)
   if (advice.length > 0) {
@@ -443,8 +457,10 @@ export function renderComparisonJson(input: ComparisonInput, model: ComparisonMo
         added: findingDiff.added.length,
         resolved: findingDiff.resolved.length,
         persisted: findingDiff.persisted.length,
+        changed: findingDiff.changed.length,
         addedItems: findingDiff.added,
         resolvedItems: findingDiff.resolved,
+        changedItems: findingDiff.changed,
       },
       steps: summary,
       // JSON 给机器读，不按 maxStepRows 截断：悄悄少几行，下游会以为变化更少。
