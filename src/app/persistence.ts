@@ -86,6 +86,30 @@ const MIGRATIONS: Record<number, (data: unknown) => unknown> = {
   // 1: (data) => ({ ...data, renamedField: (data as { old?: string }).old }),
 }
 
+/** Walk the chain from `fromVersion` up to `toVersion`.
+ *
+ *  A missing migration is a bug, not a condition to tolerate: skipping it would
+ *  silently reinterpret the payload — the exact failure this chain exists to
+ *  prevent. `toVersion` is a parameter so a test can exercise a future version
+ *  without bumping SCHEMA_VERSION. */
+export function migrateToCurrent(
+  data: unknown,
+  fromVersion: number,
+  toVersion: number = SCHEMA_VERSION,
+): unknown {
+  let migrated = data
+  for (let from = fromVersion; from < toVersion; from += 1) {
+    const migrate = MIGRATIONS[from]
+    if (!migrate) {
+      throw new Error(
+        `missing storage migration ${from} -> ${from + 1}: raising SCHEMA_VERSION requires adding it`,
+      )
+    }
+    migrated = migrate(migrated)
+  }
+  return migrated
+}
+
 function unwrap(raw: string): unknown {
   const parsed: unknown = JSON.parse(raw)
   if (parsed && typeof parsed === 'object' && 'schemaVersion' in parsed && 'data' in parsed) {
@@ -93,13 +117,7 @@ function unwrap(raw: string): unknown {
     const version = envelope.schemaVersion
     if (typeof version !== 'number') return envelope.data
     if (version > SCHEMA_VERSION) throw new FutureSchemaVersionError(version)
-
-    let data = envelope.data
-    for (let from = version; from < SCHEMA_VERSION; from += 1) {
-      const migrate = MIGRATIONS[from]
-      if (migrate) data = migrate(data)
-    }
-    return data
+    return migrateToCurrent(envelope.data, version)
   }
   // v0.1 wrote the payload bare; treat it as schemaVersion 1.
   return parsed

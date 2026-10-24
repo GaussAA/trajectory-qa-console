@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Annotation, PackVariant } from '../core/model'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
 import {
+  migrateToCurrent,
   SCHEMA_VERSION,
   STORAGE_KEYS,
   createMemoryStorage,
@@ -89,6 +90,16 @@ describe('persistence', () => {
     const events = telemetry.snapshot()
     expect(events.some((event) => event.name === 'storage:pack-corrupt')).toBe(true)
     expect(events.some((event) => event.name === 'storage:annotations-corrupt')).toBe(true)
+  })
+
+  it('refuses to skip a migration that was never written', () => {
+    // The chain is empty today (SCHEMA_VERSION is 1). The point is what happens
+    // the day someone raises it and forgets the entry: a silent skip would
+    // reinterpret v1 data as v2, which is the whole failure mode this exists
+    // to prevent. Skipping used to be exactly what the loop did.
+    expect(migrateToCurrent({ a: 1 }, 1, 1)).toEqual({ a: 1 })
+    expect(() => migrateToCurrent({ a: 1 }, 1, 2)).toThrow(/missing storage migration 1 -> 2/)
+    expect(() => migrateToCurrent({ a: 1 }, 1, 3)).toThrow(/missing storage migration 1 -> 2/)
   })
 
   it('still reads bare v0.1 payloads as version 1', () => {
