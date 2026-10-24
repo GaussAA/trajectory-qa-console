@@ -17,6 +17,7 @@ import { isRecord, looksLikeMessage, pairToolResults, pick, toSteps } from './no
 
 const CONTAINER_KEYS = [
   'messages',
+  'conversations',
   'steps',
   'trajectory',
   'conversation',
@@ -39,18 +40,24 @@ interface SessionDraft {
 
 function findMessageArray(value: unknown): unknown[] | undefined {
   if (!isRecord(value)) return undefined
-  for (const key of CONTAINER_KEYS) {
-    const candidate = value[key]
-    if (Array.isArray(candidate)) return candidate
-  }
+  const candidates = CONTAINER_KEYS.map((key) => value[key]).filter((item): item is unknown[] => Array.isArray(item))
+  // 优先取「里面真是消息」的那个数组。SWE-agent 的记录同时有 `trajectory`（动作记录）和
+  // `history`（消息），按键的先后取第一个数组，会把动作记录当消息读。
+  const real = candidates.find((item) => item.some(looksLikeMessage))
+  if (real) return real
+  // 外层没有像消息的数组时，再去嵌套容器里找真消息（`{data:{messages:[…]}}`）。
+  let nestedFallback: unknown[] | undefined
   for (const key of NESTED_KEYS) {
     const nested = value[key]
-    if (isRecord(nested)) {
-      const found = findMessageArray(nested)
-      if (found) return found
-    }
+    if (!isRecord(nested)) continue
+    const found = findMessageArray(nested)
+    if (!found) continue
+    if (found.some(looksLikeMessage)) return found
+    nestedFallback ??= found
   }
-  return undefined
+  // 哪里都找不到像消息的数组：保持老行为，取第一个，让后面的「无可评分」去拒绝，
+  // 而不是在这里换一种报错。
+  return candidates[0] ?? nestedFallback
 }
 
 export function detectSessions(value: unknown): Result<SessionDraft[]> {

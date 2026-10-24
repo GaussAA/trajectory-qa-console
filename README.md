@@ -61,8 +61,9 @@ pnpm verify           # typecheck + lint + coverage + 文案扫描 + 构建 + �
 **支持的输入**：OpenAI Chat Completions 消息（数组或 `{messages:[…]}` 等常见容器）、JSONL、
 OpenAI Responses 条目（`function_call` / `function_call_output`）、Anthropic 内容块
 （`tool_use` / `tool_result`，并行结果会拆成独立步骤）。没有助手或工具步骤的会话不会被评分，
-而是作为「被跳过」报告，不会拿到虚高分。SWE-agent、ShareGPT、LangChain `model_dump` 等格式尚未适配，
-请先转成上面的形态，详见 [CONTEXT.md](CONTEXT.md) 的「输入格式」。
+而是作为「被跳过」报告，不会拿到虚高分。也能读 ShareGPT（`conversations`）、LangChain
+（`model_dump` / `messages_to_dict` / 构造器形式）和 SWE-agent 的 `history`。OpenHands 事件等其它格式
+不支持，会被拒绝而不是打分，请先转成上面的形态，详见 [CONTEXT.md](CONTEXT.md) 的「输入格式」。
 键盘：`↑` / `↓`（或 `j` / `k`）逐步查看轨迹。
 
 界面随窗口自适应：**宽度**决定几栏（1280 以上三栏，1024–1279 左栏收成 56px 图标条，

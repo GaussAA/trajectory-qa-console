@@ -19,6 +19,7 @@ const ROLE_MAP: Record<string, Role> = {
   assistant: 'assistant',
   ai: 'assistant',
   bot: 'assistant',
+  gpt: 'assistant',
   model: 'assistant',
   agent: 'assistant',
   tool: 'tool',
@@ -216,7 +217,8 @@ function readParts(parts: unknown[], draft: ContentDraft): void {
 function readContentDraft(message: Record<string, unknown>): ContentDraft {
   const draft: ContentDraft = { text: '', reasoning: '', calls: [], notes: [] }
 
-  const content = message.content
+  // ShareGPT 把正文放在 `value` 里。只在没有 content 时才退到它。
+  const content = message.content ?? message.value
   if (typeof content === 'string') draft.text = content
   else if (Array.isArray(content)) readParts(content, draft)
   else if (content !== undefined && content !== null) draft.text = readText(content)
@@ -242,9 +244,52 @@ function readContentDraft(message: Record<string, unknown>): ContentDraft {
   return draft
 }
 
+/** LangChain 的类名 → 角色。id 数组的最后一项就是类名。 */
+const LANGCHAIN_CLASS_ROLE: Record<string, Role> = {
+  humanmessage: 'user',
+  aimessage: 'assistant',
+  aimessagechunk: 'assistant',
+  systemmessage: 'system',
+  toolmessage: 'tool',
+  functionmessage: 'tool',
+}
+
+/** `type` 字段当角色用时认哪些：LangChain 的 model_dump() / messages_to_dict() 都这么写。 */
+const TYPE_AS_ROLE = new Set(['human', 'ai', 'system', 'tool', 'function'])
+
+function isLangChainConstructor(value: Record<string, unknown>): boolean {
+  return value.lc !== undefined && isRecord(value.kwargs) && Array.isArray(value.id)
+}
+
+/** 把 LangChain 的两种外壳剥成普通消息，其余原样返回。
+ *  - 构造器形式 {lc, type:'constructor', id:[…,'HumanMessage'], kwargs:{content}}：角色来自类名；
+ *  - messages_to_dict 形式 {type:'human', data:{content, …}}：负载在 data 里。
+ *  只在确认是这两种壳时才动手，所以一条普通消息恰好带个 data 字段不会被误剥。 */
+export function unwrapMessage(value: Record<string, unknown>): Record<string, unknown> {
+  if (isLangChainConstructor(value)) {
+    const kwargs = value.kwargs as Record<string, unknown>
+    const cls = String((value.id as unknown[]).at(-1) ?? '').toLowerCase()
+    const role = LANGCHAIN_CLASS_ROLE[cls]
+    return role ? { role, ...kwargs } : kwargs
+  }
+  if (
+    typeof value.type === 'string' &&
+    TYPE_AS_ROLE.has(value.type.toLowerCase()) &&
+    typeof value.role !== 'string' &&
+    isRecord(value.data)
+  ) {
+    return { ...value.data, type: value.type }
+  }
+  return value
+}
+
 export function looksLikeMessage(value: unknown): boolean {
   if (!isRecord(value)) return false
   if (typeof value.role === 'string') return true
+  if (isLangChainConstructor(value)) return true
+  if (typeof value.type === 'string' && TYPE_AS_ROLE.has(value.type.toLowerCase())) return true
+  // ShareGPT：{from, value}
+  if (typeof value.from === 'string' && typeof value.value === 'string') return true
   if (
     typeof value.type === 'string' &&
     (TOOL_USE_TYPES.has(value.type) || TOOL_RESULT_TYPES.has(value.type))
@@ -272,40 +317,47 @@ export function toStep(raw: unknown, index: number): Step {
     }
   }
 
-  const type = typeof raw.type === 'string' ? raw.type : ''
-  let role = normalizeRole(pick(raw, ['role', 'sender', 'author', 'from', 'speaker']))
+  // 剥掉 LangChain 的外壳；`raw`（原样保留在 Step 上给检视器看）仍是剥之前的对象，
+  // 下面读字段一律用 `source`。
+  const source = unwrapMessage(raw)
+  const type = typeof source.type === 'string' ? source.type : ''
+  let role = normalizeRole(pick(source, ['role', 'sender', 'author', 'from', 'speaker']))
+  // LangChain 把角色写在 `type` 里。只在没有显式角色时才用，所以不会盖过 role 字段。
+  if (role === 'unknown' && TYPE_AS_ROLE.has(type.toLowerCase())) {
+    role = normalizeRole(type.toLowerCase() === 'ai' ? 'assistant' : type)
+  }
   if (role === 'unknown' && TOOL_USE_TYPES.has(type)) role = 'assistant'
   if (role === 'unknown' && TOOL_RESULT_TYPES.has(type)) role = 'tool'
 
-  const draft = readContentDraft(raw)
+  const draft = readContentDraft(source)
   // Anthropic-style traces put `tool_result` parts on a user message.
   if (draft.resultContent !== undefined && role !== 'tool') role = 'tool'
 
   // OpenAI Responses items carry the call/result on the item itself.
-  if (TOOL_USE_TYPES.has(type) && !isRecord(raw.function) && draft.calls.length === 0) {
-    const call = toCallDraft(raw, notes)
+  if (TOOL_USE_TYPES.has(type) && !isRecord(source.function) && draft.calls.length === 0) {
+    const call = toCallDraft(source, notes)
     if (call) draft.calls.push(call)
   }
 
   let result: ToolResult | undefined
   if (role === 'tool' || TOOL_RESULT_TYPES.has(type)) {
-    const callIdRaw = pick(raw, ['tool_call_id', 'toolCallId', 'call_id', 'tool_use_id'])
+    const callIdRaw = pick(source, ['tool_call_id', 'toolCallId', 'call_id', 'tool_use_id'])
     const noteCallId = draft.notes.find((note) => note.startsWith('RESULT_CALL_ID:'))
     const callId =
       typeof callIdRaw === 'string' ? callIdRaw : noteCallId ? noteCallId.slice('RESULT_CALL_ID:'.length) : ''
-    const content = draft.resultContent ?? readText(pick(raw, ['content', 'output', 'result']))
-    const flagError = Boolean(raw.is_error ?? raw.isError) || Boolean(draft.resultIsError)
+    const content = draft.resultContent ?? readText(pick(source, ['content', 'output', 'result', 'value']))
+    const flagError = Boolean(source.is_error ?? source.isError) || Boolean(draft.resultIsError)
     const prefixedError = /^\s*(error|exception|traceback)\b/i.test(content)
     result = {
       callId,
-      name: typeof raw.name === 'string' ? raw.name : undefined,
+      name: typeof source.name === 'string' ? source.name : undefined,
       content,
       isError: flagError || prefixedError,
-      timestamp: readTimestamp(raw),
+      timestamp: readTimestamp(source),
     }
   }
 
-  const usage = readUsage(raw)
+  const usage = readUsage(source)
   const textTokens = estimateTokens(draft.text) + estimateTokens(draft.reasoning)
   const callTokens = draft.calls.reduce((sum, call) => sum + estimateTokens(call.rawArgs), 0)
   const resultTokens = estimateTokens(result?.content ?? '')
@@ -332,7 +384,7 @@ export function toStep(raw: unknown, index: number): Step {
     reasoning: draft.reasoning,
     toolCalls,
     result,
-    timestamp: readTimestamp(raw),
+    timestamp: readTimestamp(source),
     tokens,
     charCount:
       draft.text.length +
