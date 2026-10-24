@@ -8,7 +8,7 @@ import { fail, type ErrorCode, type Result } from '../model'
 import type { Trajectory } from '../model'
 import { complete, type CompleteFailure } from '../llm/complete'
 import { extractContent, inspectResponse } from '../llm/response'
-import { buildMessages, DIGEST_DEFAULTS, type DigestOptions } from './prompt'
+import { buildJudgementPrompt, DIGEST_DEFAULTS, type DigestOptions } from './prompt'
 import { parseJudgement } from './parse'
 import type { LlmTransport, SemanticFinding } from './types'
 
@@ -36,7 +36,7 @@ export async function judgeTrajectory(
   trajectory: Trajectory,
   options: JudgeOptions,
 ): Promise<Result<SemanticFinding[]>> {
-  const messages = buildMessages(trajectory, options.digest ?? DIGEST_DEFAULTS)
+  const { messages, digestText } = buildJudgementPrompt(trajectory, options.digest ?? DIGEST_DEFAULTS)
   const maxTokens = options.maxTokens ?? DEFAULT_MAX_TOKENS
   const body = JSON.stringify({
     model: options.model,
@@ -84,6 +84,8 @@ export async function judgeTrajectory(
   return parseJudgement(content, {
     stepCount: trajectory.steps.length,
     maxFindings: options.maxFindings,
+    // 引文要对着「模型实际看到的那份」核对：已脱敏的摘要，而不是原始轨迹。
+    digestText,
   })
 }
 

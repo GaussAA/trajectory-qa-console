@@ -494,24 +494,65 @@ const listRules: Tool = {
   },
 }
 
-function readEdits(args: Record<string, unknown>): RuleEdit[] | null {
+/** 数值参数。规格里 `scoreImpact` 声明的是 number，规则包本身也允许小数（0–100），
+ *  所以这里不能像 `readInt` 那样只收整数。模型有时把数字写成字符串，也收。 */
+function readNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string' && /^-?\d+(\.\d+)?$/.test(value.trim())) return Number(value)
+  return null
+}
+
+type EditsRead = { ok: true; edits: RuleEdit[] } | { ok: false; error: string }
+
+/** 把工具参数读成规则改动。**写错了就报错，不丢弃。**
+ *
+ *  此前不认的字段（小数的 scoreImpact、拼错的 severity、字符串形式的 enabled）被悄悄忽略，
+ *  `draftPack` 什么也没改、`validatePack` 当然通过，于是 simulate_pack 返回 valid:true、delta:0，
+ *  模型据此写出「这条改动没有影响」——一个由我们的静默丢弃造出来的、看似有数字支撑的错误结论。 */
+function readEdits(args: Record<string, unknown>): EditsRead {
   const raw = args.edits
-  if (!Array.isArray(raw) || raw.length === 0) return null
+  if (!Array.isArray(raw) || raw.length === 0) {
+    return { ok: false, error: '需要非空的 edits 数组，每项至少含 ruleId' }
+  }
   const edits: RuleEdit[] = []
-  for (const item of raw) {
+  for (const [index, item] of raw.entries()) {
+    const where = `edits[${index}]`
+    if (typeof item !== 'object' || item === null || Array.isArray(item)) {
+      return { ok: false, error: `${where} 必须是对象` }
+    }
     const record = item as Record<string, unknown>
     const ruleId = readString(record, 'ruleId')
-    if (!ruleId) continue
+    if (!ruleId) return { ok: false, error: `${where}.ruleId 缺失或不是非空字符串` }
     const edit: RuleEdit = { ruleId }
-    const impact = readInt(record, 'scoreImpact')
-    if (impact !== null) edit.scoreImpact = impact
-    if (typeof record.enabled === 'boolean') edit.enabled = record.enabled
-    if (isSeverity(record.severity)) edit.severity = record.severity
-    const expr = readString(record, 'expr')
-    if (expr) edit.expr = expr
+
+    // null 与缺省等价：模型常把没打算改的字段显式写成 null。
+    const given = (key: string) => record[key] !== undefined && record[key] !== null
+
+    if (given('scoreImpact')) {
+      const impact = readNumber(record.scoreImpact)
+      if (impact === null) return { ok: false, error: `${where}.scoreImpact 必须是数字，收到 ${JSON.stringify(record.scoreImpact)}` }
+      edit.scoreImpact = impact
+    }
+    if (given('enabled')) {
+      if (typeof record.enabled !== 'boolean') {
+        return { ok: false, error: `${where}.enabled 必须是 true 或 false（布尔值），收到 ${JSON.stringify(record.enabled)}` }
+      }
+      edit.enabled = record.enabled
+    }
+    if (given('severity')) {
+      if (!isSeverity(record.severity)) {
+        return { ok: false, error: `${where}.severity 只能是 error / warn / info，收到 ${JSON.stringify(record.severity)}` }
+      }
+      edit.severity = record.severity
+    }
+    if (given('expr')) {
+      const expr = readString(record, 'expr')
+      if (!expr) return { ok: false, error: `${where}.expr 必须是非空字符串` }
+      edit.expr = expr
+    }
     edits.push(edit)
   }
-  return edits.length > 0 ? edits : null
+  return { ok: true, edits }
 }
 
 const simulatePack: Tool = {
@@ -542,8 +583,9 @@ const simulatePack: Tool = {
     },
   },
   run: (args, context) => {
-    const edits = readEdits(args)
-    if (!edits) return reject('需要非空的 edits 数组，每项至少含 ruleId')
+    const read = readEdits(args)
+    if (!read.ok) return reject(read.error)
+    const edits = read.edits
 
     const draft = draftPack(context, edits)
     if (!draft.ok) return draft.outcome
@@ -590,8 +632,9 @@ const proposePack: Tool = {
     },
   },
   run: (args, context) => {
-    const edits = readEdits(args)
-    if (!edits) return reject('需要非空的 edits 数组，每项至少含 ruleId')
+    const read = readEdits(args)
+    if (!read.ok) return reject(read.error)
+    const edits = read.edits
     const rationale = readString(args, 'rationale')
     if (!rationale) return reject('需要 rationale：一句话说明为什么该这么改')
 

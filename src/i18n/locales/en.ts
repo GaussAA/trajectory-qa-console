@@ -446,6 +446,7 @@ export const en: Record<MessageKey, string> = {
   'compare.status.added': 'added',
   'compare.status.removed': 'removed',
 
+  'semantic.unverifiedNote': '(the quote the model cited could not be verified in the trace; downgraded to info)',
   'semantic.category.off_topic': 'Off-topic answer',
   'semantic.category.unsupported_claim': 'Unsupported claim',
   'semantic.category.overreach': 'Overreach',

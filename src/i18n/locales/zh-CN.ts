@@ -435,6 +435,7 @@ export const zhCN = {
   'compare.status.changed': '内容变化',
   'compare.status.added': '新增步',
   'compare.status.removed': '删除步',
+  'semantic.unverifiedNote': '（模型引用的原文未能在轨迹中核实，已降为提示）',
   'semantic.category.off_topic': '答非所问',
   'semantic.category.unsupported_claim': '无依据断言',
   'semantic.category.overreach': '越权承诺',
