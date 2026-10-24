@@ -89,6 +89,22 @@ describe('import reports every problem it had', () => {
     expect(result.current.state.issues[0]?.params).toMatchObject({ limit: INGEST_LIMITS.maxFiles, extra: 1 })
   })
 
+  it('keeps the specific reason instead of collapsing every failure', async () => {
+    const { result } = setup()
+
+    await act(async () => {
+      void result.current.actions.ingestFiles([
+        { name: 'bad.json', size: 8, text: async () => '{not json' },
+      ])
+      await Promise.resolve()
+    })
+    await waitFor(() => expect(result.current.state.issues.length).toBeGreaterThan(0))
+
+    // Not a generic "analysis failed": the dictionary has an entry for this
+    // exact failure, and the user should be told which one it was.
+    expect(result.current.state.issues[0]?.code).toBe('invalid-json')
+  })
+
   it('still fails loudly when nothing at all could be read', async () => {
     const { result } = setup()
 

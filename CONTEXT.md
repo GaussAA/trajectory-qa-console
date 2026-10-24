@@ -232,3 +232,12 @@ node dist-cli/qa.mjs a.json b.json --compare --fail-below 80    # 只卡「对�
 产物契约校验（`scripts/check-artifact.mjs`）要求：不得含外部脚本/样式/远程图片，
 必须有 `#root`，体积不超过 1500 KB（`ARTIFACT_BUDGET_KB` 可调）。
 产物与覆盖率作为 artifact 上传（保留 14 / 7 天）。本地等价入口：`pnpm verify`。
+
+## 已知边界
+
+- **`src/core` 的报错文案不本地化**（解析说明、规则标题同属数据/逻辑，故 `check-i18n` 不扫 core）。
+  界面与 CLI 一律以 `t('error.<code>')` 覆盖它：core 的 `message` 只是没有字典时的兜底。
+  `IngestIssueCode` 因此**直接复用 `ErrorCode`**，错误码一路带到 UI 不被压平——把一切折叠成
+  `analysis-failed` 会让「不是合法的 JSON」和「结构无法识别」显示成同一句话。
+- **语义复核的 `SemanticIssue.message` 是运行时诊断原文**（网络/API 错误，内容不可控），不做本地化；
+  它前面的 `✗ 文件 ·` 计数行走字典。

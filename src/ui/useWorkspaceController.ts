@@ -160,11 +160,15 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
         if (!result.ok) {
           if (result.error.code === 'aborted') {
             telemetry.emit('ingest:aborted', { file: input.name }, 'warn')
-            dispatch({ type: 'ingest/failure', error: result.error })
+            dispatch({ type: 'ingest/failure', error: result.error, issues })
             release()
             return
           }
-          issues.push({ file: input.name, message: result.error.message, code: 'analysis-failed' })
+          // Keep the *specific* code. Collapsing every failure into
+          // 'analysis-failed' threw away the reason, so a bad JSON file and a
+          // structurally alien one both read as "analysis failed" — while the
+          // dictionary has an entry for each.
+          issues.push({ file: input.name, message: result.error.message, code: result.error.code })
           telemetry.emit('ingest:file-failed', { file: input.name, code: result.error.code }, 'error')
           continue
         }
@@ -202,7 +206,11 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
 
       if (collected.length === 0) {
         const message = issues[0]?.message ?? 'No usable traces'
-        dispatch({ type: 'ingest/failure', error: { code: 'analysis-failed', message } })
+        dispatch({
+          type: 'ingest/failure',
+          error: { code: 'analysis-failed', message },
+          issues,
+        })
         const first = issues[0]
         setToast(
           first
@@ -234,7 +242,11 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
       })
       if (inputs.length === 0) {
         const message = issues[0]?.message ?? 'No readable files'
-        dispatch({ type: 'ingest/failure', error: { code: 'analysis-failed', message } })
+        dispatch({
+          type: 'ingest/failure',
+          error: { code: 'analysis-failed', message },
+          issues,
+        })
         const first = issues[0]
         setToast(
           first

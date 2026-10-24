@@ -66,7 +66,7 @@ describe('ingest', () => {
     }
     const result = await readFiles([fakeFile('empty.json', '   '), broken, fakeFile('ok.json', '[]')])
     expect(result.inputs.map((input) => input.name)).toEqual(['ok.json'])
-    expect(result.issues.map((issue) => issue.code)).toEqual(['empty', 'read-failed'])
+    expect(result.issues.map((issue) => issue.code)).toEqual(['empty-file', 'read-failed'])
   })
 
   it('ships four demo inputs', () => {
@@ -97,7 +97,19 @@ describe('ingest', () => {
  *  which is how the whole i18n gap started. */
 describe('issue message keys', () => {
   it('maps every code to an entry that exists in both locales', () => {
-    const codes = ['too-large', 'too-many', 'total-limit', 'read-failed', 'empty', 'analysis-failed']
+    const codes = [
+      'too-large',
+      'too-many',
+      'total-limit',
+      'read-failed',
+      'empty-file',
+      'analysis-failed',
+      // Domain codes now survive the whole way through, so they must resolve too.
+      'invalid-json',
+      'unrecognized-structure',
+      'too-many-steps',
+      'empty-input',
+    ]
     for (const code of codes) {
       const key = issueMessageKey(code as IngestIssueCode)
       expect(zhCN[key], `zh-CN missing ${key}`).toBeTruthy()

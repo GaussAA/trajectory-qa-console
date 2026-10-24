@@ -6,6 +6,7 @@
  */
 
 import { SAMPLE_FILES } from '../core/sample'
+import type { ErrorCode } from '../core/model'
 import type { MessageKey } from '../i18n/core'
 
 export interface IngestFile {
@@ -19,8 +20,10 @@ export interface TextInput {
   text: string
 }
 
-export type IngestIssueCode =
-  'too-large' | 'too-many' | 'total-limit' | 'read-failed' | 'empty' | 'analysis-failed'
+/** Reuses the domain's error codes rather than inventing a parallel set: a
+ *  parse failure keeps its own code all the way to the UI, so the dictionary
+ *  entry that describes *that* failure is the one that gets shown. */
+export type IngestIssueCode = ErrorCode | 'too-many' | 'total-limit' | 'empty-file'
 
 export interface IngestIssue {
   file: string
@@ -41,20 +44,22 @@ export interface IngestIssue {
  *  the mapping next to the codes is what stops the two from drifting. */
 export function issueMessageKey(code: IngestIssueCode): MessageKey {
   switch (code) {
+    // These carry numbers the generic entries cannot express.
     case 'too-many':
       return 'ingest.tooManyFiles'
     case 'too-large':
       return 'ingest.fileTooLarge'
     case 'total-limit':
       return 'ingest.totalTooLarge'
-    case 'empty':
-      return 'ingest.emptyFile'
     case 'read-failed':
       return 'ingest.readFailed'
-    case 'analysis-failed':
-      return 'error.analysis-failed'
+    case 'empty-file':
+      return 'ingest.emptyFile'
     default:
-      return 'error.analysis-failed'
+      // Every remaining code is a domain ErrorCode, and the dictionary names
+      // them exactly that way — which is why the specific reason survives
+      // instead of collapsing into "analysis failed".
+      return `error.${code}` as MessageKey
   }
 }
 
@@ -120,7 +125,7 @@ export async function readFiles(
     try {
       const text = await file.text()
       if (!text.trim()) {
-        issues.push({ file: file.name, message: 'File is empty', code: 'empty', params: {} })
+        issues.push({ file: file.name, message: 'File is empty', code: 'empty-file', params: {} })
         continue
       }
       total += file.size

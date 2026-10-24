@@ -32,7 +32,7 @@ export interface WorkspaceState {
 export type WorkspaceAction =
   | { type: 'ingest/start' }
   | { type: 'ingest/success'; sessions: SessionAnalysis[]; issues: IngestIssue[] }
-  | { type: 'ingest/failure'; error: AppError }
+  | { type: 'ingest/failure'; error: AppError; issues?: IngestIssue[] }
   | { type: 'session/select'; id: string }
   | { type: 'step/select'; index: number | null }
   | { type: 'workspace/clear' }
@@ -138,7 +138,14 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
     }
 
     case 'ingest/failure':
-      return { ...state, phase: state.sessions.length > 0 ? 'ready' : 'idle', lastError: action.error }
+      // A failed import still owes the user its per-file reasons: "analysis
+      // failed" on its own says nothing about which file or why.
+      return {
+        ...state,
+        phase: state.sessions.length > 0 ? 'ready' : 'idle',
+        lastError: action.error,
+        issues: action.issues ?? state.issues,
+      }
 
     case 'session/select': {
       const session = findSession(state, action.id)
