@@ -39,6 +39,7 @@ Agent 上线前后的轨迹（system / user / assistant / tool 结果交错）�
 
 - **双语界面**：中文 / EN 一键切换，`<html lang>` 同步、持久化；报告跟随界面语言。
 - **命令行**：整目录批量、`--fail-below` 质量门禁、`--semantic` 可选 LLM 语义复核（密钥只从环境变量读取、失败自动降级）。产物为自包含单文件，拷到任何 Node 22 机器即可运行。
+- **智能体诊断（可选）**：把分数交给模型解释——根因、可执行动作、规则包提案。它**只解释分数，不改分数**；提案要你点了才算数，且采纳前会自动把旧口径存成变体。
 
 ![调参与变体](docs/screenshots/tuning-variants.png)
 <p align="center"><sub>试跑与调参 · 改阈值即刻重算命中；存成命名变体一键切回</sub></p>
@@ -66,13 +67,37 @@ node dist-cli/qa.mjs traces --semantic-dry-run         # 语义复核：只看�
 ```
 
 语义复核需环境变量：`TQA_LLM_URL`、`TQA_LLM_MODEL`、`TQA_LLM_API_KEY`（只从环境读取，不接受命令行参数）。
+`TQA_LLM_URL` 也可只写 base（`https://host/v1`，会自动补 `/chat/completions`）；自带路径的本地代理地址原样使用。
+
+## 智能体诊断（可选）
+
+模型能说清「这条为什么只有 54 分」和「该改哪条规则」——这两件事规则做不到。它调用本工具的
+12 个只读/纯计算工具取数，所以结论里的每个数字都能追到一次调用，而不是模型自己算的。
+
+```bash
+# 命令行：诊断并产出 agent.md / agent.json
+node dist-cli/qa.mjs traces --agent --out qa-out
+node dist-cli/qa.mjs traces --agent-dry-run          # 只看提示词与工具清单，零成本
+node dist-cli/qa.mjs traces --agent --agent-task "只看工具报错后有没有重试"
+
+# 界面：起本地服务，按它提示的地址打开即多出「诊断」按钮
+node dist-cli/qa.mjs serve                           # 默认 127.0.0.1:7788
+```
+
+- **密钥不进页面**：界面经本地服务调模型，key 只在服务进程里。服务只监听 `127.0.0.1`，
+  CORS 只放行本机页面；公用机器可加 `--token <secret>`（界面用 `?agentToken=` 传）。
+- **提案不会自动生效**：命令行写成 `proposal.pack.json`（可直接 `--pack` 试用），
+  界面点「应用到工作区」也会先把当前规则包存成变体，随时切回。
+- **报告单独成篇**：`agent.md` / `agent.json` 与 `report.*` 并列，不混写——模型的话会漂移，
+  混进去以后就分不清哪句是规则说的。
+- 不开就是完全离线：不点「诊断」不产生任何网络请求。
 
 ## 工程
 
-- **311 项测试**，覆盖率 95.6% 行 / 87.2% 分支 / 92.3% 函数；`pnpm verify` 八道关全绿是合并的唯一标准。
-- 分层：`core`（解析 / 规则 / 评分 / 对比 / 语义）/ `app`（状态机 / 持久化 / 遥测 / 分析端口）/ `ui` / `lib` / `cli`，接口小而行为厚。
+- **479 项测试**，覆盖率 95.4% 行 / 86.2% 分支 / 94.4% 函数；`pnpm verify` 八道关全绿是合并的唯一标准。
+- 分层：`core`（解析 / 规则 / 评分 / 对比 / 语义 / 智能体）/ `core/llm`（超时、重试、响应解析共用一份）/ `app`（状态机 / 持久化 / 遥测 / 分析端口）/ `ui` / `lib` / `cli`，接口小而行为厚。
 - 行为快照：4 条示例轨迹的分数与问题清单逐字段锁定（golden master）；600+ 例解析 fuzz；性能预算测试（10k 步 < 3s）。
-- 领域词汇、不变量与模块地图见 [CONTEXT.md](CONTEXT.md)；17 份 ADR 记录关键取舍（[docs/adr](docs/adr)）。
+- 领域词汇、不变量与模块地图见 [CONTEXT.md](CONTEXT.md)；19 份 ADR 记录关键取舍（[docs/adr](docs/adr)）。
 
 ## License
 
