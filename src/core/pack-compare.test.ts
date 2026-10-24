@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { analyze } from './analysis'
 import { DEFAULT_PACK } from './rules/builtin-pack'
+import { analyzeSessions } from './test-support'
 import type { RulePack } from './model'
 import type { PackOption } from './pack-compare'
 import { comparePacks, scoreUnderPack } from './pack-compare'
@@ -12,9 +12,7 @@ const TRACE = JSON.stringify([
 ])
 
 function sessions() {
-  const parsed = analyze({ source: TRACE, label: 'trace.json' })
-  if (!parsed.ok) throw new Error(parsed.error.message)
-  return parsed.value.sessions
+  return analyzeSessions(TRACE)
 }
 
 const strict: RulePack = { ...DEFAULT_PACK, name: '严格' }

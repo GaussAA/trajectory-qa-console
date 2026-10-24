@@ -2,22 +2,10 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { analyze, type SessionAnalysis } from '../core/analysis'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
+import { reimbursementSessions as sessions } from '../core/test-support'
 import { I18nProvider } from '../i18n'
 import { AgentPanel } from './AgentPanel'
-
-function sessions(): SessionAnalysis[] {
-  const parsed = analyze({
-    source: JSON.stringify([
-      { role: 'user', content: '查一下报销标准' },
-      { role: 'assistant', content: '住宿上限 500 元。' },
-    ]),
-    label: 'a.json',
-  })
-  if (!parsed.ok) throw new Error(parsed.error.message)
-  return parsed.value.sessions
-}
 
 function streamOf(lines: unknown[]): Response {
   return new Response(lines.map((line) => `${JSON.stringify(line)}\n`).join(''), { status: 200 })

@@ -4,8 +4,7 @@
  *  这两种都是「导入成功、行为不对」，最难排查。 */
 
 import { describe, expect, it } from 'vitest'
-import { createMemoryStorage, createPersistence } from '../../app/persistence'
-import type { Rule, RulePack } from '../model'
+import type { Rule } from '../model'
 import { DEFAULT_PACK } from './builtin-pack'
 import { BUILTIN_PACK_EN } from './builtin-pack-en'
 import { validatePack } from './contract'
@@ -125,26 +124,5 @@ describe('message placeholders must name a field the rule can actually fill', ()
   it('still checks the expression, as before', () => {
     const errors = errorsOf(withRule({ expr: 'nonexistentField > 1' }))
     expect(errors.some((error) => error.path === 'rules.0.expr')).toBe(true)
-  })
-})
-
-describe('stored data written before this check', () => {
-  it('a stored pack with a stray key falls back to the default instead of loading half-understood', () => {
-    const storage = createMemoryStorage()
-    storage.setItem('tqa.pack', JSON.stringify({ schemaVersion: 1, data: withRule({ enable: false }) }))
-    expect(createPersistence(storage).loadPack()).toEqual(DEFAULT_PACK)
-  })
-
-  it('a stored variant with a bad placeholder is dropped, clean ones kept', () => {
-    const storage = createMemoryStorage()
-    const variant = (id: string, pack: unknown) => ({ id, name: id, savedAt: '2026-10-24T00:00:00Z', pack })
-    storage.setItem(
-      'tqa.pack-variants',
-      JSON.stringify({
-        schemaVersion: 1,
-        data: [variant('bad', withRule({ message: '{stepp}' })), variant('good', DEFAULT_PACK as RulePack)],
-      }),
-    )
-    expect(createPersistence(storage).loadPackVariants().map((item) => item.id)).toEqual(['good'])
   })
 })

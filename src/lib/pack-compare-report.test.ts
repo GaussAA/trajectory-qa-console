@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { analyze } from '../core/analysis'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
+import { analyzeSessions } from '../core/test-support'
 import {
   buildPackCompareJson,
   buildPackCompareMarkdown,
@@ -18,9 +18,7 @@ const TRACE = JSON.stringify([
 ])
 
 function sessions() {
-  const parsed = analyze({ source: TRACE, label: 'single-error.json' })
-  if (!parsed.ok) throw new Error(parsed.error.message)
-  return parsed.value.sessions.map((session) => ({ id: session.id, trajectory: session.trajectory }))
+  return analyzeSessions(TRACE, 'single-error.json').map((session) => ({ id: session.id, trajectory: session.trajectory }))
 }
 
 const lenient = {

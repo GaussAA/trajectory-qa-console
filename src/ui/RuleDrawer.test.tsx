@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { analyze } from '../core/analysis'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
 import { BUILTIN_PACK_EN } from '../core/rules/builtin-pack-en'
+import { analyzeSessions } from '../core/test-support'
 import { I18nProvider } from '../i18n'
 import { RuleDrawer } from './RuleDrawer'
 
@@ -15,9 +15,7 @@ const TRACE = JSON.stringify([
 ])
 
 function sessions() {
-  const parsed = analyze({ source: TRACE, label: 'trace.json' })
-  if (!parsed.ok) throw new Error(parsed.error.message)
-  return parsed.value.sessions.map((session) => ({ id: session.id, trajectory: session.trajectory }))
+  return analyzeSessions(TRACE).map((session) => ({ id: session.id, trajectory: session.trajectory }))
 }
 
 function setup(props: Partial<Parameters<typeof RuleDrawer>[0]> = {}) {
@@ -75,10 +73,11 @@ describe('RuleDrawer pack comparison', () => {
   }
 
   function setupSingleError(props: Partial<Parameters<typeof RuleDrawer>[0]> = {}) {
-    const parsed = analyze({ source: SINGLE_ERROR, label: 'single-error.json' })
-    if (!parsed.ok) throw new Error(parsed.error.message)
     return setup({
-      sessions: parsed.value.sessions.map((session) => ({ id: session.id, trajectory: session.trajectory })),
+      sessions: analyzeSessions(SINGLE_ERROR, 'single-error.json').map((session) => ({
+        id: session.id,
+        trajectory: session.trajectory,
+      })),
       ...props,
     })
   }

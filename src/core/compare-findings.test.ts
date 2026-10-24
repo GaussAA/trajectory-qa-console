@@ -10,20 +10,7 @@
 import { describe, expect, it } from 'vitest'
 import { alignSteps, diffFindings } from './compare'
 import type { Finding, Step } from './model'
-
-function step(index: number, role: Step['role'], text: string, tools: string[] = []): Step {
-  return {
-    index,
-    role,
-    text,
-    reasoning: '',
-    toolCalls: tools.map((name, position) => ({ id: `c${index}-${position}`, name, rawArgs: '{}', args: {}, argsValid: true })),
-    tokens: { input: 0, output: 0, total: 0, estimated: true },
-    charCount: text.length,
-    raw: {},
-    parseNotes: [],
-  }
-}
+import { makeStep as step } from './test-support'
 
 function finding(ruleId: string, stepIndex: number | undefined, message = `第 ${stepIndex} 步有问题`): Finding {
   return {
