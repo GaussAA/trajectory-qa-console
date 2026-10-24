@@ -414,6 +414,8 @@ export const en: Record<MessageKey, string> = {
   'toast.agentReportExported': 'Diagnosis report exported',
   'agent.ui.exportReport': 'Export diagnosis report',
   'agent.ui.exportJson': 'Export JSON',
+  'agent.ui.exportHint':
+    'This exports the model\'s diagnosis (agent.md/json); it is not the score report from the topbar',
 
   'compare.title': 'Trace comparison',
   'compare.base': 'Baseline',

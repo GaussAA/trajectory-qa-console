@@ -40,7 +40,7 @@ export default function App({
   )
 
   const controller = useWorkspaceController({ analyzer, telemetry, persistence })
-  const { state, session, card, step, cards, totals, events, actions } = controller
+  const { state, session, card, step, cards, totals, events, actions, agentResult } = controller
   const { locale, t, setLocale } = useI18n()
   const toastText = controller.toast
     ? 'key' in controller.toast
@@ -381,6 +381,7 @@ export default function App({
           onApplyProposal={actions.adoptProposal}
           onRun={actions.receiveAgentRun}
           onExport={actions.exportAgentReport}
+          restored={agentResult}
           onFinish={(info) =>
             telemetry.emit(
               'ui:agent',

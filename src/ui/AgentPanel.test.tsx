@@ -145,6 +145,42 @@ describe('AgentPanel', () => {
     expect(applied).toEqual([{ id: 'p1', name: '提案包' }])
   })
 
+  it('restores the previous run when reopened, without calling the model', async () => {
+    const fetchSpy = vi.fn(async () => streamOf([{ type: 'start', sessions: 1 }]))
+    vi.stubGlobal('fetch', fetchSpy)
+
+    setup(
+      { endpoint: 'http://127.0.0.1:7788', token: null },
+      {
+        restored: { run: RUN as never, model: 'm', endpoint: 'http://127.0.0.1:7788' },
+        onExport: () => undefined,
+      },
+    )
+
+    // 结论应当立刻在屏上：关一次面板就得重跑一次，烧的是真配额。
+    expect(await screen.findByText(/短板都在工具错误恢复/)).toBeTruthy()
+    expect(screen.getByRole('button', { name: /导出诊断报告/ })).toBeTruthy()
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it('keeps the export buttons in the drawer footer, not buried at the end of the scroll', async () => {
+    const user = userEvent.setup()
+    replyWithProposal()
+
+    const { container } = setup(
+      { endpoint: 'http://127.0.0.1:7788', token: null },
+      { onExport: () => undefined },
+    )
+
+    await user.click(screen.getByRole('button', { name: /开始诊断/ }))
+    const button = await screen.findByRole('button', { name: /导出诊断报告/ })
+
+    // 结果会长到十几屏，按钮放在滚动区末尾等于没有——第一次就是这样找不到的。
+    const footer = container.querySelector('.drawer-foot')
+    expect(footer).not.toBeNull()
+    expect(footer?.contains(button)).toBe(true)
+  })
+
   it('offers to export the diagnosis report on its own', async () => {
     const user = userEvent.setup()
     replyWithProposal()

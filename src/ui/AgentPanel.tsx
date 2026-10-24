@@ -30,6 +30,9 @@ interface Props {
   onExport?: (format: 'md' | 'json') => void
   /** 提供时，界面会把一次请求记为一条遥测事件（失败、耗时、轮次）。 */
   onFinish?: (info: { ok: boolean; code?: string; rounds: number; toolCalls: number; ms: number }) => void
+  /** 上一次诊断的快照（由调用方保存）。重开面板时放回来——
+   *  只为了看一眼结论又要重跑一次，烧的是真配额。 */
+  restored?: { run: AgentRun; model: string; endpoint: string } | null
 }
 
 type Phase = 'idle' | 'running' | 'done' | 'error'
@@ -49,6 +52,7 @@ export function AgentPanel({
   onRun,
   onExport,
   onFinish,
+  restored,
 }: Props) {
   const { t } = useI18n()
   const panelRef = useRef<HTMLDivElement>(null)
@@ -60,6 +64,22 @@ export function AgentPanel({
   const [partial, setPartial] = useState<string | null>(null)
   const [failure, setFailure] = useState<Failure | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+  /** 每次「打开」只恢复一次：开始新一轮时 run 会被清空，恢复逻辑不能跟着再跑一遍。 */
+  const restoredRef = useRef(false)
+
+  // 重开面板把上一次结论放回来。注意判据是「本次打开有没有恢复过」而不是「run 是否为空」：
+  // 后者会在点「再诊断一次」的瞬间把旧结论塞回去，让人以为新请求秒回。
+  useEffect(() => {
+    if (!open) {
+      restoredRef.current = false
+      return
+    }
+    if (restoredRef.current || !restored) return
+    restoredRef.current = true
+    if (run !== null) return
+    setRun(restored.run)
+    setPhase('done')
+  }, [open, restored, run])
 
   useEffect(() => {
     if (!open) return
@@ -334,17 +354,6 @@ export function AgentPanel({
                     tokens: run.usage.prompt + run.usage.completion,
                   })}
                 </p>
-                {onExport && (
-                  <div className="agent-proposal-actions">
-                    <button type="button" className="btn ghost sm" onClick={() => onExport('md')}>
-                      <Icon name="download" size={12} />
-                      {t('agent.ui.exportReport')}
-                    </button>
-                    <button type="button" className="btn ghost sm" onClick={() => onExport('json')}>
-                      {t('agent.ui.exportJson')}
-                    </button>
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -375,6 +384,29 @@ export function AgentPanel({
             </button>
           )}
           <span className="agent-spacer" />
+          {/* 导出放在页脚而不是结果区末尾：结果会长到十几屏，按钮埋在最后一屏，
+              等于没有——大帅第一次就是这么找不到的。 */}
+          {onExport && run && phase === 'done' && (
+            <>
+              <button
+                type="button"
+                className="btn ghost sm"
+                title={t('agent.ui.exportHint')}
+                onClick={() => onExport('md')}
+              >
+                <Icon name="download" size={12} />
+                {t('agent.ui.exportReport')}
+              </button>
+              <button
+                type="button"
+                className="btn ghost sm"
+                title={t('agent.ui.exportHint')}
+                onClick={() => onExport('json')}
+              >
+                {t('agent.ui.exportJson')}
+              </button>
+            </>
+          )}
           <button type="button" className="btn ghost sm" onClick={onClose}>
             {t('common.close')}
           </button>

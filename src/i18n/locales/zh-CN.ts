@@ -405,6 +405,7 @@ export const zhCN = {
   'toast.agentReportExported': '诊断报告已导出',
   'agent.ui.exportReport': '导出诊断报告',
   'agent.ui.exportJson': '导出 JSON',
+  'agent.ui.exportHint': '导出的是模型给出的诊断（agent.md/json），与顶栏那三个评分报告不是同一份',
 
   'compare.title': '轨迹对比',
   'compare.base': '基准',
