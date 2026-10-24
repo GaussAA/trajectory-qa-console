@@ -44,6 +44,9 @@ Agent 上线前后的轨迹（system / user / assistant / tool 结果交错）�
 ![调参与变体](docs/screenshots/tuning-variants.png)
 <p align="center"><sub>试跑与调参 · 改阈值即刻重算命中；存成命名变体一键切回</sub></p>
 
+![AI 诊断](docs/screenshots/agent.png)
+<p align="center"><sub>AI 诊断 · 模型解释分数：每条根因都带步号与规则 id，数字来自工具调用而非模型口算</sub></p>
+
 ## 快速开始
 
 ```bash
@@ -54,7 +57,8 @@ pnpm verify           # typecheck + lint + coverage + 文案扫描 + 构建 + �
 ```
 
 界面：打开 `dist/index.html`，拖入轨迹文件（`.json` / `.jsonl`），或点「示例轨迹」。
-调试深链：`#demo:N` 载入示例、`#stress:N` 生成 N 步合成轨迹、`?drawer=1` / `?diag=1` / `?compare`。
+调试深链：`#demo:N` 载入示例、`#stress:N` 生成 N 步合成轨迹、`?drawer=1` / `?diag=1` / `?compare`；
+`?agent=http://127.0.0.1:7788` 启用「AI 诊断」按钮（需先起 `serve`，有 token 时再加 `&agentToken=`）。
 
 命令行：
 
