@@ -84,6 +84,7 @@ node dist-cli/qa.mjs traces --semantic-dry-run         # 语义复核：只看�
 
 语义复核需环境变量：`TQA_LLM_URL`、`TQA_LLM_MODEL`、`TQA_LLM_API_KEY`（只从环境读取，不接受命令行参数）。
 `TQA_LLM_URL` 也可只写 base（`https://host/v1`，会自动补 `/chat/completions`）；自带路径的本地代理地址原样使用。
+推理型模型响应慢时，用 `--llm-timeout <秒>`（5–600）调整单次请求的超时；默认语义复核 60 秒、智能体诊断 90 秒，`qa serve` 同样适用。智能体整轮仍受 180 秒总时限约束。
 
 ## 智能体诊断（可选）
 

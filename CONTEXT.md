@@ -171,6 +171,8 @@ node dist-cli/qa.mjs traces --semantic --fail-below 80
 
 - 类别：`off_topic / unsupported_claim / overreach / incoherent / unsafe`，标题随语言翻译，
   `reason` 与 `quote` 是模型原文（不翻译）。
+- 超时：单次请求默认 60s，`--llm-timeout <秒>`（5–600）统一改语义复核、智能体和 `qa serve` 的单次超时。
+  它只管「单次请求」，不碰智能体的 180s 整轮墙钟：调大它不会让一次诊断跑得更久。超时仍不重试。
 - 预算：`--semantic-limit`（默认 20 会话）、单会话最多 8 条；超长轨迹压到 120 步，
   优先保留工具出错/未配对的步。
 - 失败降级：单次调用失败只记 issue，整批继续、退出码不变。

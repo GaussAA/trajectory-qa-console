@@ -69,6 +69,26 @@ describe('parseArgs', () => {
     expect(failCode(['a', '--max-bytes', '1.5']).code).toBe('invalid-number')
   })
 
+  it('reads --llm-timeout in seconds and stores milliseconds', () => {
+    const parsed = parseArgs(['a', '--llm-timeout', '30'])
+    expect(parsed.ok && parsed.options.llmTimeoutMs).toBe(30_000)
+    const inline = parseArgs(['a', '--llm-timeout=120'])
+    expect(inline.ok && inline.options.llmTimeoutMs).toBe(120_000)
+    const unset = parseArgs(['a'])
+    expect(unset.ok && unset.options.llmTimeoutMs).toBeNull()
+  })
+
+  it('rejects an --llm-timeout outside 5-600 or without a value', () => {
+    expect(failCode(['a', '--llm-timeout', '4']).code).toBe('invalid-number')
+    expect(failCode(['a', '--llm-timeout', '601']).code).toBe('invalid-number')
+    expect(failCode(['a', '--llm-timeout', '1.5']).code).toBe('invalid-number')
+    expect(failCode(['a', '--llm-timeout']).code).toBe('missing-value')
+    expect(failCode(['a', '--llm-timeout', '4']).range).toEqual({ min: 5, max: 600 })
+    for (const edge of ['5', '600']) {
+      expect(parseArgs(['a', '--llm-timeout', edge]).ok).toBe(true)
+    }
+  })
+
   it('rejects a missing value for value-taking flags', () => {
     for (const flag of ['--out', '--pack', '--max-files', '--max-bytes', '--fail-below']) {
       const error = failCode(['a', flag])

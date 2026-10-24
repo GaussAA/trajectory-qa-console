@@ -158,6 +158,7 @@ export function renderHelp(locale: Locale, { version }: HelpOptions): string {
     `  ${t('cli.optLlmUrl')}`,
     `  ${t('cli.optLlmModel')}`,
     `  ${t('cli.optSemanticLimit')}`,
+    `  ${t('cli.optLlmTimeout')}`,
     `  ${t('cli.optAgent')}`,
     `  ${t('cli.optAgentDryRun')}`,
     `  ${t('cli.optAgentRounds')}`,

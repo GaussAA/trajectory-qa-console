@@ -238,6 +238,7 @@ async function runServe(options: CliOptions, io: ServeIo): Promise<number> {
     token: options.token,
     // 轮次上限归运行服务的人定：页面请求的轮次只能比它少，不能比它多。
     maxRounds: options.agentRounds ?? undefined,
+    timeoutMs: options.llmTimeoutMs ?? undefined,
     // 用户明确绑到非回环地址时，Host 就不会是回环名；那种情形下的防线是 token 与启动警告。
     loopbackOnly: isLoopbackHost(options.host),
     transport: deps.transport,
@@ -416,6 +417,7 @@ export async function main(
           ...semanticConfig,
           transport,
           maxFindings: 8,
+          timeoutMs: options.llmTimeoutMs ?? undefined,
         })
         if (!result.ok) throw new Error(result.error.message)
         return toFindings(result.value, locale, session.id)
@@ -611,7 +613,10 @@ export async function main(
         apiKey: config.apiKey,
         locale,
         task: options.agentTask ?? undefined,
-        budget: options.agentRounds === null ? undefined : { maxRounds: options.agentRounds },
+        budget: {
+          ...(options.agentRounds === null ? {} : { maxRounds: options.agentRounds }),
+          ...(options.llmTimeoutMs === null ? {} : { timeoutMs: options.llmTimeoutMs }),
+        },
       },
     )
 

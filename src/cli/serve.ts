@@ -40,6 +40,8 @@ export interface ServeConfig {
   maxConcurrent?: number
   /** 轮次上限。客户端可以要更少，不能要更多；默认是智能体自己的默认预算。 */
   maxRounds?: number
+  /** 单次模型请求的超时（毫秒）；省略则用智能体默认预算。 */
+  timeoutMs?: number
   now?: () => number
   /** 重试间隔：测试置 0，免得为一个 500 真等 800ms。 */
   retryDelayMs?: number
@@ -421,7 +423,10 @@ export function createAgentServer(config: ServeConfig): Server {
         task: payload.task,
         signal: abort.signal,
         // 客户端可以要更少的轮次，不能要更多：上限归运行服务的人定，不归发请求的页面定。
-        budget: { maxRounds: Math.min(payload.rounds ?? maxRounds, maxRounds) },
+        budget: {
+          maxRounds: Math.min(payload.rounds ?? maxRounds, maxRounds),
+          ...(config.timeoutMs === undefined ? {} : { timeoutMs: config.timeoutMs }),
+        },
         now: config.now,
         retryDelayMs: config.retryDelayMs,
         onEvent: (event) => write({ type: 'progress', event }),
