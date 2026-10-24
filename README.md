@@ -110,7 +110,7 @@ node dist-cli/qa.mjs serve                           # 默认 127.0.0.1:7788
 
 ## 工程
 
-- **815 项测试**，覆盖率 96.0% 行 / 88.3% 分支 / 95.5% 函数；`pnpm verify` 九道关全绿是合并的唯一标准。
+- 覆盖率有门禁（行 / 函数 / 语句 ≥ 85%，分支 ≥ 75%），低于阈值 `pnpm verify` 直接失败；`pnpm verify` 九道关全绿是合并的唯一标准。当前的测试数与覆盖率以 CI 输出为准，或本地跑 `pnpm test:coverage`（会生成 `coverage/coverage-summary.json`）；这里不抄数字，抄了就会过期。
 - 分层：`core`（解析 / 规则 / 评分 / 对比 / 语义 / 智能体）/ `core/llm`（超时、重试、响应解析共用一份）/ `app`（状态机 / 持久化 / 遥测 / 分析端口）/ `ui` / `lib` / `cli`，接口小而行为厚。
 - 行为快照：4 条示例轨迹的分数与问题清单逐字段锁定（golden master）；600+ 例解析 fuzz；性能预算测试（10k 步 < 3s）。
 - 领域词汇、不变量与模块地图见 [CONTEXT.md](CONTEXT.md)；19 份 ADR 记录关键取舍（[docs/adr](docs/adr)）。

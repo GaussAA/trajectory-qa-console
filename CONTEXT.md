@@ -376,7 +376,7 @@ node dist-cli/qa.mjs a.json b.json --compare --fail-below 80    # 只卡「对�
 
 ## 质量门槛
 
-`pnpm verify` = typecheck + lint + 覆盖率测试 + 构建。覆盖率门槛：行/函数/语句 ≥85%，分支 ≥75%。
+`pnpm verify` = typecheck + lint + 覆盖率测试 + 文案扫描 + 排版检查 + 单文件构建 + 产物契约校验 + CLI 构建 + CLI 冒烟（逐项见下文「持续集成」）。覆盖率门槛：行/函数/语句 ≥85%，分支 ≥75%。
 四条示例轨迹的分数与问题清单由 `src/core/__golden__/samples.json` 锁定。
 样式分四层（tokens / base / layout / components），只允许上层引用下层变量，不靠权重压制。
 交互元素均可键盘到达；抽屉有焦点陷阱与 Esc 关闭；动效尊重 `prefers-reduced-motion`。
@@ -402,7 +402,8 @@ node dist-cli/qa.mjs a.json b.json --compare --fail-below 80    # 只卡「对�
 
 `.github/workflows/ci.yml`：push 到 main、PR、手动触发；先 `pnpm install --frozen-lockfile`，再 `pnpm verify`。
 `verify` 依次是：typecheck → lint → 覆盖率测试 → 文案扫描（`src/ui` + `src/cli` + `src/app` + `src/lib`，
-汉字与全角标点都算；导出报告里写死的 `：` `（` 会让英文报告混进全角符号）→ 单文件构建 →
+汉字与全角标点都算；导出报告里写死的 `：` `（` 会让英文报告混进全角符号）→ 排版检查
+（`scripts/check-typography.mjs`：裸字号、11px 下限、样式表花括号）→ 单文件构建 →
 产物契约校验 → CLI 构建 → CLI 冒烟（`scripts/smoke-cli.mjs`）。
 产物契约校验（`scripts/check-artifact.mjs`）要求：不得含外部脚本/样式/远程图片，
 必须有 `#root`，体积不超过 1500 KB（`ARTIFACT_BUDGET_KB` 可调）。
