@@ -84,6 +84,13 @@ function readUsage(record: Record<string, unknown>): Usage | undefined {
   return undefined
 }
 
+/** 轨迹里的 `is_error` / `isError`。三态：true、false，或 undefined（什么都没说，或写了 null）。
+ *  只有「没说」才轮得到正文前缀的启发式；折成 false 就等于把「没说」和「明确没出错」混为一谈。 */
+function readErrorFlag(record: Record<string, unknown>): boolean | undefined {
+  const value = record.is_error ?? record.isError
+  return typeof value === 'boolean' ? value : undefined
+}
+
 interface CallDraft {
   id?: string
   name: string
@@ -200,7 +207,7 @@ function readParts(parts: unknown[], draft: ContentDraft): void {
     }
     if (TOOL_RESULT_TYPES.has(type)) {
       draft.resultContent = readText(raw.content ?? raw.output ?? raw.result)
-      draft.resultIsError = Boolean(raw.is_error ?? raw.isError)
+      draft.resultIsError = readErrorFlag(raw)
       const callId = pick(raw, ['tool_use_id', 'tool_call_id', 'call_id', 'id'])
       if (typeof callId === 'string') draft.notes.push(`RESULT_CALL_ID:${callId}`)
       continue
@@ -346,13 +353,16 @@ export function toStep(raw: unknown, index: number): Step {
     const callId =
       typeof callIdRaw === 'string' ? callIdRaw : noteCallId ? noteCallId.slice('RESULT_CALL_ID:'.length) : ''
     const content = draft.resultContent ?? readText(pick(source, ['content', 'output', 'result', 'value']))
-    const flagError = Boolean(source.is_error ?? source.isError) || Boolean(draft.resultIsError)
-    const prefixedError = /^\s*(error|exception|traceback)\b/i.test(content)
+    // 显式标记优先：轨迹明确说了 is_error（真或假）就以它为准。只有它什么都没说时，
+    // 才退到「正文以 Error / Exception / Traceback 开头」的启发式。
+    // 此前两者是 `||`，一份叫「Error handling guide」的文档即使被明确标成 is_error:false 也算出错。
+    const explicit = readErrorFlag(source) ?? draft.resultIsError
+    const isError = explicit ?? /^\s*(error|exception|traceback)\b/i.test(content)
     result = {
       callId,
       name: typeof source.name === 'string' ? source.name : undefined,
       content,
-      isError: flagError || prefixedError,
+      isError,
       timestamp: readTimestamp(source),
     }
   }
