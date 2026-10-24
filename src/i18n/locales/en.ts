@@ -373,6 +373,37 @@ export const en: Record<MessageKey, string> = {
   'toast.htmlExported': 'HTML report exported',
 
   'action.compare': 'Compare',
+  'action.agent': 'Diagnose',
+  'action.agentHint': 'Explain the scores: root causes, fixes, rule pack proposals (needs the local service)',
+
+  'agent.ui.title': 'Trajectory diagnosis',
+  'agent.ui.intro':
+    'The model explains the scores; it never changes them. Its verdict is not part of any score card and it never edits your pack.',
+  'agent.ui.offlineTitle': 'Cannot reach the local service',
+  'agent.ui.offlineHint':
+    'Diagnosis needs a model, and the key stays in the service process rather than in this page. Run this first:',
+  'agent.ui.offlineUrl': 'Then reopen this page with ?agent=http://127.0.0.1:7788 appended to the URL.',
+  'agent.ui.scope': 'About to send {count} trajectory(ies) to {model}',
+  'agent.ui.cost': 'One run takes roughly 30-60 seconds and ~20k tokens; you can cancel at any time.',
+  'agent.ui.start': 'Start diagnosis',
+  'agent.ui.again': 'Diagnose again',
+  'agent.ui.running': 'Diagnosing… round {round}',
+  'agent.ui.lastTool': 'Last call: {name}',
+  'agent.ui.aborted': 'Cancelled',
+  'agent.ui.failed': 'Diagnosis did not finish',
+  'agent.ui.conclusion': 'Conclusion',
+  'agent.ui.conclusionNote':
+    'The prose below is the model\'s own account; the numbers in it are unverified. Trust the call log for figures.',
+  'agent.ui.noConclusion': 'The model produced no conclusion.',
+  'agent.ui.rootCauses': 'Root causes',
+  'agent.ui.actions': 'Suggested actions',
+  'agent.ui.proposals': 'Rule pack proposals',
+  'agent.ui.proposalNote':
+    'Proposals never take effect on their own; download one and try it with --pack, or import it in the rules drawer.',
+  'agent.ui.proposalDelta': 'average {before} → {after} ({delta})',
+  'agent.ui.downloadProposal': 'Download candidate pack',
+  'agent.ui.notConverged': 'Did not converge ({reason}); the conclusion is incomplete.',
+  'agent.ui.stats': '{rounds} round(s) · {tools} tool call(s) · {tokens} tokens',
 
   'compare.title': 'Trace comparison',
   'compare.base': 'Baseline',

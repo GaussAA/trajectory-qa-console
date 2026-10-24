@@ -1,0 +1,161 @@
+/* 诊断面板：沿用抽屉骨架，只补结果区与进度区。
+   刻意不新增颜色令牌——绿=成功、红=失败、灰=说明，全部复用 tokens.css。 */
+
+.agent-drawer {
+  max-width: 760px;
+  width: min(760px, 92vw);
+}
+
+.agent-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-height: 220px;
+}
+
+.agent-hint {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: rgba(148, 163, 184, 0.06);
+  border: 1px solid var(--line);
+}
+
+.agent-hint code {
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(6, 8, 15, 0.6);
+  border: 1px solid var(--line);
+  color: var(--teal);
+  align-self: flex-start;
+}
+
+.agent-failure {
+  border-color: rgba(251, 113, 133, 0.35);
+  background: rgba(251, 113, 133, 0.08);
+}
+
+.agent-mute {
+  color: var(--text-mute);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.agent-note {
+  margin: 0 0 8px;
+  font-style: normal;
+}
+
+.agent-progress-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.agent-progress ul {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.agent-progress li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(148, 163, 184, 0.05);
+}
+
+.agent-tool {
+  font-family: var(--mono);
+  color: var(--text-dim);
+}
+
+.agent-tool.failed {
+  color: var(--error);
+}
+
+.agent-result {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.agent-result section h4 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: var(--text-dim);
+}
+
+.agent-verdict {
+  margin: 0;
+  line-height: 1.75;
+  font-size: 14px;
+}
+
+.agent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.agent-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(148, 163, 184, 0.05);
+  border-left: 2px solid var(--violet);
+}
+
+.agent-list em {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--text-mute);
+}
+
+.agent-proposal {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(94, 234, 212, 0.06);
+  border: 1px solid rgba(94, 234, 212, 0.2);
+  margin-bottom: 10px;
+}
+
+.agent-partial {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  color: var(--warn);
+  background: rgba(251, 191, 36, 0.08);
+}
+
+.agent-spacer {
+  flex: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-progress .spinner {
+    animation: none;
+  }
+}

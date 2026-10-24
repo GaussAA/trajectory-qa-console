@@ -4,6 +4,7 @@ import type { AnalyzerPort } from '../app/analyzer'
 import { issueMessageKey } from '../app/ingest'
 import { createPersistence, createBrowserStorage, type PersistencePort } from '../app/persistence'
 import { createTelemetry, installGlobalErrorHandlers, type Telemetry } from '../app/telemetry'
+import { AgentPanel } from './AgentPanel'
 import { DiagnosticsDrawer } from './DiagnosticsDrawer'
 import { ComparePanel } from './ComparePanel'
 import { EmptyState } from './EmptyState'
@@ -16,6 +17,7 @@ import { ScorePanel } from './ScorePanel'
 import { SessionList } from './SessionList'
 import { Timeline } from './Timeline'
 import { labelOf } from '../app/workspace'
+import { readAgentTarget } from '../app/agent-client'
 import { useWorkspaceController } from './useWorkspaceController'
 import { LOCALES, useI18n } from '../i18n'
 import { cx } from '../lib/format'
@@ -49,6 +51,11 @@ export default function App({
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false)
   const [compareOpen, setCompareOpen] = useState(false)
+  const [agentOpen, setAgentOpen] = useState(false)
+  // `?agent=` 只读一次：诊断是可选增强，没配就一切照旧（离线承诺不因为加了它而松动）。
+  const [agentTarget] = useState(() =>
+    typeof window === 'undefined' ? null : readAgentTarget(window.location.search),
+  )
   const canCompare = state.sessions.length >= 2
   const [dragging, setDragging] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -201,6 +208,19 @@ export default function App({
           >
             {t('action.compare')}
           </button>
+          {agentTarget && (
+            <button
+              type="button"
+              className={cx('btn ghost sm', agentOpen && 'active')}
+              onClick={() => setAgentOpen(true)}
+              disabled={!hasData}
+              title={t('action.agentHint')}
+              aria-pressed={agentOpen}
+            >
+              <Icon name="spark" size={13} />
+              {t('action.agent')}
+            </button>
+          )}
           <button type="button" className="btn ghost sm" onClick={() => setDiagnosticsOpen(true)}>
             {t('action.diagnostics')}
           </button>
@@ -348,6 +368,29 @@ export default function App({
             actions.applyPack(next)
             setDrawerOpen(false)
           }}
+        />
+      </ErrorBoundary>
+
+      <ErrorBoundary nameKey="agent.ui.title" onError={reportBoundaryError('agent')}>
+        <AgentPanel
+          open={agentOpen}
+          target={agentTarget}
+          sessions={state.sessions}
+          pack={state.pack}
+          onClose={() => setAgentOpen(false)}
+          onFinish={(info) =>
+            telemetry.emit(
+              'ui:agent',
+              {
+                ok: info.ok,
+                code: info.code ?? '',
+                rounds: info.rounds,
+                toolCalls: info.toolCalls,
+                durationMs: info.ms,
+              },
+              info.ok ? 'info' : 'warn',
+            )
+          }
         />
       </ErrorBoundary>
 

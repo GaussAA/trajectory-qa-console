@@ -158,6 +158,33 @@ node dist-cli/qa.mjs traces --agent --agent-rounds 4 --agent-trace ./trace.json
 - **定向诊断**：`--agent-task <文本>` 把用户的问题塞进 user 消息；试跑会把两条消息原样打出来，
   所以「定向指令到底传没传」不用猜。
 
+### 本地诊断服务（P2，界面入口）
+
+`qa serve` 把同一套 `runAgent` 挂到本机 HTTP 上，界面「诊断」按钮经它调模型。
+密钥留在服务进程里，页面只拿得到结论——这是 ADR-0011 写明的形态，不是临时方案。
+
+```bash
+trajectory-qa serve                 # 127.0.0.1:7788
+trajectory-qa serve --port 7788 --token abc123
+# 界面：在 URL 后加 ?agent=http://127.0.0.1:7788（有 token 再加 &agentToken=abc123）
+```
+
+- **只 bind `127.0.0.1`**；`--host` 非回环地址时终端会警告（局域网内其他机器就连得上了）。
+- **CORS 白名单**：只放行 `file://`（Origin 为 `null`）与本机 http。其它来源拿不到 CORS 头，
+  浏览器会拦下读取。
+- **token 拦的是另一件事**：跨站页面仍能「盲发」请求消耗额度，所以留了 `--token`；
+  不设时终端明说风险（本机自用没关系）。
+- 端点：`GET /health`（只答模型名与是否需要 token，**不含密钥与端点路径**）、
+  `POST /api/diagnose`（NDJSON 流）。
+- **流式用 NDJSON 不用 SSE**：POST 配 `EventSource` 用不了，还得另写一套手动解析。
+  事件四种：`start` / `progress`（轮次、工具名、耗时）/ `done`（完整 `AgentRun`）/
+  `error`（`code: 'partial'` 表示有会话被跳过，不是整次失败）。
+- **界面只在点「诊断」时发请求**，不探测、不预取；没配 `?agent=` 时按钮禁用并给出启动命令。
+- 诊断结论不落 reducer、不持久化、不进评分（不变量 7）。
+- 请求体只发 `step` 去掉 `raw` 后的形状：`raw` 是解析前的原始对象，常常比整条轨迹还大，
+  本机传输也不例外。
+- 单条坏会话在服务端被隔离（与 `analyze` 同一条不变量），界面照实显示「有 N 条被跳过」。
+
 ### 对比报告
 
 同一份 diff 两个出口：界面「导出对比」下载 Markdown；CLI `--compare` 写
