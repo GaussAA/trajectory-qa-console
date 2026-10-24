@@ -66,7 +66,8 @@ The pipeline and the rules that keep it consistent:
 - ESLint forbids `any`, allows only `console.warn` and `console.error` outside tests, and ignores unused names only when they start with `_`. tsconfig turns on `noUncheckedIndexedAccess`. Prettier settings: no semicolons, single quotes, 110-character lines.
 
 - **Layer direction is a lint rule.** `eslint.config.js` (`layerRules`) forbids upward relative imports, tests included: `core` may not import `app/ui/lib/cli`, `lib` not `app/ui/cli`, `app` not `ui/cli`, `cli` not `ui`, and `i18n` not any other layer. A test that needs a higher layer belongs in that layer's directory. The rule matches relative specifiers by depth (up to 3 levels), so keep imports relative.
-- **Shared test builders live in `src/core/test-support.ts`** (`analyzeSessions`, `reimbursementSessions`, `makeStep`). Test files only; it is excluded from coverage, and production code must not import it.
+- **Shared test builders live in `test-support.ts` files**: `src/core/test-support.ts` (`analyzeSessions`, `reimbursementSessions`, `makeStep`) and `src/cli/test-support.ts` (temp dirs, `capture`, the serve server helpers). Test files only; they are excluded from coverage by the `**/test-support.ts` pattern, and production code must not import them. A test file that uses `tempDir` must register `afterEach(cleanupTempDirs)` itself.
+- **Large CLI test files are split by topic**: `cli/main.test.ts` holds the core flow, with `main.compare`, `main.semantic`, `main.agent` and `main.llm` beside it; `serve.test.ts` holds routing, with `serve.security`, `serve.limits` and `serve.lifecycle`. Put a new case in the file that matches its topic rather than growing `main.test.ts`.
 
 Another convention, not checked by a script: CSS is split into four layers (`tokens` → `base` → `layout` → `components`). Each layer may reference only variables from the layers below it, and conflicts are not resolved by raising specificity.
 
