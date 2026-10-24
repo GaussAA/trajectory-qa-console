@@ -236,6 +236,8 @@ async function runServe(options: CliOptions, io: ServeIo): Promise<number> {
   const server = createAgentServer({
     llm: resolved.config,
     token: options.token,
+    // 轮次上限归运行服务的人定：页面请求的轮次只能比它少，不能比它多。
+    maxRounds: options.agentRounds ?? undefined,
     // 用户明确绑到非回环地址时，Host 就不会是回环名；那种情形下的防线是 token 与启动警告。
     loopbackOnly: isLoopbackHost(options.host),
     transport: deps.transport,

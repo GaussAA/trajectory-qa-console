@@ -251,6 +251,10 @@ trajectory-qa serve --port 7788 --token abc123
 - **界面 `?agent=` 只认回环地址**（`readAgentTarget`）：链接可以是别人发来的，不限制的话，
   点「诊断」就把整条轨迹发给任意主机。非回环、非 http(s)、解析不了的都当作未配置。
   回环判断在 `src/lib/loopback.ts`，serve 与界面共用一份。
+- **资源上限**：同时在跑的诊断默认最多 2 个，超出拿 `429`（带 `Retry-After`）；名额在响应 `close`
+  上归还，所以断连不会占满服务。轮次的上限归运行服务的人定（默认 8，`--agent-rounds` 可改），
+  页面可以要更少、不能要更多。自由文本 `task` 最多 2000 字符。请求体超 `maxBytes` 回 `413` 并
+  `Connection: close`——**不能** `request.destroy()`，它会连带销毁 socket，413 就送不达了。
 - **token 拦的是另一件事**：跨站页面仍能「盲发」请求消耗额度，所以留了 `--token`；
   不设时终端明说风险（本机自用没关系）。
 - 端点：`GET /health`（只答模型名与是否需要 token，**不含密钥与端点路径**）、
