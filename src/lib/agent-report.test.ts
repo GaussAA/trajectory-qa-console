@@ -90,7 +90,13 @@ describe('renderAgentMarkdown', () => {
   })
 
   it('shows the session label next to the id when the session is loaded', () => {
-    const analyzed = analyze({ source: JSON.stringify([{ role: 'user', content: 'hi' }]), label: 'a.json' })
+    const analyzed = analyze({
+      source: JSON.stringify([
+        { role: 'user', content: 'hi' },
+        { role: 'assistant', content: 'hello' },
+      ]),
+      label: 'a.json',
+    })
     if (!analyzed.ok) throw new Error('fixture failed')
     const sessions = analyzed.value.sessions
     const id = sessions[0]?.id as string

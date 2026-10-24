@@ -91,6 +91,9 @@ export interface AnalyzeOptions {
   clock?: Clock
 }
 
+/** core 的文案不本地化（已知边界）；界面与 CLI 只是把它原样放进「会话被跳过」的说明里。 */
+export const NOTHING_TO_SCORE = '没有助手或工具步骤，无可评分内容（轨迹为空，或格式无法识别）'
+
 let runSequence = 0
 
 export function analyze(options: AnalyzeOptions): Result<AnalyzeOutcome> {
@@ -109,6 +112,11 @@ export function analyze(options: AnalyzeOptions): Result<AnalyzeOutcome> {
     const trajectory = parsed.value[index] as Trajectory
     const sessionStart = clock()
     try {
+      // 没有任何助手/工具步骤就没有东西可评：规则都是「找毛病」，空轨迹毛病为零，
+      // 会得到 A。无法识别的格式（角色全是 unknown）同理。宁可报「没检查」，也不给假高分。
+      if (!trajectory.steps.some((step) => step.role === 'assistant' || step.role === 'tool')) {
+        throw new Error(NOTHING_TO_SCORE)
+      }
       const metrics = computeMetrics(trajectory)
       const sessionEnd = clock()
 
@@ -138,6 +146,10 @@ export function analyze(options: AnalyzeOptions): Result<AnalyzeOutcome> {
   // Nothing usable is still a failure — "I analysed your file" must not be
   // claimed when every session in it was dropped.
   if (sessions.length === 0 && issues.length > 0) {
+    // 全是「没东西可评」时给专属错误码：和「分析过程出错」是两回事，界面按码取文案即可说清。
+    if (issues.every((issue) => issue.message === NOTHING_TO_SCORE)) {
+      return fail('nothing-to-score', NOTHING_TO_SCORE, { label: options.label })
+    }
     return fail('analysis-failed', '分析过程出错', {
       reason: issues[0]?.message ?? '未知错误',
       label: options.label,

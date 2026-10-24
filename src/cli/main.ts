@@ -21,6 +21,7 @@ import {
   renderPackCompareMarkdown,
 } from '../lib/pack-compare-report'
 import { renderComparisonHtml } from '../lib/comparison-html'
+import { isLoopbackHost } from '../lib/loopback'
 import {
   buildAgentReportModel,
   endpointHost,
@@ -217,6 +218,8 @@ async function runServe(options: CliOptions, io: ServeIo): Promise<number> {
   const server = createAgentServer({
     llm: resolved.config,
     token: options.token,
+    // 用户明确绑到非回环地址时，Host 就不会是回环名；那种情形下的防线是 token 与启动警告。
+    loopbackOnly: isLoopbackHost(options.host),
     transport: deps.transport,
   })
 
@@ -244,7 +247,7 @@ async function runServe(options: CliOptions, io: ServeIo): Promise<number> {
   stdout(`${t('cli.serveHint', { origin: url })}\n`)
   if (options.token === null) stderr(`${t('cli.serveNoToken')}\n`)
   else stdout(`${t('cli.serveWithToken')}\n`)
-  if (!['127.0.0.1', 'localhost', '::1'].includes(options.host)) {
+  if (!isLoopbackHost(options.host)) {
     stderr(`${t('cli.servePublicHost', { host: options.host })}\n`)
   }
 

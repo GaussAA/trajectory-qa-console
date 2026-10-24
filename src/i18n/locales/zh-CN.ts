@@ -59,6 +59,7 @@ export const zhCN = {
   'error.unrecognized-structure': '结构无法识别：未找到 messages / steps 数组',
   'error.too-large': '文件超过大小上限',
   'error.too-many-steps': '步数超过上限',
+  'error.nothing-to-score': '没有助手或工具步骤，无可评分内容（轨迹为空，或格式无法识别）',
   'error.invalid-pack': '规则包不合法',
   'error.analysis-failed': '分析失败',
   'error.aborted': '已取消',
@@ -452,7 +453,8 @@ export const zhCN = {
   'cli.optAgentTask': '--agent-task <文本>      定向诊断：让模型专门看某个问题',
   'cli.serveReady': '诊断服务已启动：{url}',
   'cli.serveHint': '在界面地址后加 ?agent={origin} 即可启用「诊断」按钮',
-  'cli.serveNoToken': '未设 --token：本机任何页面都能调它（自用没关系，公用机器建议加）',
+  'cli.serveNoToken':
+    '未设 --token：本机 http 页面都能调它，双击打开的 file:// 页面会被拒绝（要用请加 --token）',
   'cli.serveWithToken': '已启用 token：界面需带 ?agentToken=<token>',
   'cli.servePublicHost': '注意：--host {host} 不是回环地址，局域网内其他机器也能连',
   'cli.err.serveListen': '无法监听 {host}:{port}：{message}',

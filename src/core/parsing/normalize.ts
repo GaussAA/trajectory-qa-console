@@ -127,7 +127,8 @@ function toCallDraft(value: unknown, notes: string[]): CallDraft | undefined {
     }
   }
 
-  const id = pick(value, ['id', 'call_id', 'tool_call_id', 'toolCallId', 'tool_use_id'])
+  // Responses 的 function_call 同时带 `id`（条目 id）和 `call_id`（与输出配对的键），必须先取 call_id。
+  const id = pick(value, ['call_id', 'id', 'tool_call_id', 'toolCallId', 'tool_use_id'])
   return {
     id: typeof id === 'string' ? id : undefined,
     name: name || 'unknown_tool',
@@ -341,6 +342,45 @@ export function toStep(raw: unknown, index: number): Step {
     raw,
     parseNotes: [...draft.notes.filter((note) => !note.startsWith('RESULT_CALL_ID:')), ...notes],
   }
+}
+
+function isToolResultPart(part: unknown): boolean {
+  return isRecord(part) && typeof part.type === 'string' && TOOL_RESULT_TYPES.has(part.type)
+}
+
+/** One raw message → one or more steps.
+ *
+ *  A `Step` carries a single result, but Anthropic puts every parallel `tool_result`
+ *  of a turn into one user message. Reading them into one step would keep only the
+ *  last content and pair it with the first id, so such a message is split: one step
+ *  per result, plus one for whatever else the message held. */
+export function toSteps(raw: unknown, index: number): Step[] {
+  const parts = isRecord(raw) && Array.isArray(raw.content) ? raw.content : undefined
+  if (!isRecord(raw) || !parts || parts.filter(isToolResultPart).length < 2) return [toStep(raw, index)]
+
+  const note = '一条消息含多个 tool_result，已拆成独立步骤'
+  const steps: Step[] = []
+
+  const rest = parts.filter((part) => !isToolResultPart(part))
+  const hasCalls = pick(raw, ['tool_calls', 'toolCalls']) !== undefined || isRecord(raw.function_call)
+  if (rest.length > 0 || hasCalls) {
+    const step = toStep({ ...raw, content: rest }, index)
+    step.raw = raw
+    step.parseNotes.push(note)
+    steps.push(step)
+  }
+
+  const timestamp = readTimestamp(raw)
+  for (const part of parts.filter(isToolResultPart)) {
+    const step = toStep(
+      { role: 'tool', content: [part], ...(timestamp !== undefined && { timestamp }) },
+      index,
+    )
+    step.raw = part
+    step.parseNotes.push(note)
+    steps.push(step)
+  }
+  return steps
 }
 
 /** Pairs tool results to calls. Only falls back to name matching when the trace

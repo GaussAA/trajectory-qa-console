@@ -29,7 +29,7 @@ vi.mock('./metrics', async (importOriginal) => {
   }
 })
 
-const { analyze } = await import('./index')
+const { analyze, NOTHING_TO_SCORE } = await import('./index')
 
 /** three sessions in one file, one per line (JSONL). */
 const SOURCE = [
@@ -76,6 +76,47 @@ describe('analyze isolates a failing session', () => {
     expect(result.error.code).toBe('analysis-failed')
     // "I analysed your file" must not be claimed when nothing survived.
     expect(result.error.message).toBeTruthy()
+  })
+
+  it('refuses to score a session with no assistant or tool step, instead of grading it A', () => {
+    gate.failOn = []
+    gate.calls = 0
+
+    const userOnly = analyze({ source: JSON.stringify([{ role: 'user', content: 'hi' }]), label: 'u.json' })
+    expect(userOnly.ok).toBe(false)
+    if (userOnly.ok) return
+    expect(userOnly.error.code).toBe('nothing-to-score')
+    expect(userOnly.error.message).toBe(NOTHING_TO_SCORE)
+
+    // 角色全是 unknown 的异形格式同理：识别不了，就不该给分。
+    const alien = analyze({
+      source: JSON.stringify([
+        { foo: 'a', content: 'x' },
+        { foo: 'b', content: 'y' },
+      ]),
+      label: 'alien.json',
+    })
+    expect(alien.ok).toBe(false)
+  })
+
+  it('drops only the unscorable session of a multi-session file and reports it', () => {
+    gate.failOn = []
+    gate.calls = 0
+
+    const source = [
+      JSON.stringify([{ role: 'user', content: '只有用户' }]),
+      JSON.stringify([
+        { role: 'user', content: '正常' },
+        { role: 'assistant', content: '回答' },
+      ]),
+    ].join('\n')
+    const result = analyze({ source, label: 'mixed.jsonl' })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.sessions).toHaveLength(1)
+    expect(result.value.issues).toHaveLength(1)
+    expect(result.value.issues[0]?.index).toBe(0)
+    expect(result.value.issues[0]?.message).toBe(NOTHING_TO_SCORE)
   })
 
   it('reports no issues when everything succeeds', () => {
