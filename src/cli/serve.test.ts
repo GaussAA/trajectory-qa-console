@@ -291,6 +291,221 @@ describe('agent server', () => {
     }
   })
 
+  it('answers 413 for a declared oversize body instead of resetting the connection', async () => {
+    const server = await start({ maxBytes: 200 })
+    try {
+      const response = await fetch(`${server.base}/api/diagnose`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ sessions: [session()], filler: 'x'.repeat(2000) }),
+      })
+      // 之前 readBody 先把连接 destroy 掉，再去写 413：客户端看到的是 fetch failed，不是 413
+      expect(response.status).toBe(413)
+      expect(((await response.json()) as { error: string }).error).toContain('too large')
+      // 服务还活着，后面的请求不受影响
+      expect((await fetch(`${server.base}/health`)).status).toBe(200)
+    } finally {
+      await server.close()
+    }
+  })
+
+  it('answers 413 for a chunked body that grows past the limit', async () => {
+    const server = await start({ maxBytes: 200 })
+    try {
+      const status = await new Promise<number>((resolve, reject) => {
+        const req = httpRequest(
+          {
+            host: '127.0.0.1',
+            port: server.port,
+            path: '/api/diagnose',
+            method: 'POST',
+            // 不给 content-length：走分块传输，服务端事先不知道多大
+            headers: { 'content-type': 'application/json', 'transfer-encoding': 'chunked' },
+          },
+          (res) => {
+            res.resume()
+            res.on('end', () => resolve(res.statusCode ?? 0))
+          },
+        )
+        req.on('error', reject)
+        req.write('{"sessions":[')
+        req.write('"' + 'x'.repeat(1000) + '"')
+        req.end(']}')
+      })
+      expect(status).toBe(413)
+    } finally {
+      await server.close()
+    }
+  })
+
+  it('still accepts a body that is exactly within the limit', async () => {
+    const body = JSON.stringify({ sessions: [session()] })
+    const server = await start({ maxBytes: Buffer.byteLength(body) })
+    try {
+      const result = await diagnose(server.base, JSON.parse(body))
+      expect(result.status).toBe(200)
+    } finally {
+      await server.close()
+    }
+  })
+
+  /** 一直挂着、直到被取消的端点：用来把「正在跑」的那个名额占住。 */
+  function blocking() {
+    const waiting: (() => void)[] = []
+    const transport: LlmTransport = (input) =>
+      new Promise((resolve, reject) => {
+        input.signal?.addEventListener('abort', () => reject(new Error('aborted')), { once: true })
+        waiting.push(() => resolve({ ok: true, status: 200, text: SUBMITTED }))
+      })
+    return { transport, release: () => waiting.splice(0).forEach((fn) => fn()), pending: () => waiting.length }
+  }
+
+  it('turns away a diagnosis beyond the concurrency limit with 429, and frees the slot when one ends', async () => {
+    const gate = blocking()
+    const server = await start({ transport: gate.transport, maxConcurrent: 1 })
+    try {
+      const first = diagnose(server.base, { sessions: [session()] })
+      await vi.waitFor(() => expect(gate.pending()).toBe(1), { timeout: 2000 })
+
+      const second = await fetch(`${server.base}/api/diagnose`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ sessions: [session()] }),
+      })
+      expect(second.status).toBe(429)
+      expect(second.headers.get('retry-after')).not.toBeNull()
+      // 被拒的那个请求没有碰模型
+      expect(gate.pending()).toBe(1)
+
+      gate.release()
+      expect((await first).status).toBe(200)
+
+      // 第一个跑完，名额回来了
+      const third = diagnose(server.base, { sessions: [session()] })
+      await vi.waitFor(() => expect(gate.pending()).toBe(1), { timeout: 2000 })
+      gate.release()
+      expect((await third).status).toBe(200)
+    } finally {
+      await server.close()
+    }
+  })
+
+  it('frees the slot when the client walks away mid-run', async () => {
+    const gate = blocking()
+    const server = await start({ transport: gate.transport, maxConcurrent: 1 })
+    try {
+      const body = JSON.stringify({ sessions: [session()] })
+      await new Promise<void>((resolve) => {
+        const req = httpRequest(
+          {
+            host: '127.0.0.1',
+            port: server.port,
+            path: '/api/diagnose',
+            method: 'POST',
+            headers: { 'content-type': 'application/json', 'content-length': Buffer.byteLength(body) },
+          },
+          (res) => {
+            res.once('data', () => {
+              req.destroy()
+              resolve()
+            })
+          },
+        )
+        req.on('error', () => undefined)
+        req.end(body)
+      })
+
+      // 客户端走了：名额必须还回来，否则一次断连就把服务永久占满
+      await vi.waitFor(
+        async () => {
+          const probe = await fetch(`${server.base}/api/diagnose`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body,
+          })
+          expect(probe.status).not.toBe(429)
+          probe.body?.cancel().catch(() => undefined)
+        },
+        { timeout: 3000 },
+      )
+    } finally {
+      gate.release()
+      await server.close()
+    }
+  })
+
+  /** 永远不收尾的模型：每一轮都再调一次工具，数它被问了几轮。 */
+  function neverFinishes() {
+    const call = JSON.stringify({
+      choices: [
+        {
+          message: {
+            content: '',
+            tool_calls: [{ id: 'c', type: 'function', function: { name: 'list_sessions', arguments: '{}' } }],
+          },
+          finish_reason: 'tool_calls',
+        },
+      ],
+      usage: { prompt_tokens: 1, completion_tokens: 1 },
+    })
+    let rounds = 0
+    const transport: LlmTransport = async () => {
+      rounds += 1
+      return { ok: true, status: 200, text: call }
+    }
+    return { transport, rounds: () => rounds }
+  }
+
+  it('never lets a client ask for more rounds than the operator allows', async () => {
+    const model = neverFinishes()
+    const server = await start({ transport: model.transport, maxRounds: 3 })
+    try {
+      // 客户端要 40 轮；服务端的上限是 3
+      const result = await diagnose(server.base, { sessions: [session()], rounds: 40 })
+      expect(result.status).toBe(200)
+      expect(model.rounds()).toBe(3)
+    } finally {
+      await server.close()
+    }
+  })
+
+  it('lets a client ask for fewer rounds than the ceiling', async () => {
+    const model = neverFinishes()
+    const server = await start({ transport: model.transport, maxRounds: 6 })
+    try {
+      await diagnose(server.base, { sessions: [session()], rounds: 2 })
+      expect(model.rounds()).toBe(2)
+    } finally {
+      await server.close()
+    }
+  })
+
+  it('uses the default budget when the client says nothing', async () => {
+    const model = neverFinishes()
+    const server = await start({ transport: model.transport })
+    try {
+      await diagnose(server.base, { sessions: [session()] })
+      expect(model.rounds()).toBe(8)
+    } finally {
+      await server.close()
+    }
+  })
+
+  it('refuses an oversized free-text task before spending anything', async () => {
+    const model = neverFinishes()
+    const server = await start({ transport: model.transport })
+    try {
+      const result = await fetch(`${server.base}/api/diagnose`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ sessions: [session()], task: '问'.repeat(5000) }),
+      })
+      expect(result.status).toBe(400)
+      expect(model.rounds()).toBe(0)
+    } finally {
+      await server.close()
+    }
+  })
   it('reports a model failure as a done event, not a broken stream', async () => {
     const failing: LlmTransport = async () => ({ ok: false, status: 500, text: 'down' })
     const server = await start({ transport: failing })
