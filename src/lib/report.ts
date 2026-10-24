@@ -275,9 +275,13 @@ export function buildComparisonModel(input: ComparisonInput) {
   return { cardDiff, findingDiff, rows, summary: summarizeAlignment(rows) }
 }
 
-export function buildComparisonReport(input: ComparisonInput): string {
+/** The comparison, computed once. Rendering takes it as an argument so a
+ *  caller exporting several artifacts does not recompute it per artifact. */
+export type ComparisonModel = ReturnType<typeof buildComparisonModel>
+
+export function renderComparisonMarkdown(input: ComparisonInput, model: ComparisonModel): string {
   const t: Translate = (key, params) => translate(input.locale, key, params)
-  const { cardDiff, findingDiff, rows, summary } = buildComparisonModel(input)
+  const { cardDiff, findingDiff, rows, summary } = model
   const lines: string[] = []
 
   lines.push(`# ${t('report.compare.title')}`)
@@ -414,8 +418,8 @@ export function buildComparisonReport(input: ComparisonInput): string {
   return lines.join('\n')
 }
 
-export function buildComparisonJson(input: ComparisonInput): string {
-  const { cardDiff, findingDiff, rows, summary } = buildComparisonModel(input)
+export function renderComparisonJson(input: ComparisonInput, model: ComparisonModel): string {
+  const { cardDiff, findingDiff, rows, summary } = model
   return JSON.stringify(
     {
       generatedAt: input.generatedAt.toISOString(),
@@ -442,4 +446,15 @@ export function buildComparisonJson(input: ComparisonInput): string {
     null,
     2,
   )
+}
+
+
+/** Convenience wrappers: compute once, render one artifact. Callers that emit
+ *  several artifacts should build the model themselves and pass it in. */
+export function buildComparisonReport(input: ComparisonInput): string {
+  return renderComparisonMarkdown(input, buildComparisonModel(input))
+}
+
+export function buildComparisonJson(input: ComparisonInput): string {
+  return renderComparisonJson(input, buildComparisonModel(input))
 }

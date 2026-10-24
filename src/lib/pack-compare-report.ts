@@ -5,7 +5,7 @@
  *  混进主报告会让「这份报告的分数是哪套口径算的」变成猜谜。
  */
 
-import { comparePacks, type PackCompareSession } from '../core/pack-compare'
+import { comparePacks, type PackCompareSession, type PackComparison } from '../core/pack-compare'
 import { formatDateTime, translate, type Locale, type MessageKey } from '../i18n/core'
 import type { RulePack } from '../core/model'
 
@@ -31,9 +31,17 @@ function escapeCell(text: string): string {
   return text.replace(/\|/g, '\\|').replace(/\n+/g, ' ')
 }
 
-export function buildPackCompareMarkdown(input: PackCompareReportInput): string {
+/** The comparison, computed once and shared by both artifacts.
+ *
+ *  `comparePacks` re-runs every rule under both packs for every session, so
+ *  calling it twice per export was pure waste — the same mistake the
+ *  trace-comparison report had already made. */
+export function buildPackCompareModel(input: PackCompareReportInput): PackComparison {
+  return comparePacks(input.sessions, input.base.pack, input.target.pack)
+}
+
+export function renderPackCompareMarkdown(input: PackCompareReportInput, comparison: PackComparison): string {
   const t: Translate = (key, params) => translate(input.locale, key, params)
-  const comparison = comparePacks(input.sessions, input.base.pack, input.target.pack)
 
   const lines: string[] = []
   lines.push(`# ${t('report.packCompare.title')}`)
@@ -69,8 +77,7 @@ export function buildPackCompareMarkdown(input: PackCompareReportInput): string 
   return lines.join('\n')
 }
 
-export function buildPackCompareJson(input: PackCompareReportInput): string {
-  const comparison = comparePacks(input.sessions, input.base.pack, input.target.pack)
+export function renderPackCompareJson(input: PackCompareReportInput, comparison: PackComparison): string {
   return JSON.stringify(
     {
       generatedAt: input.generatedAt.toISOString(),
@@ -91,3 +98,12 @@ export function buildPackCompareJson(input: PackCompareReportInput): string {
 }
 
 type Translate = (key: MessageKey, params?: Record<string, string | number>) => string
+
+
+export function buildPackCompareMarkdown(input: PackCompareReportInput): string {
+  return renderPackCompareMarkdown(input, buildPackCompareModel(input))
+}
+
+export function buildPackCompareJson(input: PackCompareReportInput): string {
+  return renderPackCompareJson(input, buildPackCompareModel(input))
+}

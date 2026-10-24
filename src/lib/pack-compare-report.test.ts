@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { analyze } from '../core/analysis'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
-import { buildPackCompareJson, buildPackCompareMarkdown } from './pack-compare-report'
+import {
+  buildPackCompareJson,
+  buildPackCompareMarkdown,
+  buildPackCompareModel,
+  renderPackCompareJson,
+  renderPackCompareMarkdown,
+} from './pack-compare-report'
 
 const TRACE = JSON.stringify([
   { role: 'system', content: '你是助手' },
@@ -89,5 +95,24 @@ describe('pack comparison reports', () => {
     expect(json.average.delta).toBe(26)
     expect(json.sessions[0].delta).toBe(26)
     expect(json.identical).toBe(false)
+  })
+})
+
+/** The same discipline the trace comparison has: one model, several renders. */
+describe('pack-compare artifacts share one model', () => {
+  it('renders markdown and json from an identical comparison', () => {
+    const input = {
+      sessions: sessions(),
+      base: { name: '内置中文包', pack: DEFAULT_PACK },
+      target: lenient,
+      generatedAt: new Date('2026-10-24T12:00:00Z'),
+      locale: 'zh-CN' as const,
+    }
+    const model = buildPackCompareModel(input)
+    const fromModel = renderPackCompareMarkdown(input, model)
+    const standalone = buildPackCompareMarkdown(input)
+
+    expect(fromModel).toBe(standalone)
+    expect(renderPackCompareJson(input, model)).toBe(buildPackCompareJson(input))
   })
 })

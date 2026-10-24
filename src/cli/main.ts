@@ -10,10 +10,17 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { analyze } from '../core/analysis'
-import { buildComparisonJson, buildComparisonReport } from '../lib/report'
-import { buildPackCompareJson, buildPackCompareMarkdown } from '../lib/pack-compare-report'
-import { comparePacks } from '../core/pack-compare'
-import { buildComparisonHtml } from '../lib/comparison-html'
+import {
+  buildComparisonModel,
+  renderComparisonJson,
+  renderComparisonMarkdown,
+} from '../lib/report'
+import {
+  buildPackCompareModel,
+  renderPackCompareJson,
+  renderPackCompareMarkdown,
+} from '../lib/pack-compare-report'
+import { renderComparisonHtml } from '../lib/comparison-html'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
 import { BUILTIN_PACK_EN } from '../core/rules/builtin-pack-en'
 import { validatePack } from '../core/rules/contract'
@@ -336,11 +343,13 @@ export async function main(
       return EXIT.error
     }
 
-    const comparison = comparePacks(
-      result.entries.map((entry) => ({ id: entry.trajectory.id, trajectory: entry.trajectory })),
-      pack,
-      loaded.pack,
-    )
+    const comparison = buildPackCompareModel({
+      sessions: result.entries.map((entry) => ({ id: entry.trajectory.id, trajectory: entry.trajectory })),
+      base: { name: pack.name, pack },
+      target: { name: loaded.pack.name, pack: loaded.pack },
+      generatedAt: new Date(),
+      locale,
+    })
     const input = {
       sessions: result.entries.map((entry) => ({ id: entry.trajectory.id, trajectory: entry.trajectory })),
       base: { name: pack.name, pack },
@@ -348,8 +357,10 @@ export async function main(
       generatedAt: new Date(),
       locale,
     }
-    const markdown = buildPackCompareMarkdown(input)
-    const json = buildPackCompareJson(input)
+    // 算一次，渲染两份：三份产物各算一遍 comparePacks 是纯浪费。
+    const packModel = buildPackCompareModel(input)
+    const markdown = renderPackCompareMarkdown(input, packModel)
+    const json = renderPackCompareJson(input, packModel)
 
     stdout(
       `${t('cli.packCompareLine', {
@@ -382,9 +393,10 @@ export async function main(
     const [base, target] = result.entries as [(typeof result.entries)[0], (typeof result.entries)[0]]
     const generatedAt = new Date()
     const comparisonInput = { base, target, generatedAt, locale }
-    const markdown = buildComparisonReport(comparisonInput)
-    const json = buildComparisonJson(comparisonInput)
-    const html = buildComparisonHtml(comparisonInput)
+    const model = buildComparisonModel(comparisonInput)
+    const markdown = renderComparisonMarkdown(comparisonInput, model)
+    const json = renderComparisonJson(comparisonInput, model)
+    const html = renderComparisonHtml(comparisonInput, model)
 
     stdout(
       `${t('cli.compareLine', {

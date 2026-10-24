@@ -9,7 +9,7 @@ import { formatTokens } from '../core/estimate'
 import { buildAdvice } from '../core/rules/advice'
 import type { Severity } from '../core/model'
 import { formatDateTime, labelFor, translate, type MessageKey, type Translate } from '../i18n/core'
-import { buildComparisonModel, type ComparisonInput } from './report'
+import { buildComparisonModel, type ComparisonInput, type ComparisonModel } from './report'
 import { STYLE, clampPercent, escapeHtml, toneOf } from './report-style'
 
 const SEVERITY_KEY: Record<Severity, MessageKey> = {
@@ -161,11 +161,11 @@ td .num, .delta-cell { font-variant-numeric: tabular-nums; }
 }
 `
 
-export function buildComparisonHtml(input: ComparisonInput): string {
+export function renderComparisonHtml(input: ComparisonInput, model: ComparisonModel): string {
   const t: Translate = (key, params) => translate(input.locale, key, params)
   const { base, target, generatedAt, locale } = input
 
-  const { cardDiff, findingDiff, rows, summary } = buildComparisonModel(input)
+  const { cardDiff, findingDiff, rows, summary } = model
 
   const dimensionRows = cardDiff.dimensions
     .map((dimension) => {
@@ -307,4 +307,9 @@ ${dimensionRows}
 </body>
 </html>
 `
+}
+
+
+export function buildComparisonHtml(input: ComparisonInput): string {
+  return renderComparisonHtml(input, buildComparisonModel(input))
 }
