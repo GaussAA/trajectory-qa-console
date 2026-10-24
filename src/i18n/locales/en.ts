@@ -130,6 +130,7 @@ export const en: Record<MessageKey, string> = {
   'grade.A': 'Excellent',
   'grade.B': 'Good',
   'grade.C': 'Pass',
+  'grade.C.gated': 'Serious issues',
   'grade.D': 'Needs work',
   'grade.E': 'Unusable',
 

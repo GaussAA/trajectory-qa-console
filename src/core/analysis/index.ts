@@ -31,6 +31,7 @@ export { computeMetrics, type TrajectoryMetrics } from './metrics'
 export {
   annotationFindings,
   capForErrors,
+  gradeKeyOf,
   gradeOf,
   scoreTrajectory,
   sortFindings,

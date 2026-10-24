@@ -1,5 +1,5 @@
 import { formatDuration, formatTokens } from '../core/estimate'
-import type { ScoreCard } from '../core/analysis'
+import { gradeKeyOf, type ScoreCard } from '../core/analysis'
 import type { Trajectory } from '../core/model'
 import { labelFor, useI18n } from '../i18n'
 import { cx, GRADE_COLOR } from '../lib/format'
@@ -24,7 +24,7 @@ export function ScorePanel({ card, trajectory, label, ruleIssueCount }: Props) {
       ? trajectory.meta.endedAt - trajectory.meta.startedAt
       : undefined
 
-  const gradeLabel = labelFor(locale, 'grade', card.grade, card.gradeLabel)
+  const gradeLabel = labelFor(locale, 'grade', gradeKeyOf(card), card.gradeLabel)
 
   return (
     <section className="panel score-panel glass">
