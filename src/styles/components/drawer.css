@@ -34,13 +34,13 @@
 
 .drawer-head h3 {
   margin: 0 0 5px;
-  font-size: 15px;
+  font-size: var(--fs-md);
   font-weight: 600;
 }
 
 .drawer-head p {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-mute);
   line-height: 1.6;
   max-width: 620px;
@@ -67,7 +67,7 @@
   background: rgba(3, 6, 14, 0.6);
   color: #b8c6db;
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: var(--fs-sm);
   line-height: 1.7;
   outline: none;
   tab-size: 2;
@@ -82,7 +82,7 @@
 .drawer-issues {
   border-radius: 10px;
   padding: 9px 12px;
-  font-size: 10.5px;
+  font-size: var(--fs-xs);
   line-height: 1.6;
 }
 
@@ -117,7 +117,7 @@
 
 .drawer-help summary {
   cursor: pointer;
-  font-size: 10.5px;
+  font-size: var(--fs-xs);
   color: var(--text-mute);
   padding: 4px 0;
 }
@@ -135,7 +135,7 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
-  font-size: 10.5px;
+  font-size: var(--fs-xs);
   color: var(--text-dim);
   line-height: 1.6;
 }
@@ -143,7 +143,7 @@
 .drawer-help b {
   color: #c3cddf;
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: var(--fs-xs);
 }
 
 .drawer-foot {
@@ -169,12 +169,12 @@
   align-items: center;
   padding: 2px 8px;
   border-radius: 6px;
-  font-size: 10.5px;
+  font-size: var(--fs-xs);
   color: var(--text-mute);
 }
 
 .tune-head {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-mute);
@@ -203,7 +203,7 @@
   flex: 0 1 auto;
   max-width: 118px;
   font-weight: 400;
-  font-size: 9px;
+  font-size: var(--fs-xs);
   color: #8494ab;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -213,7 +213,7 @@
 .tune-title {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: 10.5px;
+  font-size: var(--fs-xs);
   color: #9fb0c8;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -239,7 +239,7 @@
   background: rgba(6, 10, 18, 0.55);
   color: var(--text-dim);
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   text-align: right;
 }
 
@@ -278,7 +278,7 @@
 
 .variant-section h4 {
   margin: 0 0 8px;
-  font-size: 10px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -299,7 +299,7 @@
   border: 1px solid rgba(148, 163, 184, 0.16);
   background: rgba(8, 12, 20, 0.7);
   color: var(--text-dim);
-  font-size: 11px;
+  font-size: var(--fs-sm);
 }
 
 .variant-save-row input:focus {
@@ -322,7 +322,7 @@
   gap: 2px 8px;
   padding: 6px 8px;
   border-radius: 8px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-dim);
 }
 
@@ -345,7 +345,7 @@
 
 .variant-name em {
   flex: 0 0 auto;
-  font-size: 9px;
+  font-size: var(--fs-xs);
   font-style: normal;
   color: #5eead4;
   border: 1px solid rgba(94, 234, 212, 0.3);
@@ -355,7 +355,7 @@
 
 .variant-meta {
   grid-column: 1 / -1;
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   color: var(--text-mute);
 }
 
@@ -382,7 +382,7 @@
 }
 
 .packcmp-pickers span {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.06em;
   color: var(--text-mute);
 }
@@ -394,7 +394,7 @@
   border: 1px solid rgba(148, 163, 184, 0.16);
   background: rgba(8, 12, 20, 0.7);
   color: var(--text-dim);
-  font-size: 10.5px;
+  font-size: var(--fs-xs);
 }
 
 .packcmp-table {
@@ -411,7 +411,7 @@
   align-items: center;
   padding: 3px 8px;
   border-radius: 6px;
-  font-size: 10.5px;
+  font-size: var(--fs-xs);
   color: var(--text-mute);
 }
 
@@ -427,7 +427,7 @@
 }
 
 .packcmp-head {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-mute);
@@ -479,7 +479,7 @@
   border: 1px solid rgba(94, 234, 212, 0.35);
   background: rgba(8, 12, 20, 0.7);
   color: var(--text-dim);
-  font-size: 11px;
+  font-size: var(--fs-sm);
 }
 
 .variant-name input:focus {
@@ -531,5 +531,11 @@
 
 .variant-tools .btn {
   padding: 2px 8px;
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
+}
+
+/* 调参表有五列（规则/阈值/命中/禁用后）。900px 下「规则」列占掉一半，
+   数值被推到最右，行与数之间横跨大半个屏幕——加宽一档才好扫读。 */
+.drawer.rules-drawer {
+  width: min(1040px, 94vw);
 }

@@ -235,7 +235,7 @@ export function RuleDrawer({
   return (
     <div className="drawer-backdrop" onMouseDown={onClose}>
       <div
-        className="drawer glass"
+        className="drawer rules-drawer glass"
         ref={panelRef}
         role="dialog"
         aria-modal="true"
@@ -259,13 +259,6 @@ export function RuleDrawer({
         </header>
 
         <div className="drawer-body">
-          <textarea
-            className="pack-editor"
-            spellCheck={false}
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-          />
-
           {errors.length > 0 && (
             <div className="drawer-errors">
               {errors.map((error, index) => (
@@ -599,6 +592,19 @@ export function RuleDrawer({
                 </div>
               </>
             )}
+          </details>
+
+          {/* 原始 JSON 是低频、危险的操作（手改错一个字段整包废掉），
+              原先占抽屉上半屏，把真正常用的「试跑与调参」挤到折叠线以下。
+              降级为默认收起的高级入口，顺序排在调参之后。 */}
+          <details className="drawer-help">
+            <summary>{t('rules.rawJson')}</summary>
+            <textarea
+              className="pack-editor"
+              spellCheck={false}
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+            />
           </details>
 
           <details className="drawer-help">

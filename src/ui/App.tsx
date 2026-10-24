@@ -198,6 +198,7 @@ export default function App({
             <Icon name="sliders" size={13} />
             {t('action.rules')}
           </button>
+          <span className="topbar-sep" aria-hidden="true" />
           <button
             type="button"
             className={cx('btn ghost sm', compareOpen && 'active')}
@@ -224,6 +225,7 @@ export default function App({
           <button type="button" className="btn ghost sm" onClick={() => setDiagnosticsOpen(true)}>
             {t('action.diagnostics')}
           </button>
+          <span className="topbar-sep" aria-hidden="true" />
           <button type="button" className="btn ghost sm" onClick={actions.exportJson} disabled={!hasData}>
             {t('action.json')}
           </button>
@@ -238,7 +240,7 @@ export default function App({
           </button>
           <button
             type="button"
-            className="btn primary sm"
+            className="btn subtle sm"
             onClick={actions.exportMarkdown}
             disabled={!hasData}
           >

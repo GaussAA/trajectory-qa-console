@@ -37,16 +37,19 @@
 
 .brand h1 {
   margin: 0;
-  font-size: 14.5px;
+  font-size: var(--fs-md);
   font-weight: 600;
   letter-spacing: 0.02em;
 }
 
 .brand-sub {
   display: block;
-  font-size: 9px;
+  font-size: var(--fs-xs);
   color: var(--text-mute);
-  letter-spacing: 0.16em;
+  /* 字号抬到 11px 后，0.16em 字距会把整串撑出 208px 边界折成两行。
+     收紧字距并禁止折行：副标题是装饰，折行会顶高整个顶栏。 */
+  letter-spacing: 0.1em;
+  white-space: nowrap;
   text-transform: uppercase;
   margin-top: 2px;
 }
@@ -66,13 +69,13 @@
 }
 
 .kpi b {
-  font-size: 14px;
+  font-size: var(--fs-md);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
 .kpi span {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text-mute);
 }
 
@@ -90,6 +93,15 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* 三组：数据（示例/规则）｜分析（对比/诊断）｜输出（JSON/HTML/导出）。
+   八颗同权重的按钮平铺时，眼睛找不到边界，只能一个个读完。 */
+.topbar-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--line);
+  margin: 0 2px;
 }
 
 .main-grid {
@@ -137,7 +149,7 @@
 }
 
 .panel-title {
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   letter-spacing: 0.08em;
   color: #cfd8e8;
@@ -147,7 +159,7 @@
 }
 
 .panel-sub {
-  font-size: 10.5px;
+  font-size: var(--fs-xs);
   color: var(--text-mute);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;

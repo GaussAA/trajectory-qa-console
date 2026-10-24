@@ -5,13 +5,22 @@
   --line-strong: rgba(148, 163, 184, 0.2);
   --text: #e9eef8;
   --text-dim: #a8b3c7;
-  --text-mute: #6f7a92;
+  --text-mute: #7b869c; /* 4.39:1 → 5.16:1：原色在 9px 小字上低于 AA */
   --teal: #5eead4;
   --violet: #a78bfa;
   --error: #fb7185;
   --warn: #fbbf24;
   --info: #60a5fa;
   --ok: #34d399;
+  /* ---------- 字号标度 ----------
+     只有 6 档，且下限 11px：8.5–10px 的小字在正常视距下读不清，
+     这不是审美问题，是持续使用成本。`scripts/check-typography.mjs` 会拦住裸 px。 */
+  --fs-xs: 11px; /* 元信息、标签、徽标 */
+  --fs-sm: 12px; /* 次要正文、按钮、输入 */
+  --fs-base: 13px; /* 正文 */
+  --fs-md: 15px; /* 小标题、关键数字 */
+  --fs-lg: 19px; /* 区块标题 */
+  --fs-xl: 22px; /* 空态大标题 */
   --radius: 18px;
   --mono: ui-monospace, SFMono-Regular, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
   --sans:
@@ -33,7 +42,7 @@ body,
 body {
   margin: 0;
   font-family: var(--sans);
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--text);
   background:
     radial-gradient(900px 620px at 8% -12%, rgba(94, 234, 212, 0.11), transparent 62%),

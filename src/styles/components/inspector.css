@@ -18,7 +18,7 @@
 
 .section h4 {
   margin: 0 0 7px;
-  font-size: 10px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   letter-spacing: 0.09em;
   color: var(--text-mute);
@@ -32,7 +32,7 @@
   border-radius: 10px;
   border: 1px solid rgba(148, 163, 184, 0.1);
   background: rgba(4, 8, 16, 0.45);
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   line-height: 1.68;
   color: #c3cddf;
   white-space: pre-wrap;
@@ -43,7 +43,7 @@
 
 .code-block {
   font-family: var(--mono);
-  font-size: 10.5px;
+  font-size: var(--fs-xs);
   color: #9fb0c9;
   max-height: 180px;
 }
@@ -64,7 +64,7 @@
 
 .collapse summary {
   cursor: pointer;
-  font-size: 10px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   letter-spacing: 0.09em;
   color: var(--text-mute);
@@ -81,7 +81,7 @@
 
 .collapse summary::before {
   content: '▸';
-  font-size: 9px;
+  font-size: var(--fs-xs);
   transition: transform 0.16s ease;
 }
 
@@ -99,7 +99,7 @@
   text-transform: none;
   letter-spacing: 0;
   color: var(--text-mute);
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
 }
 
 .call-card {
@@ -133,12 +133,12 @@
 }
 
 .call-name {
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   color: #dbe4f4;
 }
 
 .call-state {
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   padding: 1px 7px;
   border-radius: 999px;
 }
@@ -159,21 +159,21 @@
 }
 
 .kv {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.1em;
   color: var(--text-mute);
   text-transform: uppercase;
 }
 
 .call-id {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   color: rgba(111, 122, 146, 0.7);
   text-align: right;
 }
 
 .hint {
   margin: 0;
-  font-size: 10.5px;
+  font-size: var(--fs-xs);
   color: var(--text-mute);
   line-height: 1.6;
 }
@@ -188,7 +188,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 10.5px;
+  font-size: var(--fs-xs);
   color: var(--text-dim);
   line-height: 1.55;
 }
@@ -214,13 +214,13 @@
 }
 
 .metric-value {
-  font-size: 14px;
+  font-size: var(--fs-md);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
 .metric-label {
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   color: var(--text-mute);
 }
 
@@ -236,7 +236,7 @@
   padding: 7px 9px;
   border-radius: 9px;
   background: rgba(148, 163, 184, 0.05);
-  font-size: 10.5px;
+  font-size: var(--fs-xs);
 }
 
 .mini-finding i {
@@ -279,7 +279,7 @@
   border-radius: 8px;
   background: rgba(167, 139, 250, 0.08);
   border: 1px solid rgba(167, 139, 250, 0.14);
-  font-size: 10.5px;
+  font-size: var(--fs-xs);
   color: #ddd6fe;
 }
 

@@ -50,7 +50,7 @@
   border: 1px solid;
   display: grid;
   place-items: center;
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   font-weight: 600;
 }
 
@@ -63,7 +63,7 @@
 }
 
 .session-name {
-  font-size: 12px;
+  font-size: var(--fs-base);
   color: #dbe4f4;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -71,7 +71,7 @@
 }
 
 .session-meta {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text-mute);
   font-variant-numeric: tabular-nums;
 }
@@ -84,7 +84,7 @@
   border-radius: 5px;
   display: grid;
   place-items: center;
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   color: #fda4af;
   background: rgba(251, 113, 133, 0.16);
@@ -145,7 +145,7 @@
 }
 
 .session-note {
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   color: #8494ab;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -170,7 +170,7 @@
   border: 1px solid rgba(148, 163, 184, 0.16);
   background: rgba(8, 12, 20, 0.7);
   color: var(--text-dim);
-  font-size: 10.5px;
+  font-size: var(--fs-xs);
 }
 
 .session-editor input:focus {
@@ -190,7 +190,7 @@
   border: 0;
   background: transparent;
   color: var(--text-mute);
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.04em;
   padding: 2px 6px;
   border-radius: 5px;
@@ -236,7 +236,7 @@
 }
 
 .batch-count {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: #d9fff8;
 }
 
@@ -252,7 +252,7 @@
 }
 
 .batch-labels {
-  font-size: 8.5px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.04em;
   color: var(--text-mute);
   margin-bottom: -2px;
@@ -265,7 +265,7 @@
 
 .batch-preview {
   margin: 0;
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   color: var(--text-mute);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -295,7 +295,7 @@
   border: 1px solid rgba(148, 163, 184, 0.18);
   background: rgba(148, 163, 184, 0.06);
   color: var(--text-mute);
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   cursor: pointer;
   transition:
     background 0.14s ease,
@@ -314,7 +314,7 @@
 
 .tag-chip.mini {
   padding: 0 6px;
-  font-size: 8.5px;
+  font-size: var(--fs-xs);
   cursor: default;
 }
 

@@ -89,7 +89,12 @@ function StepRow({ step, duration, compact, selected, issues, maxTokens, onSelec
         )}
       </span>
 
-      <span className="step-meter">
+      <span
+        className="step-meter"
+        title={t('timeline.tokenShare', {
+          pct: Math.max(1, Math.round((step.tokens.total / maxTokens) * 100)),
+        })}
+      >
         <span className="meter-num">{formatTokens(step.tokens.total)}</span>
         <span className="meter-bar">
           <i style={{ width: `${Math.max(4, (step.tokens.total / maxTokens) * 100)}%` }} />
@@ -225,6 +230,23 @@ export function Timeline({ trajectory, card, selectedStep, onSelectStep }: Props
           )
         })}
       </div>
+
+      {/* 色条原先没有任何图例：读者只能猜每种颜色对应什么角色。
+          图例放在色条正下方，扫一眼就对上。 */}
+      {!compact && (
+        <div className="trace-legend">
+          {(['system', 'user', 'assistant', 'tool'] as const).map((role) => (
+            <span className="trace-legend-item" key={role}>
+              <i style={{ background: ROLE_COLOR[role] }} />
+              {t(`role.${role}`)}
+            </span>
+          ))}
+          <span className="trace-legend-item">
+            <i style={{ background: '#fb7185' }} />
+            {t('timeline.legendError')}
+          </span>
+        </div>
+      )}
 
       <div className="timeline" ref={scrollRef}>
         {compact ? (

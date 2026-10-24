@@ -266,6 +266,16 @@ describe('App smoke', () => {
     expect(events).toContain('ingest:file')
   })
 
+  it('collapses the findings panel to one line when no rule fired', async () => {
+    const { user } = setup()
+    await loadSamples(user)
+
+    // demo-01 是满分轨迹：右栏不该被「0/0 空态」占掉一半，
+    // 那块高度要给「人工标注」——右栏的核心动作。
+    expect(screen.getByText('这条轨迹没有命中任何规则')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /全部维度/ })).toBeNull()
+  })
+
   it('opens the rule pack as a dialog and closes it with Escape', async () => {
     const { user } = setup()
     await loadSamples(user)
@@ -281,7 +291,10 @@ describe('App smoke', () => {
     const { user } = setup()
     await loadSamples(user)
 
-    const errorFilter = screen.getByRole('button', { name: /严重/ })
+    // demo-01 没有命中任何规则，问题清单会收成一行，筛选器也就不该出现。
+    // 换成有问题的那条会话再验筛选器（它只在有东西可筛时才有意义）。
+    await user.click(screen.getByRole('button', { name: /demo-02/ }))
+    const errorFilter = await screen.findByRole('button', { name: /严重/ })
     expect(errorFilter.getAttribute('aria-pressed')).toBe('false')
     await user.click(errorFilter)
     expect(errorFilter.getAttribute('aria-pressed')).toBe('true')

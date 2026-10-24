@@ -35,7 +35,7 @@
 
 .score-title-row h2 {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--fs-lg);
   font-weight: 600;
   letter-spacing: 0.01em;
   overflow: hidden;
@@ -45,7 +45,7 @@
 
 .grade-chip {
   flex: 0 0 auto;
-  font-size: 10px;
+  font-size: var(--fs-xs);
   padding: 2px 8px;
   border-radius: 999px;
   border: 1px solid;
@@ -56,7 +56,7 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  font-size: 10.5px;
+  font-size: var(--fs-xs);
   color: var(--text-mute);
   font-variant-numeric: tabular-nums;
 }
@@ -69,7 +69,7 @@
 }
 
 .tag-dim {
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   padding: 1px 6px;
   border-radius: 5px;
   background: rgba(251, 191, 36, 0.1);
@@ -84,7 +84,7 @@
 }
 
 .count-pill {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   padding: 2px 8px;
   border-radius: 999px;
   border: 1px solid transparent;
@@ -115,24 +115,52 @@
   border-color: rgba(167, 139, 250, 0.2);
 }
 
+/* 四个维度压成一行：名称+分数在上、细条在下。
+   原先 2×2 每行一条满格进度条，占总分 100 时四条全满——占了最大视觉权重，
+   信息量为零。压成一行后省出的高度全给时间线。 */
 .dim-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 9px 22px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px 18px;
 }
 
 .dim-row {
   display: grid;
-  grid-template-columns: 128px minmax(0, 1fr) 28px 20px;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-rows: auto 3px;
   align-items: center;
-  gap: 8px;
+  gap: 3px 6px;
+}
+
+.dim-row .dim-track {
+  grid-column: 1 / -1;
+  grid-row: 2;
+}
+
+.dim-row .dim-issues {
+  grid-column: 3;
+}
+
+/* 满分维度弱化：条与分数都退到背景里，让有扣分的那条跳出来。 */
+.dim-row.dim-full .dim-track span {
+  opacity: 0.35;
+}
+
+.dim-row.dim-full .dim-score {
+  color: var(--text-mute);
+}
+
+@media (max-width: 1279px) {
+  .dim-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .dim-name {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: #c3cddf;
   white-space: nowrap;
 }
@@ -146,7 +174,7 @@
 
 .dim-name em {
   font-style: normal;
-  font-size: 9px;
+  font-size: var(--fs-xs);
   color: var(--text-mute);
 }
 
@@ -165,14 +193,14 @@
 }
 
 .dim-score {
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   text-align: right;
   font-variant-numeric: tabular-nums;
   color: var(--text-dim);
 }
 
 .dim-issues {
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   text-align: center;
   color: var(--text-mute);
   background: rgba(148, 163, 184, 0.08);

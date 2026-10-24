@@ -116,7 +116,15 @@ export function ScorePanel({ card, trajectory, label, ruleIssueCount }: Props) {
 
       <div className="dim-grid">
         {card.dimensions.map((dimension) => (
-          <div className={cx('dim-row', dimension.findings === 0 && 'dim-clean')} key={dimension.id}>
+          <div
+            className={cx(
+              'dim-row',
+              dimension.findings === 0 && 'dim-clean',
+              // 满分且无问题：视觉上退到背景，让有扣分的那条跳出来
+              dimension.score >= 100 && dimension.findings === 0 && 'dim-full',
+            )}
+            key={dimension.id}
+          >
             <span className="dim-name">
               <i style={{ background: dimension.color }} />
               {labelFor(locale, 'dimension', dimension.id, dimension.label)}
@@ -125,7 +133,8 @@ export function ScorePanel({ card, trajectory, label, ruleIssueCount }: Props) {
             <span className="dim-track">
               <span style={{ width: `${dimension.score}%`, background: dimension.color }} />
             </span>
-            <span className="dim-score" style={{ color: dimension.score >= 80 ? '#e9eef8' : '#fbbf24' }}>
+            {/* 只在扣分时才上色：满分用 CSS 的弱化色，避免四条一样亮 */}
+            <span className="dim-score" style={dimension.score < 80 ? { color: '#fbbf24' } : undefined}>
               {dimension.score}
             </span>
             <span className="dim-issues" title={t('findings.title')}>

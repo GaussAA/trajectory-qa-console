@@ -21,7 +21,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "verify": "pnpm typecheck && pnpm lint && pnpm test:coverage && node scripts/check-i18n.mjs && vite build && node scripts/check-artifact.mjs && pnpm build:cli && node scripts/smoke-cli.mjs",
+    "verify": "pnpm typecheck && pnpm lint && pnpm test:coverage && node scripts/check-i18n.mjs && node scripts/check-typography.mjs && vite build && node scripts/check-artifact.mjs && pnpm build:cli && node scripts/smoke-cli.mjs",
     "ci": "pnpm verify"
   },
   "dependencies": {

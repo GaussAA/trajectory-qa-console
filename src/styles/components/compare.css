@@ -9,6 +9,20 @@
   min-height: 0;
 }
 
+/* 逐步差异是这一页的主体，让它吃掉剩余高度；否则页脚上方会漂一块空白。 */
+.compare-block.compare-steps {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.compare-step-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 .compare-body {
   flex: 1;
   min-height: 0;
@@ -30,7 +44,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text-mute);
 }
 
@@ -41,7 +55,7 @@
   border: 1px solid rgba(148, 163, 184, 0.14);
   background: rgba(8, 12, 20, 0.6);
   color: var(--text-dim);
-  font-size: 10.5px;
+  font-size: var(--fs-xs);
 }
 
 .compare-arrow,
@@ -57,17 +71,17 @@
 }
 
 .compare-score-before {
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--text-mute);
 }
 
 .compare-score-after {
-  font-size: 19px;
+  font-size: var(--fs-lg);
   color: #e9eef8;
 }
 
 .compare-delta {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   padding: 1px 6px;
   border-radius: 999px;
   font-family: var(--mono);
@@ -98,7 +112,7 @@
 
 .compare-block h4 {
   margin: 0 0 8px;
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-mute);
@@ -111,7 +125,7 @@
   gap: 8px;
   align-items: center;
   padding: 2px 0;
-  font-size: 10.5px;
+  font-size: var(--fs-xs);
 }
 
 .compare-dim-name {
@@ -124,7 +138,7 @@
 .compare-dim-scores {
   font-family: var(--mono);
   color: var(--text-mute);
-  font-size: 10px;
+  font-size: var(--fs-xs);
 }
 
 .compare-dim-row .compare-delta {
@@ -135,7 +149,7 @@
   display: flex;
   gap: 14px;
   margin-top: 8px;
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   color: var(--text-mute);
   font-family: var(--mono);
 }
@@ -147,7 +161,7 @@
 }
 
 .compare-chip {
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   padding: 2px 7px;
   border-radius: 999px;
 }
@@ -169,7 +183,7 @@
 
 .compare-sub {
   margin: 10px 0 4px;
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   font-weight: 500;
   color: var(--text-mute);
 }
@@ -186,13 +200,13 @@
 .compare-finding-list li {
   display: flex;
   gap: 8px;
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text-mute);
 }
 
 .compare-finding-list .mono {
   flex: 0 0 auto;
-  font-size: 9px;
+  font-size: var(--fs-xs);
   color: #93a4bd;
 }
 
@@ -221,7 +235,7 @@
   align-items: baseline;
   padding: 2px 6px;
   border-radius: 5px;
-  font-size: 10.5px;
+  font-size: var(--fs-xs);
 }
 
 .compare-step.changed {
@@ -237,13 +251,13 @@
 }
 
 .compare-step-badge {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   color: var(--text-mute);
 }
 
 .compare-step-index {
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: var(--fs-xs);
   color: var(--text-mute);
 }
 

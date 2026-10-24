@@ -37,6 +37,25 @@ function syntheticTrajectory(count: number): Trajectory {
   }
 }
 
+describe('Timeline legend', () => {
+  it('labels the trace map colours so the rail is not a guessing game', () => {
+    const trajectory = syntheticTrajectory(6)
+    const card = scoreTrajectory([], DIMENSIONS)
+    const { container } = renderTimeline(
+      <Timeline trajectory={trajectory} card={card} selectedStep={null} onSelectStep={() => undefined} />,
+    )
+
+    // 色条原先没有任何图例，读者只能猜。角色名在步骤行里也有，
+    // 所以只认图例容器内的顺序，避免「用户」撞到角色胶囊。
+    const legend = container.querySelector('.trace-legend')
+    expect(legend).not.toBeNull()
+    const labels = [...(legend?.querySelectorAll('.trace-legend-item') ?? [])].map((node) =>
+      node.textContent?.trim(),
+    )
+    expect(labels).toEqual(['系统', '用户', '助手', '工具', '含错误'])
+  })
+})
+
 describe('Timeline virtualization', () => {
   it('renders a bounded number of rows for a 10,000-step trace', () => {
     const trajectory = syntheticTrajectory(10_000)

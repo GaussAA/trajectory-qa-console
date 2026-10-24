@@ -26,6 +26,10 @@ export function FindingsPanel({ card, dimensions, onLocate }: Props) {
     return map
   }, [dimensions, locale, t])
 
+  /** 一条都没有 vs 被筛掉了，是两件事：
+   *  前者不该给「调整筛选」的建议，也不该占半栏高度——那高度要给「人工标注」。 */
+  const isEmpty = card.findings.length === 0
+
   const visible = card.findings.filter(
     (finding) =>
       (severity === 'all' || finding.severity === severity) &&
@@ -33,7 +37,7 @@ export function FindingsPanel({ card, dimensions, onLocate }: Props) {
   )
 
   return (
-    <section className="panel findings-panel glass">
+    <section className={cx('panel findings-panel glass', isEmpty && 'is-empty')}>
       <header className="panel-head">
         <span className="panel-title">{t('findings.title')}</span>
         <span className="panel-sub">
@@ -41,6 +45,10 @@ export function FindingsPanel({ card, dimensions, onLocate }: Props) {
         </span>
       </header>
 
+      {isEmpty ? (
+        <p className="findings-none">{t('findings.noneAtAll')}</p>
+      ) : (
+        <>
       <div className="filter-row">
         <div className="chip-group">
           {(['all', 'error', 'warn', 'info'] as SeverityFilter[]).map((item) => (
@@ -106,6 +114,9 @@ export function FindingsPanel({ card, dimensions, onLocate }: Props) {
           ))
         )}
       </div>
+
+        </>
+      )}
 
       {card.ruleIssues.length > 0 && (
         <footer className="rule-issues">
