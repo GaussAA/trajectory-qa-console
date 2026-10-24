@@ -128,6 +128,7 @@ export const zhCN = {
   'grade.A': '优秀',
   'grade.B': '良好',
   'grade.C': '合格',
+  'grade.C.gated': '有严重问题',
   'grade.D': '待修',
   'grade.E': '不可用',
 

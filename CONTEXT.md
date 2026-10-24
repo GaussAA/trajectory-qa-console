@@ -17,7 +17,7 @@
 | **规则包（RulePack）**          | 维度 + 规则 + 版本，可在界面内编辑、导入导出。                              |
 | **评分卡（ScoreCard）**         | 派生结果：维度分、加权分、封顶分、等级、问题计数。                          |
 | **评分派生（buildCard）**       | `(trajectory, metrics, pack, 标注) → 评分卡`。唯一的算分入口，规则在此现算。 |
-| **错误封顶（Error gate）**      | 按「不同 error 级规则数」限制总分：≥1→74、≥3→54、≥5→39。                    |
+| **错误封顶（Error gate）**      | 按「不同 error 级规则数」限制总分：≥1→74、≥3→54、≥5→39。74 恰好是 C 的上沿，所以带 error 的 C 标签是「有严重问题」而不是「合格」（`gradeKeyOf`）；字母与分数不变。 |
 | **会话分析（SessionAnalysis）** | 一条轨迹的质检产物：指标、发现、规则异常、耗时诊断。                        |
 | **工作区（Workspace）**         | 会话集合 + 选中态 + 规则包 + 人工标注 + 导入问题。                          |
 | **分析端口（Analyzer port）**   | `analyze(request, signal)`：只做解析与指标，不接规则包；返回 `{ sessions, issues }`。同步/worker 两个 adapter。 |

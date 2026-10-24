@@ -8,7 +8,7 @@
  */
 
 import { formatTokens } from '../core/estimate'
-import type { ScoreCard } from '../core/analysis'
+import { gradeKeyOf, type ScoreCard } from '../core/analysis'
 import { alignSteps, compareCards, diffFindings, summarizeAlignment, type AlignStatus } from '../core/compare'
 import { mdCell, mdInline } from './markdown'
 import { buildAdvice } from '../core/rules/advice'
@@ -115,7 +115,7 @@ export function buildMarkdownReport({ entries, pack, generatedAt, locale }: Repo
       `**${t('report.totalScore', {
         score: card.overall,
         grade: card.grade,
-        label: labelFor(locale, 'grade', card.grade, card.gradeLabel),
+        label: labelFor(locale, 'grade', gradeKeyOf(card), card.gradeLabel),
       })}**`,
     )
     lines.push('')
@@ -220,7 +220,7 @@ export function buildJsonReport({ entries, pack, generatedAt, locale }: ReportIn
         score: card.overall,
         rawScore: card.rawOverall,
         grade: card.grade,
-        gradeLabel: labelFor(locale, 'grade', card.grade, card.gradeLabel),
+        gradeLabel: labelFor(locale, 'grade', gradeKeyOf(card), card.gradeLabel),
         dimensions: card.dimensions.map((dimension) => ({
           ...dimension,
           label: labelFor(locale, 'dimension', dimension.id, dimension.label),
