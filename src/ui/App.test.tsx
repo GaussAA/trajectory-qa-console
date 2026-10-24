@@ -8,7 +8,12 @@ import { createTelemetry } from '../app/telemetry'
 import App from './App'
 import { I18nProvider, type Locale } from '../i18n'
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  // 有些用例会改地址栏（`?agent=` 决定是否出现 AI 诊断按钮），用完必须还原，
+  // 否则后面的用例会莫名其妙多出一个按钮。
+  window.history.replaceState({}, '', '/')
+})
 
 function setup(locale: Locale = 'zh-CN') {
   const telemetry = createTelemetry()
@@ -27,6 +32,21 @@ async function loadSamples(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('App smoke', () => {
+  it('keeps topbar labels distinct once AI diagnosis is enabled', async () => {
+    window.history.replaceState({}, '', '/?agent=http://127.0.0.1:7788')
+    const { user } = setup()
+    await loadSamples(user)
+
+    const topbar = document.querySelector('.topbar-actions')
+    const labels = [...(topbar?.querySelectorAll('button') ?? [])].map((button) =>
+      (button.textContent ?? '').trim(),
+    )
+    // 曾经有两个按钮都叫「诊断」：一个是诊断日志，一个是 AI 诊断。并排时没人分得清。
+    const duplicates = [...new Set(labels.filter((label, index) => labels.indexOf(label) !== index))]
+    expect(labels.length).toBeGreaterThan(0)
+    expect(duplicates).toEqual([])
+  })
+
   it('renders the empty state', () => {
     setup()
     expect(screen.getByText('把轨迹拖进来，四面体检')).toBeTruthy()

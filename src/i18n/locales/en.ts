@@ -373,7 +373,7 @@ export const en: Record<MessageKey, string> = {
   'toast.htmlExported': 'HTML report exported',
 
   'action.compare': 'Compare',
-  'action.agent': 'Diagnose',
+  'action.agent': 'AI diagnosis',
   'action.agentHint': 'Explain the scores: root causes, fixes, rule pack proposals (needs the local service)',
 
   'agent.ui.title': 'Trajectory diagnosis',

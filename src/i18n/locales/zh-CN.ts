@@ -367,7 +367,9 @@ export const zhCN = {
   'toast.htmlExported': 'HTML 报告已导出',
 
   'action.compare': '对比',
-  'action.agent': '诊断',
+  // 顶栏已有一个「诊断」（打开的是诊断日志/遥测）。两个同名按钮并排，
+  // 用户分不清哪个是哪个——留旧名不动，新的带上 AI 前缀。
+  'action.agent': 'AI 诊断',
   'action.agentHint': '解释分数：根因、整改动作、规则包提案（需先在本机运行 serve）',
 
   'agent.ui.title': '轨迹诊断',
