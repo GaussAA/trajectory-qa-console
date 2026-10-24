@@ -23,7 +23,7 @@ function walk(dir) {
   for (const name of readdirSync(dir)) {
     const path = join(dir, name)
     if (statSync(path).isDirectory()) files.push(...walk(path))
-    else if (/\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name)) files.push(path)
+    else if (/\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name) && name !== 'test-support.ts') files.push(path)
   }
   return files
 }
