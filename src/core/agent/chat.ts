@@ -17,6 +17,8 @@ export interface ChatOptions {
   apiKey: string
   maxTokens: number
   timeoutMs: number
+  /** 这一回合（含重试）最多还能花多久；由循环按剩余的墙钟预算算出。 */
+  totalTimeoutMs?: number
   retries?: number
   retryDelayMs?: number
   tools: ToolSpec[]
@@ -138,6 +140,7 @@ export async function chat(messages: AgentMessage[], options: ChatOptions): Prom
     apiKey: options.apiKey,
     body: JSON.stringify(body),
     timeoutMs: options.timeoutMs,
+    totalTimeoutMs: options.totalTimeoutMs,
     retries: options.retries,
     retryDelayMs: options.retryDelayMs,
     signal: options.signal,
@@ -156,6 +159,7 @@ export async function chat(messages: AgentMessage[], options: ChatOptions): Prom
     return fail(failure.kind === 'aborted' ? 'aborted' : 'analysis-failed', message, {
       kind: failure.kind,
       ...(failure.kind === 'http' ? { status: failure.status } : {}),
+      ...(failure.kind === 'timeout' && failure.budgetExhausted ? { budgetExhausted: true } : {}),
     })
   }
 

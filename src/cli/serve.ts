@@ -321,6 +321,14 @@ export function createAgentServer(config: ServeConfig): Server {
       return
     }
 
+    // 客户端中途走掉（关页面、点取消）：连接断开时响应还没写完，就让这次运行停下。
+    // 否则服务端会继续往模型发请求，最多烧满预算，而没有任何人在看结果。
+    // 正常写完 `end()` 之后也会触发 close，所以要看 `writableFinished` 区分两种情形。
+    const abort = new AbortController()
+    response.once('close', () => {
+      if (!response.writableFinished) abort.abort()
+    })
+
     response.writeHead(200, {
       'content-type': 'application/x-ndjson; charset=utf-8',
       // 不要缓冲：进度要立刻可见。
@@ -348,6 +356,7 @@ export function createAgentServer(config: ServeConfig): Server {
         apiKey: config.llm.apiKey,
         locale,
         task: payload.task,
+        signal: abort.signal,
         budget: payload.rounds === undefined ? undefined : { maxRounds: payload.rounds },
         now: config.now,
         retryDelayMs: config.retryDelayMs,

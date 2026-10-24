@@ -142,7 +142,7 @@ export const AGENT_BUDGET: AgentBudget = {
 
 // ---------- trace ----------
 
-export type StopReason = 'answered' | 'submitted' | 'rounds' | 'tool-calls' | 'duration'
+export type StopReason = 'answered' | 'submitted' | 'rounds' | 'tool-calls' | 'duration' | 'output-limit'
 
 export type TraceEntry =
   | {

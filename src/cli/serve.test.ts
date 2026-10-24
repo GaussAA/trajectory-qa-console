@@ -1,6 +1,6 @@
 import { request as httpRequest } from 'node:http'
 import type { AddressInfo } from 'node:net'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { analyze } from '../core/analysis'
 import type { LlmTransport } from '../core/llm/transport'
 import { allowOrigin, createAgentServer, type ServeConfig } from './serve'
@@ -299,6 +299,67 @@ describe('agent server', () => {
     const server = await start()
     try {
       expect((await fetch(`${server.base}/nope`)).status).toBe(404)
+    } finally {
+      await server.close()
+    }
+  })
+
+  it('stops the agent run when the client disconnects, instead of spending on', async () => {
+    // 端点一直挂着，直到收到取消信号。没有断连处理时，这次调用会一直挂到单次超时，
+    // 模型额度就这样烧在一个没人在看的请求上。
+    let seen: AbortSignal | undefined
+    let calls = 0
+    const transport: LlmTransport = (input) => {
+      calls += 1
+      seen = input.signal
+      return new Promise((_resolve, reject) => {
+        input.signal?.addEventListener('abort', () => reject(new Error('aborted')), { once: true })
+      })
+    }
+    const server = await start({ transport })
+    try {
+      const body = JSON.stringify({ sessions: [session()] })
+      await new Promise<void>((resolve) => {
+        const req = httpRequest(
+          {
+            host: '127.0.0.1',
+            port: server.port,
+            path: '/api/diagnose',
+            method: 'POST',
+            headers: { 'content-type': 'application/json', 'content-length': Buffer.byteLength(body) },
+          },
+          (res) => {
+            // 收到第一块（start 事件）就说明服务端已经开跑了：此时关掉页面。
+            res.once('data', () => {
+              req.destroy()
+              resolve()
+            })
+          },
+        )
+        req.on('error', () => undefined)
+        req.end(body)
+      })
+
+      await vi.waitFor(() => expect(seen?.aborted).toBe(true), { timeout: 2000 })
+      expect(calls).toBe(1)
+    } finally {
+      await server.close()
+    }
+  })
+
+  it('does not abort a run whose client stays connected', async () => {
+    let aborted = false
+    const transport: LlmTransport = async (input) => {
+      input.signal?.addEventListener('abort', () => {
+        aborted = true
+      })
+      return { ok: true, status: 200, text: SUBMITTED }
+    }
+    const server = await start({ transport })
+    try {
+      const result = await diagnose(server.base, { sessions: [session()] })
+      expect(result.lines.at(-1)?.type).toBe('done')
+      expect(aborted).toBe(false)
     } finally {
       await server.close()
     }
