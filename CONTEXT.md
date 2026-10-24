@@ -217,8 +217,14 @@ trajectory-qa serve --port 7788 --token abc123
 ```
 
 - **只 bind `127.0.0.1`**；`--host` 非回环地址时终端会警告（局域网内其他机器就连得上了）。
-- **CORS 白名单**：只放行 `file://`（Origin 为 `null`）与本机 http。其它来源拿不到 CORS 头，
-  浏览器会拦下读取。
+- **CORS 白名单**：放行本机 http；`file://`（Origin 为 `null`）**只在设了 `--token` 时**放行。
+  `Origin: null` 也来自沙箱 iframe 与 `data:` 页面，分不出来，所以没有 token 时一律拒（预检不给 CORS 头，
+  POST 直接 403）。其它来源拿不到 CORS 头，浏览器会拦下读取。
+- **Host 校验**：绑在回环地址时，`Host` 不是回环名的请求一律 403 且不带 CORS 头，挡 DNS 重绑定。
+  用户显式绑到非回环地址（`--host`）时关闭这道校验，防线是 token 与启动警告。
+- **界面 `?agent=` 只认回环地址**（`readAgentTarget`）：链接可以是别人发来的，不限制的话，
+  点「诊断」就把整条轨迹发给任意主机。非回环、非 http(s)、解析不了的都当作未配置。
+  回环判断在 `src/lib/loopback.ts`，serve 与界面共用一份。
 - **token 拦的是另一件事**：跨站页面仍能「盲发」请求消耗额度，所以留了 `--token`；
   不设时终端明说风险（本机自用没关系）。
 - 端点：`GET /health`（只答模型名与是否需要 token，**不含密钥与端点路径**）、
@@ -362,6 +368,23 @@ node dist-cli/qa.mjs a.json b.json --compare --fail-below 80    # 只卡「对�
 产物契约校验（`scripts/check-artifact.mjs`）要求：不得含外部脚本/样式/远程图片，
 必须有 `#root`，体积不超过 1500 KB（`ARTIFACT_BUDGET_KB` 可调）。
 产物与覆盖率作为 artifact 上传（保留 14 / 7 天）。本地等价入口：`pnpm verify`。
+
+## 输入格式
+
+**支持**：OpenAI Chat Completions 消息数组、`{messages:[…]}` 等常见容器（`messages / steps / trajectory /
+conversation / history / transcript / turns / items / events / log`，可嵌在 `data / result / payload /
+session / record / thread / run` 下）、JSONL（每行一条消息或一个会话）、OpenAI Responses 条目
+（`function_call` 以 `call_id` 配对，`function_call_output`）、Anthropic 内容块（`tool_use` / `tool_result`）。
+
+- 一条消息里有多个 `tool_result`（Anthropic 的并行工具调用）会**拆成多个步骤**，每个结果单独配对。
+  所以步号对应的是拆分后的步骤，不一定等于原始消息序号。
+- **没有任何 assistant 或 tool 步骤的会话不评分**，记入 `issues`（原因 `NOTHING_TO_SCORE`）。
+  规则是「找毛病」，空轨迹毛病为零，会得 A；角色全是 `unknown` 的异形格式同理。
+  文件里所有会话都如此则整个文件失败（CLI 退出码 2）。
+
+**未适配**（不保证正确，遇到请先转成上面的形态）：SWE-agent / OpenHands 轨迹、ShareGPT 风格的
+`conversations`、LangChain `model_dump` / `messages_to_dict`（角色放在 `type` 字段里的那种）。
+这类输入若被识别成「有 assistant 步骤」的形状，仍可能得到不准确的分数。
 
 ## 已知边界
 
