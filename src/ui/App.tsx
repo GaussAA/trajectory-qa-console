@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ErrorInfo } from 'react'
 import { formatTokens } from '../core/estimate'
 import type { AnalyzerPort } from '../app/analyzer'
+import { issueMessageKey } from '../app/ingest'
 import { createPersistence, createBrowserStorage, type PersistencePort } from '../app/persistence'
 import { createTelemetry, installGlobalErrorHandlers, type Telemetry } from '../app/telemetry'
 import { DiagnosticsDrawer } from './DiagnosticsDrawer'
@@ -159,7 +160,9 @@ export default function App({
           <button
             type="button"
             className="issue-pill"
-            title={state.issues.map((issue) => `${issue.file}：${issue.message}`).join('\n')}
+            title={state.issues
+              .map((issue) => t(issueMessageKey(issue.code), issue.params))
+              .join('\n')}
             onClick={() => setDiagnosticsOpen(true)}
           >
             {t('issues.filesFailed', { count: state.issues.length })}

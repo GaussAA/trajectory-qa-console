@@ -1,10 +1,11 @@
-import { hasMessage, useI18n } from '../i18n'
+import { useI18n } from '../i18n'
+import { issueMessageKey, type IngestIssue } from '../app/ingest'
 import { Icon } from './Icons'
 
 interface Props {
   onPick: () => void
   onSample: () => void
-  issues: { file: string; message: string; code: string }[]
+  issues: IngestIssue[]
 }
 
 const SNIPPET = `[
@@ -17,12 +18,11 @@ const SNIPPET = `[
 ]`
 
 export function EmptyState({ onPick, onSample, issues }: Props) {
-  const { locale, t } = useI18n()
+  const { t } = useI18n()
 
-  const issueText = (issue: { message: string; code: string }) => {
-    const key = `error.${issue.code}`
-    return hasMessage(locale, key) ? t(key) : issue.message
-  }
+  // Same mapping the toast uses: code → dictionary entry + params. A second,
+  // hand-rolled variant here is what let the two drift apart before.
+  const issueText = (issue: IngestIssue) => t(issueMessageKey(issue.code), issue.params)
 
   return (
     <main className="empty-wrap" aria-label={t('empty.title')}>

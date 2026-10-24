@@ -122,7 +122,7 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
   }, [state.sessions, cards])
 
   const ingest = useCallback(
-    async (inputs: TextInput[]) => {
+    async (inputs: TextInput[], carried: IngestIssue[] = []) => {
       if (inputs.length === 0) return
       dispatch({ type: 'ingest/start' })
       const batch = uid().slice(0, 8)
@@ -133,7 +133,10 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
       })
 
       const collected: SessionAnalysis[] = []
-      const issues: IngestIssue[] = []
+      // Problems found while *reading* the files (too large, over the total
+      // budget, unreadable) belong to the same import as the ones found while
+      // analysing. Dropping them here is how a rejected file went unnoticed.
+      const issues: IngestIssue[] = [...carried]
 
       // One controller for the whole batch: cancelling has to stop every file
       // still in flight, not merely the one being awaited.
@@ -240,7 +243,7 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
         )
         return
       }
-      await ingest(inputs)
+      await ingest(inputs, issues)
     },
     [ingest, telemetry],
   )
