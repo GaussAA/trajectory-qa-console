@@ -19,6 +19,9 @@ export interface SemanticFinding {
   severity: Severity
   quote?: string
   reason: string
+  /** 模型引用的原文在它看到的摘要里找不到。已降为 info 并去掉那句引文。
+   *  不是删掉：删掉就等于悄悄吞掉模型的判断；标出来，读者才知道这条没有依据。 */
+  unverified?: boolean
 }
 
 /** 传输层已抽到 `core/llm`：语义复核与智能体共用同一套超时/重试纪律，

@@ -198,6 +198,31 @@ describe('RuleDrawer variants', () => {
     expect(screen.queryByLabelText('重命名变体')).toBeNull()
   })
 
+  it('cancels only the rename on Esc, instead of closing the whole drawer', () => {
+    const onClose = vi.fn()
+    const onRenameVariant = vi.fn()
+    setup({ variants: [renameTarget()], onRenameVariant, onClose })
+
+    fireEvent.click(screen.getByRole('button', { name: '重命名变体 宽松口径' }))
+    const input = screen.getByLabelText('重命名变体') as HTMLInputElement
+    fireEvent.change(input, { target: { value: '改到一半' } })
+    fireEvent.keyDown(input, { key: 'Escape' })
+
+    // 取消的是重命名，不是整个抽屉：抽屉里可能还有没存的 JSON 草稿。
+    expect(onClose).not.toHaveBeenCalled()
+    expect(onRenameVariant).not.toHaveBeenCalled()
+    expect(screen.queryByLabelText('重命名变体')).toBeNull()
+  })
+
+  it('still closes on Esc when nothing inside the drawer is handling it', () => {
+    const onClose = vi.fn()
+    setup({ onClose })
+
+    fireEvent.keyDown(window, { key: 'Escape' })
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
   it('treats an empty rename as cancel', () => {
     const onRenameVariant = vi.fn()
     setup({ variants: [renameTarget()], onRenameVariant })

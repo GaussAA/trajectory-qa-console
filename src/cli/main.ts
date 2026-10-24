@@ -21,6 +21,7 @@ import {
   renderPackCompareMarkdown,
 } from '../lib/pack-compare-report'
 import { renderComparisonHtml } from '../lib/comparison-html'
+import { isLoopbackHost } from '../lib/loopback'
 import {
   buildAgentReportModel,
   endpointHost,
@@ -169,6 +170,24 @@ export function artifactsFor(format: ReportFormat): ArtifactKind[] {
 
 const ARTIFACT_EXT: Record<ArtifactKind, string> = { md: 'md', json: 'json', html: 'html' }
 
+type WriteOutcome = { ok: true; written: string[] } | { ok: false; message: string }
+
+/** 写盘失败（`--out` 指到一个文件上、没有权限、磁盘满）要变成一条错误信息，而不是一份栈。
+ *  此前只有普通报告分支包了 try/catch，对比、口径对比、智能体三个分支里同样的失败
+ *  会让 `main()` 直接 reject。 */
+function tryWriteArtifacts(
+  dir: string,
+  base: string,
+  kinds: ArtifactKind[],
+  contents: Partial<Record<ArtifactKind, string>>,
+): WriteOutcome {
+  try {
+    return { ok: true, written: writeArtifacts(resolve(dir), base, kinds, contents) }
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : String(error) }
+  }
+}
+
 /** 写盘按「产物清单」而非嵌套 if：加一种格式只需改 `artifactsFor`。 */
 function writeArtifacts(
   dir: string,
@@ -219,6 +238,8 @@ async function runServe(options: CliOptions, io: ServeIo): Promise<number> {
     token: options.token,
     // 轮次上限归运行服务的人定：页面请求的轮次只能比它少，不能比它多。
     maxRounds: options.agentRounds ?? undefined,
+    // 用户明确绑到非回环地址时，Host 就不会是回环名；那种情形下的防线是 token 与启动警告。
+    loopbackOnly: isLoopbackHost(options.host),
     transport: deps.transport,
   })
 
@@ -246,7 +267,7 @@ async function runServe(options: CliOptions, io: ServeIo): Promise<number> {
   stdout(`${t('cli.serveHint', { origin: url })}\n`)
   if (options.token === null) stderr(`${t('cli.serveNoToken')}\n`)
   else stdout(`${t('cli.serveWithToken')}\n`)
-  if (!['127.0.0.1', 'localhost', '::1'].includes(options.host)) {
+  if (!isLoopbackHost(options.host)) {
     stderr(`${t('cli.servePublicHost', { host: options.host })}\n`)
   }
 
@@ -344,6 +365,19 @@ export async function main(
     pack = loaded.pack
   }
 
+  // `--pack-compare` 的目标包也要在任何烧额度的步骤之前加载并校验：
+  // 此前它排在 runBatch（内含 --semantic 的模型调用）之后，路径写错会先花掉额度再报错。
+  let packCompareTarget: RulePack | null = null
+  if (options.packCompare) {
+    const alias = resolvePackAlias(options.packCompare)
+    const loadedTarget = alias ? { ok: true as const, pack: alias } : loadPack(options.packCompare)
+    if (!loadedTarget.ok) {
+      stderr(`✗ ${t('cli.err.pack-invalid', { detail: loadedTarget.message })}\n`)
+      return EXIT.error
+    }
+    packCompareTarget = loadedTarget.pack
+  }
+
   // 试跑：只打印将要发送的提示词，不调用模型（便于审计与离线检查）。
   if (options.semanticDryRun) {
     const first = collected.value.files[0] as string
@@ -391,7 +425,9 @@ export async function main(
   const result = await runBatch(collected.value.files, {
     locale,
     pack,
-    failBelow: options.failBelow,
+    // 对比模式的门禁只卡「对照」，由下面 compare 分支自己判定并打印；
+    // 这里若照常传入，汇总里会多印一行覆盖所有会话（含基准）的门禁，与退出码对不上。
+    failBelow: options.compare ? null : options.failBelow,
     maxFileBytes: options.maxFileBytes,
     semantic: semanticHook,
   })
@@ -418,38 +454,24 @@ export async function main(
     return true
   }
 
-  if (options.packCompare) {
-    const alias = resolvePackAlias(options.packCompare)
-    const loaded = alias ? { ok: true as const, pack: alias } : loadPack(options.packCompare)
-    if (!loaded.ok) {
-      stderr(`✗ ${t('cli.err.pack-invalid', { detail: loaded.message })}\n`)
-      return EXIT.error
-    }
-
-    const comparison = buildPackCompareModel({
-      sessions: result.entries.map((entry) => ({ id: entry.trajectory.id, trajectory: entry.trajectory })),
-      base: { name: pack.name, pack },
-      target: { name: loaded.pack.name, pack: loaded.pack },
-      generatedAt: new Date(),
-      locale,
-    })
+  if (packCompareTarget) {
     const input = {
       sessions: result.entries.map((entry) => ({ id: entry.trajectory.id, trajectory: entry.trajectory })),
       base: { name: pack.name, pack },
-      target: { name: loaded.pack.name, pack: loaded.pack },
+      target: { name: packCompareTarget.name, pack: packCompareTarget },
       generatedAt: new Date(),
       locale,
     }
-    // 算一次，渲染两份：三份产物各算一遍 comparePacks 是纯浪费。
-    const packModel = buildPackCompareModel(input)
-    const markdown = renderPackCompareMarkdown(input, packModel)
-    const json = renderPackCompareJson(input, packModel)
+    // 算一次，渲染两份：此前这里还多算了一遍只为取均值，纯属浪费。
+    const comparison = buildPackCompareModel(input)
+    const markdown = renderPackCompareMarkdown(input, comparison)
+    const json = renderPackCompareJson(input, comparison)
 
     stdout(
       `${t('cli.packCompareLine', {
         base: pack.name,
         baseScore: comparison.baseAverage,
-        target: loaded.pack.name,
+        target: packCompareTarget.name,
         targetScore: comparison.targetAverage,
         delta: comparison.targetAverage - comparison.baseAverage,
       })}\n`,
@@ -457,11 +479,12 @@ export async function main(
 
     if (options.out) {
       // 口径对比固定 md + json 两种形态：--format 管的是逐会话报告，不越权。
-      const written = writeArtifacts(resolve(options.out), 'pack-compare', ['md', 'json'], {
-        md: markdown,
-        json,
-      })
-      for (const path of written) stdout(`${t('cli.wrote', { path })}\n`)
+      const outcome = tryWriteArtifacts(options.out, 'pack-compare', ['md', 'json'], { md: markdown, json })
+      if (!outcome.ok) {
+        stderr(`✗ ${t('cli.err.write-failed', { path: options.out, message: outcome.message })}\n`)
+        return EXIT.error
+      }
+      for (const path of outcome.written) stdout(`${t('cli.wrote', { path })}\n`)
     }
 
     if (incomplete()) return EXIT.error
@@ -492,17 +515,36 @@ export async function main(
     )
 
     if (options.out) {
-      const written = writeArtifacts(resolve(options.out), 'compare', artifactsFor(options.format), {
+      const outcome = tryWriteArtifacts(options.out, 'compare', artifactsFor(options.format), {
         md: markdown,
         json,
         html,
       })
-      for (const path of written) stdout(`${t('cli.wrote', { path })}\n`)
+      if (!outcome.ok) {
+        stderr(`✗ ${t('cli.err.write-failed', { path: options.out, message: outcome.message })}\n`)
+        return EXIT.error
+      }
+      for (const path of outcome.written) stdout(`${t('cli.wrote', { path })}\n`)
     }
 
     // 门禁只卡「对照」那一份：基准是旧版本，不该被要求达标。
+    // 打印的那一行也只说对照：runBatch 的 gate 统计了所有会话（含基准），
+    // 基准不达标而对照达标时，会印出「未通过」而退出码却是 0。
+    const candidateFails = options.failBelow !== null && target.card.overall < options.failBelow
+    if (options.failBelow !== null) {
+      stdout(
+        `${
+          candidateFails
+            ? t('cli.gateFailed', { threshold: options.failBelow, count: 1 })
+            : t('cli.gatePassed', { threshold: options.failBelow })
+        }\n`,
+      )
+      if (candidateFails) {
+        stdout(`${t('cli.gateOffender', { file: target.trajectory.label, score: target.card.overall })}\n`)
+      }
+    }
     if (incomplete()) return EXIT.error
-    return options.failBelow !== null && target.card.overall < options.failBelow ? EXIT.gate : EXIT.ok
+    return candidateFails ? EXIT.gate : EXIT.ok
   }
 
   if (options.out) {
@@ -586,9 +628,18 @@ export async function main(
     const markdown = renderAgentMarkdown(reportInput, reportModel)
     const json = renderAgentJson(reportInput, reportModel)
 
+    // 诊断已经花了钱：写盘失败也不能把结论丢掉。报错的同时把 Markdown 打到标准输出，
+    // 并继续走完摘要与退出码，而不是让 main() 带着一份栈 reject。
+    let writeFailed = false
     if (options.out) {
-      const written = writeArtifacts(resolve(options.out), 'agent', ['md', 'json'], { md: markdown, json })
-      for (const path of written) stdout(`${t('cli.wrote', { path })}\n`)
+      const outcome = tryWriteArtifacts(options.out, 'agent', ['md', 'json'], { md: markdown, json })
+      if (outcome.ok) {
+        for (const path of outcome.written) stdout(`${t('cli.wrote', { path })}\n`)
+      } else {
+        writeFailed = true
+        stderr(`✗ ${t('cli.err.write-failed', { path: options.out, message: outcome.message })}\n`)
+        stdout(`${markdown}\n`)
+      }
     } else {
       stdout(`${markdown}\n`)
     }
@@ -597,8 +648,18 @@ export async function main(
     // 任意路径时不必再想「跟 --out 什么关系」。
     if (options.agentTrace) {
       const path = resolve(options.agentTrace)
-      writeFileSync(path, json, 'utf8')
-      stdout(`${t('cli.wrote', { path })}\n`)
+      try {
+        writeFileSync(path, json, 'utf8')
+        stdout(`${t('cli.wrote', { path })}\n`)
+      } catch (error) {
+        writeFailed = true
+        stderr(
+          `✗ ${t('cli.err.write-failed', {
+            path: options.agentTrace,
+            message: error instanceof Error ? error.message : String(error),
+          })}\n`,
+        )
+      }
     }
 
     // 候选规则包单独落一个文件：它是**可直接当 --pack 用**的完整包，
@@ -606,10 +667,15 @@ export async function main(
     if (run.proposals.length > 0) {
       const first = run.proposals[0]
       if (options.out && first) {
-        const written = writeArtifacts(resolve(options.out), 'proposal.pack', ['json'], {
+        const outcome = tryWriteArtifacts(options.out, 'proposal.pack', ['json'], {
           json: `${JSON.stringify(first.pack, null, 2)}\n`,
         })
-        for (const path of written) stdout(`${t('cli.agentProposal', { path })}\n`)
+        if (outcome.ok) {
+          for (const path of outcome.written) stdout(`${t('cli.agentProposal', { path })}\n`)
+        } else {
+          writeFailed = true
+          stderr(`✗ ${t('cli.err.write-failed', { path: options.out, message: outcome.message })}\n`)
+        }
       } else {
         stderr(`${t('cli.agentProposalNoOut', { count: run.proposals.length })}\n`)
       }
@@ -635,6 +701,7 @@ export async function main(
       stderr(`✗ ${t('cli.agentFailed', { message: run.error?.message ?? '' })}\n`)
       return EXIT.error
     }
+    if (writeFailed) return EXIT.error
   }
 
   if (incomplete()) return EXIT.error

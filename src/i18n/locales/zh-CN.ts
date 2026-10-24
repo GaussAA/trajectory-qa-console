@@ -5,6 +5,8 @@ export const zhCN = {
   'app.subtitle': 'Trajectory QA Console',
 
   'common.cancel': '取消',
+  'common.colon': '：',
+  'common.listSeparator': '、',
   'common.close': '关闭',
   'common.import': '导入',
   'common.export': '导出',
@@ -59,6 +61,7 @@ export const zhCN = {
   'error.unrecognized-structure': '结构无法识别：未找到 messages / steps 数组',
   'error.too-large': '文件超过大小上限',
   'error.too-many-steps': '步数超过上限',
+  'error.nothing-to-score': '没有助手或工具步骤，无可评分内容（轨迹为空，或格式无法识别）',
   'error.invalid-pack': '规则包不合法',
   'error.analysis-failed': '分析失败',
   'error.aborted': '已取消',
@@ -90,6 +93,7 @@ export const zhCN = {
   'panel.timeline': '时间线面板',
   'panel.inspector': '检视器',
   'panel.findings': '问题清单面板',
+  'panel.app': '整个界面',
 
   'session.collapse': '折叠会话面板',
   'session.expand': '展开会话面板',
@@ -126,6 +130,7 @@ export const zhCN = {
   'grade.A': '优秀',
   'grade.B': '良好',
   'grade.C': '合格',
+  'grade.C.gated': '有严重问题',
   'grade.D': '待修',
   'grade.E': '不可用',
 
@@ -435,6 +440,7 @@ export const zhCN = {
   'compare.status.changed': '内容变化',
   'compare.status.added': '新增步',
   'compare.status.removed': '删除步',
+  'semantic.unverifiedNote': '（模型引用的原文未能在轨迹中核实，已降为提示）',
   'semantic.category.off_topic': '答非所问',
   'semantic.category.unsupported_claim': '无依据断言',
   'semantic.category.overreach': '越权承诺',
@@ -452,7 +458,8 @@ export const zhCN = {
   'cli.optAgentTask': '--agent-task <文本>      定向诊断：让模型专门看某个问题',
   'cli.serveReady': '诊断服务已启动：{url}',
   'cli.serveHint': '在界面地址后加 ?agent={origin} 即可启用「诊断」按钮',
-  'cli.serveNoToken': '未设 --token：本机任何页面都能调它（自用没关系，公用机器建议加）',
+  'cli.serveNoToken':
+    '未设 --token：本机 http 页面都能调它，双击打开的 file:// 页面会被拒绝（要用请加 --token）',
   'cli.serveWithToken': '已启用 token：界面需带 ?agentToken=<token>',
   'cli.servePublicHost': '注意：--host {host} 不是回环地址，局域网内其他机器也能连',
   'cli.err.serveListen': '无法监听 {host}:{port}：{message}',
@@ -504,6 +511,8 @@ export const zhCN = {
   'agent.report.stats.tokens': 'token',
   'agent.report.stats.tokensDetail': '输入 {prompt} / 输出 {completion}',
   'agent.report.stats.duration': '累计耗时',
+  'agent.report.sep': '：',
+  'agent.report.paren': '（{text}）',
   'agent.report.proposals': '规则包提案',
   'agent.report.proposalNote': '提案不会自动生效；命令行已把第一份写成 proposal.pack.json，可用 --pack 试用。',
   'agent.report.proposalImpact': '有效扣分 {impact}',
@@ -556,6 +565,8 @@ export const zhCN = {
   'cli.err.compareNeedsTwo': '对比需要恰好两条可分析轨迹，当前 {count} 条',
   'report.advice': '建议',
   'report.adviceCount': '{count} 处',
+  // 括号与冒号属于文案：中文用全角、英文用半角加空格。写死在代码里，英文报告就会混进全角符号。
+  'report.adviceSuffix': '（{text}）',
   'report.compare.advice': '对照改进建议',
   'report.adviceEmpty': '当前没有可给出具体动作的问题。',
 

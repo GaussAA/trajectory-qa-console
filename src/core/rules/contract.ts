@@ -5,7 +5,7 @@
 
 import { z } from 'zod'
 import { compileExpression, ExprError } from '../expr'
-import type { RulePack } from '../model'
+import type { Rule, RulePack } from '../model'
 import type { TrajectoryMetrics } from '../analysis/metrics'
 import type { StepContext } from './engine'
 
@@ -151,15 +151,33 @@ export function fieldsForScope(scope: 'step' | 'trajectory'): FieldSpec[] {
 
 // ---------- schema ----------
 
-const dimensionSchema = z.object({
+/** 维度颜色会被界面原样写进内联 `background`，所以它不是「一个字符串」，是一段 CSS。
+ *  `url(http://…)` 作为颜色会让浏览器在渲染时去取这个地址：导入一份规则包就能让页面
+ *  向外发请求，而这个工具对外的承诺是「文件不出本机」。因此只收下面几种写法：
+ *  - 十六进制 `#rgb` / `#rgba` / `#rrggbb` / `#rrggbbaa`；
+ *  - `rgb()` / `rgba()` / `hsl()` / `hsla()`，括号里只许数字、小数点、逗号、空白、`%`、`/`、`deg`；
+ *  括号内不含字母（除 `deg`），所以 `var()`、`url()`、`calc()` 之类的函数都进不来。
+ *  命名颜色（`red`）没有放行：内置包全是十六进制，宁可严一点。 */
+const HEX_COLOR = /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
+const FUNCTION_COLOR = /^(?:rgba?|hsla?)\(\s*[0-9.,%/\s]+(?:deg)?[0-9.,%/\s]*\)$/i
+
+export function isSafeCssColor(value: string): boolean {
+  const text = value.trim()
+  return text.length <= 64 && (HEX_COLOR.test(text) || FUNCTION_COLOR.test(text))
+}
+
+const dimensionSchema = z.strictObject({
   id: z.string().min(1, '维度 id 不能为空'),
   label: z.string().min(1, '维度名不能为空'),
   weight: z.number().min(0, 'weight 不能为负').max(1, 'weight 不能大于 1'),
-  color: z.string().min(1, '缺少颜色'),
+  color: z
+    .string()
+    .min(1, '缺少颜色')
+    .refine(isSafeCssColor, '颜色只能是十六进制（#rrggbb）或 rgb()/hsl() 的数值写法'),
   description: z.string().default(''),
 })
 
-const ruleSchema = z.object({
+const ruleSchema = z.strictObject({
   id: z.string().min(1, '规则 id 不能为空'),
   dimension: z.string().min(1, '规则必须归属一个维度'),
   severity: z.enum(['error', 'warn', 'info'], { message: 'severity 只能是 error / warn / info' }),
@@ -175,7 +193,7 @@ const ruleSchema = z.object({
   builtin: z.boolean().default(false),
 })
 
-export const rulePackSchema = z.object({
+export const rulePackSchema = z.strictObject({
   version: z.number().int('version 必须是整数').positive('version 必须为正'),
   name: z.string().min(1, '规则包需要名称'),
   dimensions: z.array(dimensionSchema).min(1, '至少需要一个维度').max(PACK_LIMITS.maxDimensions),
@@ -230,15 +248,58 @@ function nearest(name: string, candidates: string[]): string | undefined {
   return best?.name
 }
 
+/** 各层对象允许的键。直接从 schema 上取，不另抄一份：抄两份迟早有一份先改了。 */
+function allowedKeysAt(path: readonly PropertyKey[]): string[] {
+  const kind = path.length === 0 ? 'pack' : path[0] === 'dimensions' ? 'dimension' : 'rule'
+  const schema = kind === 'pack' ? rulePackSchema : kind === 'dimension' ? dimensionSchema : ruleSchema
+  return Object.keys(schema.shape)
+}
+
+/** zod 把一个对象上所有多余的键合成一条 issue；这里拆开，一个键一条，并给近似的提示。
+ *  多余的键此前被悄悄丢掉：写成 `enable: false`（少了个 d）的规则照样启用，没有任何提示。 */
+function unknownKeyErrors(path: readonly PropertyKey[], keys: readonly string[]): PackError[] {
+  const allowed = allowedKeysAt(path)
+  const where = path.map(String).join('.') || '(root)'
+  return keys.map((key) => {
+    const hint = nearest(key, allowed)
+    return {
+      path: where,
+      message: hint ? `未知的键 "${key}"，是否指 "${hint}"？` : `未知的键 "${key}"，这里不认`,
+    }
+  })
+}
+
+/** 消息里的 `{名字}` 渲染时只认当前作用域的字段（见 engine.ts 的 renderMessage）。
+ *  写错名字、或在整条轨迹的规则里要逐步字段，渲染时会原样留着 `{名字}`，用户在报告里才发现。
+ *  匹配规则与渲染一致（`\{(\w+)\}`），所以 `{}`、`{ step }` 这类不是占位符的花括号不受影响。 */
+function placeholderErrors(rule: Rule, path: string): PackError[] {
+  const allowed = fieldsForScope(rule.scope).map((field) => field.name)
+  const bad = new Set<string>()
+  for (const match of rule.message.matchAll(/\{(\w+)\}/g)) {
+    const name = match[1] as string
+    if (!allowed.includes(name)) bad.add(name)
+  }
+  return [...bad].map((name) => {
+    const hint = nearest(name, allowed)
+    return {
+      path: `${path}.message`,
+      message: hint
+        ? `提示文案里的占位符 {${name}} 不是 ${rule.scope} 作用域的字段，是否指 {${hint}}？`
+        : `提示文案里的占位符 {${name}} 不是 ${rule.scope} 作用域的字段，渲染时会原样留着`,
+    }
+  })
+}
+
 export function validatePack(input: unknown): PackValidation {
   const parsed = rulePackSchema.safeParse(input)
   if (!parsed.success) {
     return {
       ok: false,
-      errors: parsed.error.issues.map((issue) => ({
-        path: issue.path.map(String).join('.') || '(root)',
-        message: issue.message,
-      })),
+      errors: parsed.error.issues.flatMap((issue): PackError[] =>
+        issue.code === 'unrecognized_keys'
+          ? unknownKeyErrors(issue.path, issue.keys)
+          : [{ path: issue.path.map(String).join('.') || '(root)', message: issue.message }],
+      ),
     }
   }
 
@@ -272,6 +333,9 @@ export function validatePack(input: unknown): PackValidation {
         message: `规则指向未定义的维度 "${rule.dimension}"`,
       })
     }
+
+    // 占位符与表达式是两类独立的错误：先查占位符，这样表达式编译失败提前 return 时也不会漏报。
+    errors.push(...placeholderErrors(rule, path))
 
     let identifiers: readonly string[]
     try {

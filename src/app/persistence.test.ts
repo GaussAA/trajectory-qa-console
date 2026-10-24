@@ -92,6 +92,61 @@ describe('persistence', () => {
     expect(events.some((event) => event.name === 'storage:annotations-corrupt')).toBe(true)
   })
 
+  describe('data from a newer version is never overwritten', () => {
+    // 读到未来版本的数据会降级成默认值，而界面挂载后的保存副作用立刻会把「默认值」写回去，
+    // 新版本写下的东西就这样被旧版本抹掉了。拒绝读取不够，还得拒绝覆盖。
+    const futureEnvelope = (data: unknown) => JSON.stringify({ schemaVersion: SCHEMA_VERSION + 1, data })
+
+    it('refuses to write over a key it could not read', () => {
+      const store = createMemoryStorage({ [STORAGE_KEYS.pack]: futureEnvelope(DEFAULT_PACK) })
+      const telemetry = createTelemetry()
+      const port = createPersistence(store, telemetry)
+
+      port.loadPack() // 读到未来版本 → 降级成默认包
+      expect(port.savePack(DEFAULT_PACK)).toBe(false)
+
+      // 存储里还是新版本写的那份，一个字节没动
+      expect(store.getItem(STORAGE_KEYS.pack)).toBe(futureEnvelope(DEFAULT_PACK))
+      expect(telemetry.snapshot().some((event) => event.name === 'storage:write-blocked')).toBe(true)
+    })
+
+    it('protects each key on its own', () => {
+      const store = createMemoryStorage({ [STORAGE_KEYS.pack]: futureEnvelope(DEFAULT_PACK) })
+      const port = createPersistence(store)
+
+      port.loadPack()
+      // 批注那个键读的是当前版本，照常能写
+      expect(port.saveAnnotations([])).toBe(true)
+      expect(store.getItem(STORAGE_KEYS.annotations)).toContain('schemaVersion')
+    })
+
+    it.each([
+      ['annotations', STORAGE_KEYS.annotations, (p: ReturnType<typeof createPersistence>) => p.loadAnnotations(), (p: ReturnType<typeof createPersistence>) => p.saveAnnotations([])],
+      ['session notes', STORAGE_KEYS.sessionNotes, (p: ReturnType<typeof createPersistence>) => p.loadSessionNotes(), (p: ReturnType<typeof createPersistence>) => p.saveSessionNotes([])],
+      ['pack variants', STORAGE_KEYS.packVariants, (p: ReturnType<typeof createPersistence>) => p.loadPackVariants(), (p: ReturnType<typeof createPersistence>) => p.savePackVariants([])],
+    ])('covers %s too', (_name, key, load, save) => {
+      const store = createMemoryStorage({ [key]: futureEnvelope([]) })
+      const port = createPersistence(store)
+      load(port)
+      expect(save(port)).toBe(false)
+      expect(store.getItem(key)).toBe(futureEnvelope([]))
+    })
+
+    it('does not block writes for ordinary corruption, which is not someone else’s data', () => {
+      // 坏数据不是「新版本写的」，覆盖它是对的：否则一次损坏会让这个键永远存不了。
+      const store = createMemoryStorage({ [STORAGE_KEYS.pack]: '{not json' })
+      const port = createPersistence(store)
+      port.loadPack()
+      expect(port.savePack(DEFAULT_PACK)).toBe(true)
+    })
+
+    it('still lets the default pack be saved when nothing was ever stored', () => {
+      const port = createPersistence(createMemoryStorage())
+      port.loadPack()
+      expect(port.savePack(DEFAULT_PACK)).toBe(true)
+    })
+  })
+
   it('refuses to skip a migration that was never written', () => {
     // The chain is empty today (SCHEMA_VERSION is 1). The point is what happens
     // the day someone raises it and forgets the entry: a silent skip would

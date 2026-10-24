@@ -44,6 +44,28 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
+describe('readAgentTarget loopback restriction', () => {
+  it('accepts localhost and IPv6 loopback with a port', () => {
+    expect(readAgentTarget('?agent=http://localhost:7788')?.endpoint).toBe('http://localhost:7788')
+    expect(readAgentTarget('?agent=http://[::1]:7788')?.endpoint).toBe('http://[::1]:7788')
+  })
+
+  it('treats a crafted link pointing off-machine as not configured', () => {
+    for (const bad of [
+      'https://evil.example',
+      'http://192.168.1.10:7788',
+      'http://127.0.0.1.evil.example:7788',
+      'http://localhost.evil.example',
+      'http://evil.example/@127.0.0.1',
+      'file:///etc/passwd',
+      'javascript:alert(1)',
+      'not a url',
+    ]) {
+      expect(readAgentTarget(`?agent=${encodeURIComponent(bad)}`), bad).toBeNull()
+    }
+  })
+})
+
 describe('readAgentTarget', () => {
   it('reads the endpoint and the optional token', () => {
     expect(readAgentTarget('?agent=http://127.0.0.1:7788')).toEqual({

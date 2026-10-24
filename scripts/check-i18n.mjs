@@ -4,7 +4,8 @@
  *
  *  Comments are stripped first, so Chinese explanations remain welcome.
  *
- *  Scope: src/ui, src/cli and src/app — everything a user can read. `src/core`
+ *  Scope: src/ui, src/cli, src/app and src/lib — everything a user can read
+ *  (src/lib renders the exported reports). `src/core`
  *  is deliberately excluded: its messages are data/logic (parse notes, rule
  *  titles), and translating them is a separate design question recorded in
  *  CONTEXT.md. Diagnostic placeholders in src/app are locale-neutral by
@@ -13,8 +14,9 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
-const ROOTS = ['src/ui', 'src/cli', 'src/app']
-const CJK = /[\u4e00-\u9fff]/
+const ROOTS = ['src/ui', 'src/cli', 'src/app', 'src/lib']
+// 汉字加全角标点：报告里的「：」「（」写死在代码里，英文报告就会混进全角符号。
+const CJK = /[\u4e00-\u9fff\uff00-\uffef\u3000-\u303f]/
 
 function walk(dir) {
   const files = []
@@ -58,9 +60,9 @@ for (const file of ROOTS.flatMap(walk)) {
 }
 
 if (problems.length > 0) {
-  console.error('✗ UI/CLI/app 源码中存在硬编码中文，请移入 src/i18n 字典：')
+  console.error('✗ UI/CLI/app/lib 源码中存在硬编码中文或全角标点，请移入 src/i18n 字典：')
   for (const problem of problems) console.error(`  ${problem}`)
   process.exit(1)
 }
 
-console.log('✓ UI 与 CLI、app 层文案全部经字典，无硬编码中文')
+console.log('✓ UI 与 CLI、app、lib 层文案全部经字典，无硬编码中文')

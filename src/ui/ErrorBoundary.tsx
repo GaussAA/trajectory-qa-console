@@ -6,6 +6,10 @@ interface Props {
   children: ReactNode
   onError?: (error: Error, info: ErrorInfo) => void
   compact?: boolean
+  /** 这个值一变，失败页就自动清掉重试。传「这个面板依赖什么」：时间线传会话，检视器传会话+步骤。
+   *  没有它，用户切到另一个会话或另一步后，失败页还留在原地，只能手点「重试」；
+   *  而对确定性的渲染错误，手点重试只会再抛一次。 */
+  resetKey?: string | number
 }
 
 interface State {
@@ -48,6 +52,11 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
     this.props.onError?.(error, info)
+  }
+
+  componentDidUpdate(prev: Props): void {
+    // 只在 key 真的变了才清：失败页自己触发的那次更新 key 没变，不会陷入「清掉→再抛→再清」。
+    if (this.state.error && prev.resetKey !== this.props.resetKey) this.reset()
   }
 
   private reset = (): void => {

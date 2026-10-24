@@ -135,7 +135,9 @@ export function SessionList({
     onSetTags(
       session.trajectory.id,
       draftTags
-        .split(/[,，]/)
+        // 中英文逗号都收：用户在中文输入法下敲的是全角逗号。写成转义是为了不触发「硬编码中文」检查，
+        // 这里不是文案，是输入解析。
+        .split(/[,\uff0c]/)
         .map((tag) => tag.trim())
         .filter(Boolean),
     )
@@ -423,7 +425,7 @@ export function SessionList({
           <p className="batch-preview">
             {t('session.batchPreview', {
               names:
-                previewNames.slice(0, 3).join('、') +
+                previewNames.slice(0, 3).join(t('common.listSeparator')) +
                 (previewNames.length > 3 ? ` … +${previewNames.length - 3}` : ''),
             })}
           </p>

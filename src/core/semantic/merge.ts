@@ -27,7 +27,10 @@ export function toFindings(items: SemanticFinding[], locale: Locale, trajectoryI
     ruleTitle: categoryLabel(locale, item.category),
     dimension: 'semantic',
     severity: item.severity,
-    message: item.reason,
+    // 模型原话（reason）不翻译、不改；我们自己的提示单独拼在后面，读者分得清谁说的。
+    message: item.unverified
+      ? `${item.reason} ${translate(locale, 'semantic.unverifiedNote')}`
+      : item.reason,
     stepIndex: item.step !== undefined ? item.step - 1 : undefined,
     evidence: item.quote,
     impact: SEMANTIC_IMPACT[item.severity],

@@ -19,6 +19,8 @@ export const en: Record<MessageKey, string> = {
   'common.emptyValue': '(empty)',
   'common.emptyList': 'None',
   'common.unknownError': 'Unknown render error',
+  'common.colon': ': ',
+  'common.listSeparator': ', ',
   'common.dismiss': 'Got it',
 
   'role.system': 'System',
@@ -60,6 +62,7 @@ export const en: Record<MessageKey, string> = {
   'error.unrecognized-structure': 'Unrecognized structure: no messages/steps array found',
   'error.too-large': 'File exceeds the size limit',
   'error.too-many-steps': 'Too many steps',
+  'error.nothing-to-score': 'No assistant or tool steps, so there is nothing to score (empty trace, or an unrecognised format)',
   'error.invalid-pack': 'Invalid rule pack',
   'error.analysis-failed': 'Analysis failed',
   'error.aborted': 'Cancelled',
@@ -92,6 +95,7 @@ export const en: Record<MessageKey, string> = {
   'panel.timeline': 'Timeline panel',
   'panel.inspector': 'Inspector',
   'panel.findings': 'Findings panel',
+  'panel.app': 'The console',
 
   'common.save': 'Save',
 
@@ -130,6 +134,7 @@ export const en: Record<MessageKey, string> = {
   'grade.A': 'Excellent',
   'grade.B': 'Good',
   'grade.C': 'Pass',
+  'grade.C.gated': 'Serious issues',
   'grade.D': 'Needs work',
   'grade.E': 'Unusable',
 
@@ -446,6 +451,7 @@ export const en: Record<MessageKey, string> = {
   'compare.status.added': 'added',
   'compare.status.removed': 'removed',
 
+  'semantic.unverifiedNote': '(the quote the model cited could not be verified in the trace; downgraded to info)',
   'semantic.category.off_topic': 'Off-topic answer',
   'semantic.category.unsupported_claim': 'Unsupported claim',
   'semantic.category.overreach': 'Overreach',
@@ -464,7 +470,7 @@ export const en: Record<MessageKey, string> = {
   'cli.optAgentTask': '--agent-task <text>      focus the diagnosis on one question',
   'cli.serveReady': 'Diagnosis service listening on {url}',
   'cli.serveHint': 'Append ?agent={origin} to the console URL to enable the Diagnose button',
-  'cli.serveNoToken': 'No --token: any local page can call it (fine for personal use, not for shared machines)',
+  'cli.serveNoToken': 'No --token: any local http page can call it, and file:// pages are refused (add --token to use them)',
   'cli.serveWithToken': 'Token enabled: the console needs ?agentToken=<token>',
   'cli.servePublicHost': 'Warning: --host {host} is not a loopback address; other machines on the LAN can reach it',
   'cli.err.serveListen': 'Cannot listen on {host}:{port}: {message}',
@@ -517,6 +523,8 @@ export const en: Record<MessageKey, string> = {
   'agent.report.stats.tokens': 'Tokens',
   'agent.report.stats.tokensDetail': '{prompt} in / {completion} out',
   'agent.report.stats.duration': 'Total time',
+  'agent.report.sep': ': ',
+  'agent.report.paren': ' ({text})',
   'agent.report.proposals': 'Rule pack proposals',
   'agent.report.proposalNote':
     'Proposals never take effect on their own; the CLI writes the first one to proposal.pack.json so you can try it with --pack.',
@@ -571,6 +579,7 @@ export const en: Record<MessageKey, string> = {
   'cli.err.compareNeedsTwo': 'Comparison needs exactly two analyzable traces, got {count}',
   'report.advice': 'Recommendations',
   'report.adviceCount': '{count}×',
+  'report.adviceSuffix': ' ({text})',
   'report.compare.advice': 'Recommendations for the candidate',
   'report.adviceEmpty': 'Nothing actionable surfaced in this pass.',
 

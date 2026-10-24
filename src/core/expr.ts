@@ -428,14 +428,21 @@ class Parser {
   }
 
   private parseRelational(): Node {
-    let left = this.parseAdditive()
-    for (;;) {
-      const token = this.matchOp('>', '>=', '<', '<=')
-      if (!token) return left
-      const right = this.parseAdditive()
-      left = { type: 'binary', op: token.value, left, right, pos: token.pos }
-      this.count()
+    const left = this.parseAdditive()
+    const token = this.matchOp('>', '>=', '<', '<=')
+    if (!token) return left
+    const right = this.parseAdditive()
+    // 不支持连续比较：`10 < x < 40` 会按左结合算成 `(10 < x) < 40`，布尔被当成 0/1 再去比 40，
+    // 于是 x 是 100 和 5 时结果都是 true。看着对、算得错，比报错更糟。
+    const chained = this.peek()
+    if (chained.type === 'op' && ['>', '>=', '<', '<='].includes(chained.value)) {
+      throw new ExprError(
+        `不支持连续比较 "${chained.value}"：请拆成两个比较并用 and 连接，例如 a > 10 and a < 40`,
+        chained.pos,
+      )
     }
+    this.count()
+    return { type: 'binary', op: token.value, left, right, pos: token.pos }
   }
 
   private parseAdditive(): Node {

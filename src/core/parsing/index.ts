@@ -13,10 +13,11 @@
  */
 
 import { fail, ok, type Result, type Trajectory } from '../model'
-import { isRecord, looksLikeMessage, pairToolResults, pick, toStep } from './normalize'
+import { isRecord, looksLikeMessage, pairToolResults, pick, toSteps } from './normalize'
 
 const CONTAINER_KEYS = [
   'messages',
+  'conversations',
   'steps',
   'trajectory',
   'conversation',
@@ -39,18 +40,24 @@ interface SessionDraft {
 
 function findMessageArray(value: unknown): unknown[] | undefined {
   if (!isRecord(value)) return undefined
-  for (const key of CONTAINER_KEYS) {
-    const candidate = value[key]
-    if (Array.isArray(candidate)) return candidate
-  }
+  const candidates = CONTAINER_KEYS.map((key) => value[key]).filter((item): item is unknown[] => Array.isArray(item))
+  // 优先取「里面真是消息」的那个数组。SWE-agent 的记录同时有 `trajectory`（动作记录）和
+  // `history`（消息），按键的先后取第一个数组，会把动作记录当消息读。
+  const real = candidates.find((item) => item.some(looksLikeMessage))
+  if (real) return real
+  // 外层没有像消息的数组时，再去嵌套容器里找真消息（`{data:{messages:[…]}}`）。
+  let nestedFallback: unknown[] | undefined
   for (const key of NESTED_KEYS) {
     const nested = value[key]
-    if (isRecord(nested)) {
-      const found = findMessageArray(nested)
-      if (found) return found
-    }
+    if (!isRecord(nested)) continue
+    const found = findMessageArray(nested)
+    if (!found) continue
+    if (found.some(looksLikeMessage)) return found
+    nestedFallback ??= found
   }
-  return undefined
+  // 哪里都找不到像消息的数组：保持老行为，取第一个，让后面的「无可评分」去拒绝，
+  // 而不是在这里换一种报错。
+  return candidates[0] ?? nestedFallback
 }
 
 export function detectSessions(value: unknown): Result<SessionDraft[]> {
@@ -88,18 +95,19 @@ export function parseLoose(text: string): Result<unknown> {
   try {
     return ok(JSON.parse(trimmed))
   } catch {
-    const lines = trimmed
+    // 先带上行号、再丢空行：报错要指向用户编辑器里看到的那一行，
+    // 而不是过滤掉空行之后的下标（空行在前时会少数）。
+    const lines = text
       .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean)
+      .map((content, index) => ({ content: content.trim(), line: index + 1 }))
+      .filter((entry) => entry.content !== '')
     if (lines.length <= 1) return fail('invalid-json', '不是合法的 JSON')
     const parsed: unknown[] = []
-    for (let i = 0; i < lines.length; i += 1) {
-      const line = lines[i] as string
+    for (const entry of lines) {
       try {
-        parsed.push(JSON.parse(line))
+        parsed.push(JSON.parse(entry.content))
       } catch {
-        return fail('invalid-json', `JSONL 第 ${i + 1} 行不是合法 JSON`, { line: i + 1 })
+        return fail('invalid-json', `JSONL 第 ${entry.line} 行不是合法 JSON`, { line: entry.line })
       }
     }
     return ok(parsed)
@@ -135,7 +143,7 @@ export function parseTrajectory(
     }
 
     const notes: string[] = []
-    const steps = draft.messages.map(toStep)
+    const steps = draft.messages.flatMap(toSteps)
     steps.forEach((step, index) => {
       step.index = index
     })

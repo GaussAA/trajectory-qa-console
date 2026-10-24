@@ -54,6 +54,16 @@ export function gradeOf(score: number): { grade: string; label: string } {
   return { grade: 'E', label: '不可用' }
 }
 
+/** 等级标签用哪一条文案（字典键的后半段）。
+ *
+ *  有 error 级问题时总分封顶 74（ADR-0003），74 恰好是 C 的上沿，所以「有严重问题」的轨迹最高就是 C。
+ *  C 的字面是「合格」，而规则自己的话可能是「判定为死循环，轨迹基本不可用」，同一份报告里两句话打架。
+ *  所以：C 且带 error → `C.gated`（「有严重问题」）。字母与分数都不动——封顶是 ADR 定的，
+ *  字母是给 CI 的契约。A/B 不可能带 error（封顶），D/E 的字面本来就是问题，都不需要特殊处理。 */
+export function gradeKeyOf(card: { grade: string; counts: { error: number } }): string {
+  return card.grade === 'C' && card.counts.error > 0 ? 'C.gated' : card.grade
+}
+
 export function capForErrors(distinctErrorRules: number): number {
   if (distinctErrorRules >= 5) return 39
   if (distinctErrorRules >= 3) return 54
@@ -145,13 +155,15 @@ export function scoreTrajectory(
   ).size
   const overall = Math.min(mean, capForErrors(distinctErrorRules))
   const graded = gradeOf(overall)
+  const gated = graded.grade === 'C' && counts.error > 0
 
   return {
     overall,
     rawOverall: mean,
     capped: overall < mean,
     grade: graded.grade,
-    gradeLabel: graded.label,
+    // core 的文案不本地化（已知边界）；界面与报告用 gradeKeyOf 查字典覆盖它，这里只是兜底。
+    gradeLabel: gated ? '有严重问题' : graded.label,
     dimensions: dimensionScores,
     findings: sortFindings(findings),
     ruleIssues,

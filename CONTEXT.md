@@ -17,7 +17,7 @@
 | **规则包（RulePack）**          | 维度 + 规则 + 版本，可在界面内编辑、导入导出。                              |
 | **评分卡（ScoreCard）**         | 派生结果：维度分、加权分、封顶分、等级、问题计数。                          |
 | **评分派生（buildCard）**       | `(trajectory, metrics, pack, 标注) → 评分卡`。唯一的算分入口，规则在此现算。 |
-| **错误封顶（Error gate）**      | 按「不同 error 级规则数」限制总分：≥1→74、≥3→54、≥5→39。                    |
+| **错误封顶（Error gate）**      | 按「不同 error 级规则数」限制总分：≥1→74、≥3→54、≥5→39。74 恰好是 C 的上沿，所以带 error 的 C 标签是「有严重问题」而不是「合格」（`gradeKeyOf`）；字母与分数不变。 |
 | **会话分析（SessionAnalysis）** | 一条轨迹的质检产物：指标、发现、规则异常、耗时诊断。                        |
 | **工作区（Workspace）**         | 会话集合 + 选中态 + 规则包 + 人工标注 + 导入问题。                          |
 | **分析端口（Analyzer port）**   | `analyze(request, signal)`：只做解析与指标，不接规则包；返回 `{ sessions, issues }`。同步/worker 两个 adapter。 |
@@ -26,6 +26,10 @@
 
 1. 只有 `analyze()` 能把原始文本变成 `SessionAnalysis`；UI 不得直接调用 parse / metrics / score。**例外**：规则抽屉的「试跑」与「口径对比」由界面主动求值、直接跑 rules（`tuning.ts` / `pack-compare.ts`）——它们回答的是「换一套口径会怎样」，不是这条会话的分数；大轨迹下由 `useDeferredValue` 兜着，打字不被卡。
 2. 每条 Finding 都必须指向一个已定义的维度；规则包在应用前必须通过契约校验。
+   契约是**严格**的：任何一层（包、维度、规则）出现不认的键都报错并给出「是否指 enabled」之类的提示，
+   而不是悄悄丢掉——写成 `enable: false` 的规则以前照样启用，没有任何提示。
+   消息里的 `{占位符}` 必须是该规则作用域（`step` / `trajectory`）的字段，匹配规则与渲染一致
+   （`\{(\w+)\}`），所以 `{}`、`{ step }` 这类不是占位符的花括号不受影响。
 3. 评分卡永远派生，不落库；标注或规则包一变，所有分数立即重算。会话只存与规则包无关的 `trajectory + metrics`，findings 由 `buildCard` 现算——这条因此是**结构上成立**，不是靠记得重算。工作区主路径与「口径对比」共用 `buildCard`，同一份数据不可能显示两个分数。
 4. 持久化数据一律带 `schemaVersion`，读取时迁移；损坏数据降级为默认值并记录事件。版本判定在 `persistence.ts`：未来版本（`FutureSchemaVersionError`）拒绝而非误读，迁移链是 `MIGRATIONS` 表——新增版本只加一条，不逐个改 loader。
 5. 单条坏轨迹、单条坏规则、单个面板崩溃都不得影响其余部分。坏轨迹由 `analyze` **会话级**隔离：跳过并记入 `issues` 上报，不静默；只有**全部**会话都失败才算这个文件失败。
@@ -38,7 +42,8 @@
 
 - **字号只有 6 档**：`--fs-xs 11` / `--fs-sm 12` / `--fs-base 13` / `--fs-md 15` / `--fs-lg 19` /
   `--fs-xl 22`。**下限 11px**。样式表里出现裸 `font-size: Npx` 会被
-  `scripts/check-typography.mjs` 拦下（已并入 `pnpm verify`）。
+  `scripts/check-typography.mjs` 拦下（已并入 `pnpm verify`）。导出的 HTML 报告（`src/lib`）内嵌自己的
+  样式表，拿不到应用的 CSS 变量所以不要求走标度，但同样守这条 11px 下限（此前它有 10px、10.5px 的字）。
 - 为什么这么死：改之前 3125 行 CSS 里有 137 处裸字号、其中 94 处小于 11px。这不是审美偏好——
   8.5–10px 的中文在正常视距下读不清，连续看一小时就是成本。
 - **弱化色 `--text-mute` 不得低于 4.5:1**（现为 5.16:1）。原先 4.39:1 恰好配着 9px 小字用。
@@ -163,6 +168,18 @@ node dist-cli/qa.mjs traces --semantic --fail-below 80
 - 预算：`--semantic-limit`（默认 20 会话）、单会话最多 8 条；超长轨迹压到 120 步，
   优先保留工具出错/未配对的步。
 - 失败降级：单次调用失败只记 issue，整批继续、退出码不变。
+- **发出去之前脱敏**：密钥（`sk-` / AWS / GitHub / PEM 私钥整块）、手机号、邮箱、证件号形态的串换成
+  `[REDACTED:<类别>]`（`analysis/privacy.ts` 的 `redactSecrets`，与 `sem-privacy-leak` 同一份检测定义）。
+  语义复核的摘要、智能体每条消息的正文、工具参数、工具返回值都过这一道。
+  工具参数与返回值是 JSON 文本，按结构脱敏（`redactJsonText`）：序列化后的换行是字面 `\n`，
+  密钥前面是字母 `n`，纯文本替换的 `\b` 判不出边界，`\nsk-…` 这种最常见的写法恰好漏掉。
+  代价：模型看到的是占位符，它引用的原文也是占位符；报告里这类发现显示占位符而不是真值。
+  这是启发式，不是 DLP：形态之外的敏感信息（姓名、地址、内部代号）发得出去。
+- **轨迹文本是不受信的数据**：提示词里明说它不是指令，并用 `<trajectory>` 围起来（轨迹自己写的
+  结束标签会被破坏，撑不破框）。这只是降低被带偏的概率，**不是保证**，所以回来之后还要核对：
+  模型引用的 `quote` 必须真在它看到的（已脱敏的）摘要里，对不上的判定降为 `info`、去掉引文、
+  标 `unverified` 并在报告里注明，而不是照常计分、触发门禁。没有引文的判定不受影响——
+  所以模型想绕过核对，不写引文就行；这道关挡的是编造的引文，不是所有被带偏的结论。
 - **界面不接模型**：守住离线承诺、CORS 与密钥托管三条线（ADR-0011）。
 
 ### 智能体诊断（可选，仅命令行，ADR-0019）
@@ -226,8 +243,14 @@ trajectory-qa serve --port 7788 --token abc123
 ```
 
 - **只 bind `127.0.0.1`**；`--host` 非回环地址时终端会警告（局域网内其他机器就连得上了）。
-- **CORS 白名单**：只放行 `file://`（Origin 为 `null`）与本机 http。其它来源拿不到 CORS 头，
-  浏览器会拦下读取。
+- **CORS 白名单**：放行本机 http；`file://`（Origin 为 `null`）**只在设了 `--token` 时**放行。
+  `Origin: null` 也来自沙箱 iframe 与 `data:` 页面，分不出来，所以没有 token 时一律拒（预检不给 CORS 头，
+  POST 直接 403）。其它来源拿不到 CORS 头，浏览器会拦下读取。
+- **Host 校验**：绑在回环地址时，`Host` 不是回环名的请求一律 403 且不带 CORS 头，挡 DNS 重绑定。
+  用户显式绑到非回环地址（`--host`）时关闭这道校验，防线是 token 与启动警告。
+- **界面 `?agent=` 只认回环地址**（`readAgentTarget`）：链接可以是别人发来的，不限制的话，
+  点「诊断」就把整条轨迹发给任意主机。非回环、非 http(s)、解析不了的都当作未配置。
+  回环判断在 `src/lib/loopback.ts`，serve 与界面共用一份。
 - **资源上限**：同时在跑的诊断默认最多 2 个，超出拿 `429`（带 `Retry-After`）；名额在响应 `close`
   上归还，所以断连不会占满服务。轮次的上限归运行服务的人定（默认 8，`--agent-rounds` 可改），
   页面可以要更少、不能要更多。自由文本 `task` 最多 2000 字符。请求体超 `maxBytes` 回 `413` 并
@@ -311,7 +334,9 @@ node dist-cli/qa.mjs a.json b.json --compare --fail-below 80    # 只卡「对�
 
 - 出口：顶栏「HTML 报告」按钮；CLI `--format html`（只写 `report.html`）、
   `--format all`（md + json + html）。
-- 与 Markdown / JSON 同源（同一 `ReportInput`），三份数字不会分叉。
+- 与 Markdown / JSON 同源（同一 `ReportInput`），三份数字不会分叉。JSON 里是 `totals`
+  （就是 `reportTotals` 的结果）与 `rulePack.enabledRules`；`rulePack.rules` 仍是规则总数
+  （含停用的），键名是给 CI 的契约，含义不改。
 - 汇总数字只算一次：`reportTotals(entries, pack)`（会话数/步数/token/均分/启用规则数），
   三份产物共用；对比的 diff 也只算一次：`buildComparisonModel`（内含 LCS 对齐，跑两遍纯属浪费）。
 - 对比报告同样有 HTML：`buildComparisonHtml`（`comparison-html.ts`），
@@ -370,11 +395,39 @@ node dist-cli/qa.mjs a.json b.json --compare --fail-below 80    # 只卡「对�
 ## 持续集成
 
 `.github/workflows/ci.yml`：push 到 main、PR、手动触发；先 `pnpm install --frozen-lockfile`，再 `pnpm verify`。
-`verify` 依次是：typecheck → lint → 覆盖率测试 → 文案扫描（`src/ui` + `src/cli` + `src/app`）→ 单文件构建 →
+`verify` 依次是：typecheck → lint → 覆盖率测试 → 文案扫描（`src/ui` + `src/cli` + `src/app` + `src/lib`，
+汉字与全角标点都算；导出报告里写死的 `：` `（` 会让英文报告混进全角符号）→ 单文件构建 →
 产物契约校验 → CLI 构建 → CLI 冒烟（`scripts/smoke-cli.mjs`）。
 产物契约校验（`scripts/check-artifact.mjs`）要求：不得含外部脚本/样式/远程图片，
 必须有 `#root`，体积不超过 1500 KB（`ARTIFACT_BUDGET_KB` 可调）。
 产物与覆盖率作为 artifact 上传（保留 14 / 7 天）。本地等价入口：`pnpm verify`。
+
+## 输入格式
+
+**支持**：OpenAI Chat Completions 消息数组、`{messages:[…]}` 等常见容器（`messages / steps / trajectory /
+conversation / history / transcript / turns / items / events / log`，可嵌在 `data / result / payload /
+session / record / thread / run` 下）、JSONL（每行一条消息或一个会话）、OpenAI Responses 条目
+（`function_call` 以 `call_id` 配对，`function_call_output`）、Anthropic 内容块（`tool_use` / `tool_result`）。
+
+- 一条消息里有多个 `tool_result`（Anthropic 的并行工具调用）会**拆成多个步骤**，每个结果单独配对。
+  所以步号对应的是拆分后的步骤，不一定等于原始消息序号。
+- **没有任何 assistant 或 tool 步骤的会话不评分**，记入 `issues`（原因 `NOTHING_TO_SCORE`）。
+  规则是「找毛病」，空轨迹毛病为零，会得 A；角色全是 `unknown` 的异形格式同理。
+  文件里所有会话都如此则整个文件失败（CLI 退出码 2）。
+
+**也支持**（这几种曾被悄悄读错、照样给高分，现在读对了）：
+- **ShareGPT**：`{conversations:[{from:'human'|'gpt'|'system', value}]}`，或直接一串 `{from, value}`。
+- **LangChain**：`model_dump()` 的 `{type:'human'|'ai'|'tool'|'system', content}`（角色在 `type` 里，
+  只在没有显式 `role` 时才用）、`messages_to_dict()` 的 `{type, data:{…}}`、以及构造器形式
+  `{lc, type:'constructor', id:[…,'HumanMessage'], kwargs}`（角色来自类名）。剥壳只在确认是这两种壳时才做，
+  普通消息恰好带个 `data` 字段不会被误剥；`Step.raw` 仍是剥之前的原对象。
+- **SWE-agent** 记录同时有 `trajectory`（动作记录）和 `history`（消息）：取里面**真是消息**的那个数组，
+  不再按键的先后取第一个。
+
+**不支持**（会被拒绝，不是打分）：OpenHands 事件（`source` / `action` / `observation`）、
+ShareGPT 工具调用变体（`function_call` / `observation` 角色）、其它自定义日志。这类输入没有
+assistant 或 tool 步骤，走上面的「无可评分」，CLI 退出码 2。如果它们恰好带了能被读成
+assistant/tool 的字段，仍可能被读错——遇到请先转成上面的形态。
 
 ## 已知边界
 

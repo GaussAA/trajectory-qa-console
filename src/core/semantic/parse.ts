@@ -41,6 +41,26 @@ export interface ParseOptions {
   /** 轨迹步数，用于校验 1 基步号。 */
   stepCount: number
   maxFindings?: number
+  /** 发给模型的那份摘要（已脱敏）。给了就核对每条引文是否真在里面；不给就不核对。 */
+  digestText?: string
+}
+
+/** 空白折成一个空格，供引文比对用。摘要里的文本经过 `clip`（空白已压平），模型引用时
+ *  可能带着换行或多余空格。 */
+function squash(text: string): string {
+  return text.replace(/\s+/g, ' ').trim()
+}
+
+/** 引文是否真的出现在摘要里。
+ *  模型常用 `…` 省略中间或结尾，所以按省略号切开，每一段都要在摘要里找得到。
+ *  空白不敏感，大小写敏感：引文要求是原文的连续片段，不是大意。 */
+export function quoteInDigest(quote: string, digest: string): boolean {
+  const haystack = squash(digest)
+  const segments = quote
+    .split(/…|\.{3}/)
+    .map(squash)
+    .filter((segment) => segment.length > 0)
+  return segments.length > 0 && segments.every((segment) => haystack.includes(segment))
 }
 
 export function parseJudgement(raw: string, options: ParseOptions): Result<SemanticFinding[]> {
@@ -73,12 +93,17 @@ export function parseJudgement(raw: string, options: ParseOptions): Result<Seman
     const step = item.step
     // 步号越界的判定直接丢弃步号（保留结论），不编造位置。
     const validStep = step !== undefined && step >= 1 && step <= options.stepCount ? step : undefined
+    // 这条判定会并进评分、触发门禁。提示词要求引文是轨迹原文的连续片段，对不上的就是编造
+    // （或者被轨迹里的注入文本带偏了）：降级并标记，而不是照常计分。没引文的判定不在此列。
+    const unverified =
+      options.digestText !== undefined && !!item.quote && !quoteInDigest(item.quote, options.digestText)
     findings.push({
       category: item.category as SemanticFinding['category'],
       step: validStep,
-      severity: item.severity,
-      quote: item.quote ? item.quote.slice(0, 200) : undefined,
+      severity: unverified ? 'info' : item.severity,
+      quote: unverified ? undefined : item.quote ? item.quote.slice(0, 200) : undefined,
       reason: item.reason.slice(0, 300),
+      ...(unverified ? { unverified: true } : {}),
     })
   }
 

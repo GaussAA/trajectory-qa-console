@@ -45,6 +45,16 @@ interface RowProps {
   onSelect: () => void
 }
 
+/** CSS 的 `prefers-reduced-motion` 管不到 JS 触发的平滑滚动，得自己问一句。
+ *  按住 ↓ 逐步查看时每一步都在做长距离动画，对晕动症用户是真实的不适。 */
+function scrollBehavior(): ScrollBehavior {
+  const reduce =
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  return reduce ? 'auto' : 'smooth'
+}
+
 function StepRow({ step, duration, compact, selected, issues, maxTokens, onSelect }: RowProps) {
   const t = useT()
   const roleColor = ROLE_COLOR[step.role]
@@ -55,6 +65,8 @@ function StepRow({ step, duration, compact, selected, issues, maxTokens, onSelec
       type="button"
       id={`step-row-${step.index}`}
       className={cx('step-row', compact && 'compact', selected && 'selected')}
+      // 选中态只靠 class 的话，读屏软件不知道当前在哪一步。
+      aria-current={selected ? 'step' : undefined}
       onClick={onSelect}
     >
       <span className="step-index">{String(step.index + 1).padStart(2, '0')}</span>
@@ -168,13 +180,13 @@ export function Timeline({ trajectory, card, selectedStep, onSelectStep }: Props
       const height = element.clientHeight || VIEWPORT_FALLBACK
       element.scrollTo?.({
         top: Math.max(0, selectedStep * COMPACT_ROW_HEIGHT - height / 2),
-        behavior: 'smooth',
+        behavior: scrollBehavior(),
       })
       return
     }
     document
       .getElementById(`step-row-${selectedStep}`)
-      ?.scrollIntoView?.({ block: 'center', behavior: 'smooth' })
+      ?.scrollIntoView?.({ block: 'center', behavior: scrollBehavior() })
   }, [selectedStep, compact])
 
   const buckets = useMemo(

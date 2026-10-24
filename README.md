@@ -57,6 +57,13 @@ pnpm verify           # typecheck + lint + coverage + 文案扫描 + 构建 + �
 ```
 
 界面：打开 `dist/index.html`，拖入轨迹文件（`.json` / `.jsonl`），或点「示例轨迹」。
+
+**支持的输入**：OpenAI Chat Completions 消息（数组或 `{messages:[…]}` 等常见容器）、JSONL、
+OpenAI Responses 条目（`function_call` / `function_call_output`）、Anthropic 内容块
+（`tool_use` / `tool_result`，并行结果会拆成独立步骤）。没有助手或工具步骤的会话不会被评分，
+而是作为「被跳过」报告，不会拿到虚高分。也能读 ShareGPT（`conversations`）、LangChain
+（`model_dump` / `messages_to_dict` / 构造器形式）和 SWE-agent 的 `history`。OpenHands 事件等其它格式
+不支持，会被拒绝而不是打分，请先转成上面的形态，详见 [CONTEXT.md](CONTEXT.md) 的「输入格式」。
 键盘：`↑` / `↓`（或 `j` / `k`）逐步查看轨迹。
 
 界面随窗口自适应：**宽度**决定几栏（1280 以上三栏，1024–1279 左栏收成 56px 图标条，
@@ -103,7 +110,7 @@ node dist-cli/qa.mjs serve                           # 默认 127.0.0.1:7788
 
 ## 工程
 
-- **479 项测试**，覆盖率 95.4% 行 / 86.2% 分支 / 94.4% 函数；`pnpm verify` 八道关全绿是合并的唯一标准。
+- **512 项测试**，覆盖率 95.4% 行 / 86.1% 分支 / 94.7% 函数；`pnpm verify` 八道关全绿是合并的唯一标准。
 - 分层：`core`（解析 / 规则 / 评分 / 对比 / 语义 / 智能体）/ `core/llm`（超时、重试、响应解析共用一份）/ `app`（状态机 / 持久化 / 遥测 / 分析端口）/ `ui` / `lib` / `cli`，接口小而行为厚。
 - 行为快照：4 条示例轨迹的分数与问题清单逐字段锁定（golden master）；600+ 例解析 fuzz；性能预算测试（10k 步 < 3s）。
 - 领域词汇、不变量与模块地图见 [CONTEXT.md](CONTEXT.md)；19 份 ADR 记录关键取舍（[docs/adr](docs/adr)）。

@@ -103,19 +103,24 @@ export default function App({
       }
       if (drawerOpen || compareOpen || agentOpen || diagnosticsOpen) return
 
+      // 在两头停住，不要越界：reducer 对越界的下标返回 null，于是到底再按一下选中就没了
+      // （检视器清空），再按一下又从第 1 步重新开始。
+      const count = session?.trajectory.steps.length ?? 0
+      if (count === 0) return
       const current = state.selectedStep ?? -1
       if (event.key === 'ArrowDown' || event.key === 'j') {
         event.preventDefault()
-        chooseStep(current + 1)
+        chooseStep(Math.min(current + 1, count - 1))
       } else if (event.key === 'ArrowUp' || event.key === 'k') {
         event.preventDefault()
-        chooseStep(current - 1)
+        chooseStep(Math.max(current - 1, 0))
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [
     state.sessions.length,
+    session,
     state.selectedStep,
     drawerOpen,
     compareOpen,
@@ -378,7 +383,7 @@ export default function App({
                     ))}
                   </select>
                 </label>
-                <ErrorBoundary nameKey="panel.score" compact onError={reportBoundaryError('score')}>
+                <ErrorBoundary nameKey="panel.score" compact resetKey={session.id} onError={reportBoundaryError('score')}>
                   <ScorePanel
                     card={card}
                     trajectory={session.trajectory}
@@ -386,7 +391,7 @@ export default function App({
                     ruleIssueCount={card.ruleIssues.length}
                   />
                 </ErrorBoundary>
-                <ErrorBoundary nameKey="panel.timeline" compact onError={reportBoundaryError('timeline')}>
+                <ErrorBoundary nameKey="panel.timeline" compact resetKey={`${session.id}:${state.selectedStep}`} onError={reportBoundaryError('timeline')}>
                   <Timeline
                     trajectory={session.trajectory}
                     card={card}
@@ -397,7 +402,7 @@ export default function App({
               </div>
 
               <div className="col col-right">
-                <ErrorBoundary nameKey="panel.inspector" compact onError={reportBoundaryError('inspector')}>
+                <ErrorBoundary nameKey="panel.inspector" compact resetKey={`${session.id}:${state.selectedStep}`} onError={reportBoundaryError('inspector')}>
                 <Inspector
                   trajectory={session.trajectory}
                   metrics={session.metrics}
@@ -409,7 +414,7 @@ export default function App({
                     onRemoveAnnotation={actions.removeAnnotation}
                   />
                 </ErrorBoundary>
-                <ErrorBoundary nameKey="panel.findings" compact onError={reportBoundaryError('findings')}>
+                <ErrorBoundary nameKey="panel.findings" compact resetKey={session.id} onError={reportBoundaryError('findings')}>
                   <FindingsPanel
                     card={card}
                     dimensions={state.pack.dimensions}
