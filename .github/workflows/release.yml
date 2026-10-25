@@ -51,7 +51,7 @@ jobs:
           fi
           echo "tag 与版本一致：$TAG"
 
-      - name: Build CLI bundle (verify 里未含 CLI 构建)
+      - name: Rebuild CLI bundle (verify 已构建过一次；这里重建，确保挂出去的是干净产物)
         run: pnpm build:cli
 
       - name: Create release and upload artifacts

@@ -40,9 +40,6 @@ jobs:
       - name: Verify
         run: pnpm verify
 
-      - name: CLI smoke (built bundle)
-        run: node scripts/smoke-cli.mjs
-
       - name: Upload single-file artifact
         uses: actions/upload-artifact@v6
         with:
