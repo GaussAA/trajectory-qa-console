@@ -23,6 +23,13 @@
     display: none;
   }
 
+  /* 顶栏 KPI 是重复信息（面板里都有），放不下时先让它让位，操作区优先：
+     中文界面带 KPI 的顶栏需要约 1255px，所以从这一档起收掉，其余宽度都保持一行。
+     换行是再往后的兜底，不是常态。 */
+  .kpis {
+    display: none;
+  }
+
   .narrow-session {
     display: flex;
     align-items: center;
@@ -47,15 +54,9 @@
 }
 
 @media (max-width: 1120px) {
-  /* 顶栏 KPI 是重复信息（面板里都有），窄屏优先保操作区：
-     不然「HTML 报告」「导出报告」会被挤出屏幕——输出动作消失了可不是小事。 */
-  .kpis {
-    display: none;
-  }
-
   .topbar {
     gap: 12px;
-    padding: 0 12px;
+    padding: 8px 12px;
   }
 
   .topbar-actions {
@@ -80,8 +81,7 @@
 
 @media (max-height: 680px) {
   .topbar {
-    height: 56px;
-    flex: 0 0 56px;
+    min-height: 56px;
   }
 
   /* 极矮屏：四维让位给时间线（它才是干活的地方），分数环与等级留着。 */
@@ -152,12 +152,6 @@
     max-height: 40vh;
   }
 
-  /* 按钮多的时候允许顶栏换行，宁可两行也不截断——被截掉的「导出报告」比丑更糟。 */
-  .topbar {
-    height: auto;
-    flex: 0 0 auto;
-    flex-wrap: wrap;
-    row-gap: 8px;
-    padding-bottom: 8px;
-  }
+  /* 顶栏允许换行（宁可两行也不截断——被截掉的「导出报告」比丑更糟）这件事现在对所有宽度成立，
+     写在 layout.css 的 .topbar 里；这里不再单独处理。 */
 }
