@@ -1,0 +1,21 @@
+version: 2
+
+updates:
+  # pnpm 项目也用 npm 生态；锁文件是 pnpm-lock.yaml，Dependabot 会据此更新。
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # 小版本与补丁合并成一个 PR；大版本各自独立，便于单独评审与回滚。
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']
