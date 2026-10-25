@@ -395,8 +395,7 @@ describe('RuleDrawer keeps its state while closed', () => {
     fireEvent.click(screen.getByText('口径对比'))
     const targetSelect = () => container.querySelectorAll('.packcmp-pickers select')[1] as HTMLSelectElement
     fireEvent.change(targetSelect(), { target: { value: 'v1' } })
-    const nameInput = () =>
-      screen.getByPlaceholderText(/./, { selector: '.variant-save-row input' }) as HTMLInputElement
+    const nameInput = () => container.querySelector('.variant-save-row input') as HTMLInputElement
     fireEvent.change(nameInput(), { target: { value: '写到一半' } })
 
     rerender(<Harness open={false} />)
