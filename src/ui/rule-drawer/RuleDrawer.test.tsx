@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { DEFAULT_PACK } from '../core/rules/builtin-pack'
-import { BUILTIN_PACK_EN } from '../core/rules/builtin-pack-en'
-import { analyzeSessions } from '../core/test-support'
-import { I18nProvider } from '../i18n'
+import { DEFAULT_PACK } from '../../core/rules/builtin-pack'
+import { BUILTIN_PACK_EN } from '../../core/rules/builtin-pack-en'
+import { analyzeSessions } from '../../core/test-support'
+import { I18nProvider } from '../../i18n'
 import { RuleDrawer } from './RuleDrawer'
 
 const TRACE = JSON.stringify([
