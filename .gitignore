@@ -6,6 +6,8 @@ dist-cli/
 .vite/
 .workbuddy/
 coverage/
+test-results/
+playwright-report/
 .env
 .env.*
 !.env.example

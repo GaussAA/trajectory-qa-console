@@ -25,6 +25,7 @@ pnpm test:watch
 pnpm test:coverage                          # enforces lines/functions/statements ≥85%, branches ≥75%
 
 pnpm verify                  # the merge gate; CI and release both run exactly this
+pnpm test:e2e                # Playwright against dist/index.html opened via file://; needs `pnpm build` first and a local Chrome. CI runs it after verify; it is not part of verify
 ```
 
 `pnpm verify` runs, in order: typecheck → lint → format:check → test:coverage → `scripts/check-i18n.mjs` → `scripts/check-typography.mjs` → vite build → `scripts/check-artifact.mjs` → build:cli → `scripts/smoke-cli.mjs`. Each script can be run alone with `node scripts/<name>.mjs`; the artifact check and the CLI smoke test need their build output to exist first. A formatting failure is fixed with `pnpm format`.
