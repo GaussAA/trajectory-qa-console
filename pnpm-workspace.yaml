@@ -1,2 +1,5 @@
 allowBuilds:
   esbuild: true
+  # postinstall 只检查原生二进制能否加载、失败时回退去装 @swc/wasm。原生包走可选依赖，
+  # 装得上就能用，不需要这一步；显式声明跳过，免得 pnpm 12 因「未决定」报 ERR_PNPM_IGNORED_BUILDS。
+  '@swc/core': false
