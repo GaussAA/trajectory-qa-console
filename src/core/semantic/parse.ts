@@ -5,20 +5,20 @@
  *  否则一条幻觉出来的「step 999」足以把报告搅乱。
  */
 
-import { z } from 'zod'
+import * as z from 'zod/mini'
 import { fail, ok, type Result } from '../model'
 import { SEMANTIC_CATEGORIES, type SemanticFinding } from './types'
 
 const findingSchema = z.object({
   category: z.enum(SEMANTIC_CATEGORIES as [string, ...string[]]),
-  step: z.number().int().min(1).optional(),
-  severity: z.enum(['error', 'warn', 'info']).default('warn'),
-  quote: z.string().max(600).optional(),
-  reason: z.string().min(1).max(1200),
+  step: z.optional(z.int().check(z.minimum(1))),
+  severity: z._default(z.enum(['error', 'warn', 'info']), 'warn'),
+  quote: z.optional(z.string().check(z.maxLength(600))),
+  reason: z.string().check(z.minLength(1), z.maxLength(1200)),
 })
 
 const payloadSchema = z.object({
-  findings: z.array(findingSchema).max(50).default([]),
+  findings: z._default(z.array(findingSchema).check(z.maxLength(50)), []),
 })
 
 /** 去掉 ```json 围栏，并截取最外层大括号（模型常爱加客套话）。 */
