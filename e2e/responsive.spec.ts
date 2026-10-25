@@ -121,6 +121,20 @@ test('desktop widths never need a vertical page scroll', async ({ page }) => {
   expect(found).toEqual([])
 })
 
+test('the Chinese top bar stays on one row on every desktop width', async ({ page }) => {
+  // 换行是兜底，不是常态：中文标签够短，桌面宽度下应当一行放下（64px）。
+  // 放不下时先让顶栏里重复的 KPI 让位，而不是让按钮去换行。
+  await open(page, '#demo')
+  const found = await sweep(page, async ([width]) => {
+    if (width < 1060) return []
+    const height = await page.evaluate(
+      () => document.querySelector('.topbar')!.getBoundingClientRect().height,
+    )
+    return height > 64.5 ? [`顶栏换成了多行（高 ${Math.round(height)}px）`] : []
+  })
+  expect(found).toEqual([])
+})
+
 test.describe('each layout shape holds at its widths', () => {
   type Rect = { left: number; right: number; top: number; bottom: number; width: number }
 

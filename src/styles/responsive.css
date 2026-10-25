@@ -23,6 +23,13 @@
     display: none;
   }
 
+  /* 顶栏 KPI 是重复信息（面板里都有），放不下时先让它让位，操作区优先：
+     中文界面带 KPI 的顶栏需要约 1255px，所以从这一档起收掉，其余宽度都保持一行。
+     换行是再往后的兜底，不是常态。 */
+  .kpis {
+    display: none;
+  }
+
   .narrow-session {
     display: flex;
     align-items: center;
@@ -47,12 +54,6 @@
 }
 
 @media (max-width: 1120px) {
-  /* 顶栏 KPI 是重复信息（面板里都有），窄屏优先保操作区：
-     不然「HTML 报告」「导出报告」会被挤出屏幕——输出动作消失了可不是小事。 */
-  .kpis {
-    display: none;
-  }
-
   .topbar {
     gap: 12px;
     padding: 8px 12px;
