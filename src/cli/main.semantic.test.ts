@@ -22,7 +22,11 @@ describe('validation happens before anything that costs money', () => {
       env: ENV,
       transport: async () => {
         calls += 1
-        return { ok: true, status: 200, text: JSON.stringify({ choices: [{ message: { content: '{"findings":[]}' } }] }) }
+        return {
+          ok: true,
+          status: 200,
+          text: JSON.stringify({ choices: [{ message: { content: '{"findings":[]}' } }] }),
+        }
       },
     })
 
@@ -41,9 +45,7 @@ describe('semantic review', () => {
     expect(chatCompletionsUrl('https://token.sensenova.cn/v1/')).toBe(
       'https://token.sensenova.cn/v1/chat/completions',
     )
-    expect(chatCompletionsUrl('https://host/v1/chat/completions')).toBe(
-      'https://host/v1/chat/completions',
-    )
+    expect(chatCompletionsUrl('https://host/v1/chat/completions')).toBe('https://host/v1/chat/completions')
     // 本地代理自带路径：拼一层就成了 .../api/chat/chat/completions，等于把能用的配置改坏。
     expect(chatCompletionsUrl('http://127.0.0.1:18880/api/chat')).toBe('http://127.0.0.1:18880/api/chat')
     expect(chatCompletionsUrl('   ')).toBe('')

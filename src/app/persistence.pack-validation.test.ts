@@ -11,7 +11,9 @@ const variant = (id: string, pack: unknown) => ({ id, name: id, savedAt: '2026-1
 function packWithColor(color: string): RulePack {
   return {
     ...DEFAULT_PACK,
-    dimensions: DEFAULT_PACK.dimensions.map((dimension, index) => (index === 0 ? { ...dimension, color } : dimension)),
+    dimensions: DEFAULT_PACK.dimensions.map((dimension, index) =>
+      index === 0 ? { ...dimension, color } : dimension,
+    ),
   }
 }
 
@@ -36,7 +38,11 @@ describe('a stored pack with a hostile colour', () => {
       'tqa.pack-variants',
       JSON.stringify({ schemaVersion: 1, data: [variant('bad', hostile), variant('good', DEFAULT_PACK)] }),
     )
-    expect(createPersistence(storage).loadPackVariants().map((item) => item.id)).toEqual(['good'])
+    expect(
+      createPersistence(storage)
+        .loadPackVariants()
+        .map((item) => item.id),
+    ).toEqual(['good'])
   })
 })
 
@@ -56,6 +62,10 @@ describe('stored data written before strict validation', () => {
         data: [variant('bad', withRule({ message: '{stepp}' })), variant('good', DEFAULT_PACK)],
       }),
     )
-    expect(createPersistence(storage).loadPackVariants().map((item) => item.id)).toEqual(['good'])
+    expect(
+      createPersistence(storage)
+        .loadPackVariants()
+        .map((item) => item.id),
+    ).toEqual(['good'])
   })
 })

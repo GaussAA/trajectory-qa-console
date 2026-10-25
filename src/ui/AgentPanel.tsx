@@ -153,11 +153,7 @@ export function AgentPanel({
   const downloadProposal = (index: number) => {
     const proposal = run?.proposals[index]
     if (!proposal) return
-    downloadFile(
-      'proposal.pack.json',
-      `${JSON.stringify(proposal.pack, null, 2)}\n`,
-      'application/json',
-    )
+    downloadFile('proposal.pack.json', `${JSON.stringify(proposal.pack, null, 2)}\n`, 'application/json')
   }
 
   return (

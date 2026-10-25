@@ -93,9 +93,7 @@ describe('import reports every problem it had', () => {
     const { result } = setup()
 
     await act(async () => {
-      void result.current.actions.ingestFiles([
-        { name: 'bad.json', size: 8, text: async () => '{not json' },
-      ])
+      void result.current.actions.ingestFiles([{ name: 'bad.json', size: 8, text: async () => '{not json' }])
       await Promise.resolve()
     })
     await waitFor(() => expect(result.current.state.issues.length).toBeGreaterThan(0))

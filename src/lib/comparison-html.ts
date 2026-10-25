@@ -86,7 +86,10 @@ function renderFindings(
 }
 
 /** 同一个问题、程度变了：前后两句并排。 */
-function renderChanged(changed: ReturnType<typeof buildComparisonModel>['findingDiff']['changed'], t: Translate): string {
+function renderChanged(
+  changed: ReturnType<typeof buildComparisonModel>['findingDiff']['changed'],
+  t: Translate,
+): string {
   if (changed.length === 0) return ''
   const items = changed
     .map(
@@ -326,7 +329,6 @@ ${dimensionRows}
 </html>
 `
 }
-
 
 export function buildComparisonHtml(input: ComparisonInput): string {
   return renderComparisonHtml(input, buildComparisonModel(input))

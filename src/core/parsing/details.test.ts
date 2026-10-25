@@ -62,7 +62,9 @@ describe('tool result error flag', () => {
 
   it('lets an explicit is_error:false override a body that merely starts with the word Error', () => {
     // 一份叫「Error handling guide」的文档，工具明确说没出错
-    expect(resultOf({ is_error: false, content: 'Error handling guide: retry with backoff' })?.isError).toBe(false)
+    expect(resultOf({ is_error: false, content: 'Error handling guide: retry with backoff' })?.isError).toBe(
+      false,
+    )
     expect(resultOf({ isError: false, content: 'Exception safety notes' })?.isError).toBe(false)
   })
 
@@ -84,7 +86,12 @@ describe('tool result error flag', () => {
     const parsed = parseTrajectory(
       JSON.stringify([
         { role: 'assistant', content: [{ type: 'tool_use', id: 'a1', name: 's', input: {} }] },
-        { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'a1', content: 'Error handling guide', is_error: false }] },
+        {
+          role: 'user',
+          content: [
+            { type: 'tool_result', tool_use_id: 'a1', content: 'Error handling guide', is_error: false },
+          ],
+        },
         { role: 'assistant', content: [{ type: 'tool_use', id: 'a2', name: 's', input: {} }] },
         { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'a2', content: 'Error: boom' }] },
         { role: 'assistant', content: 'done' },

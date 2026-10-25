@@ -10,7 +10,9 @@ import { isSafeCssColor, validatePack } from './contract'
 function packWithColor(color: string): RulePack {
   return {
     ...DEFAULT_PACK,
-    dimensions: DEFAULT_PACK.dimensions.map((dimension, index) => (index === 0 ? { ...dimension, color } : dimension)),
+    dimensions: DEFAULT_PACK.dimensions.map((dimension, index) =>
+      index === 0 ? { ...dimension, color } : dimension,
+    ),
   }
 }
 

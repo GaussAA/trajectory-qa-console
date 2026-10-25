@@ -157,7 +157,10 @@ export function buildJudgementPrompt(
     digestText,
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: `请质检下面 <trajectory> 标签之间的轨迹：\n\n<trajectory>\n${digestText}\n</trajectory>` },
+      {
+        role: 'user',
+        content: `请质检下面 <trajectory> 标签之间的轨迹：\n\n<trajectory>\n${digestText}\n</trajectory>`,
+      },
     ],
   }
 }

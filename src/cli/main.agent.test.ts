@@ -136,7 +136,9 @@ describe('agent diagnosis', () => {
     trace(dir, 'clean.json', CLEAN)
     const { io, chunks } = capture()
 
-    const code = await main([dir, '--agent-dry-run', '--agent-task', '只看工具报错后有没有重试'], io, { env: {} })
+    const code = await main([dir, '--agent-dry-run', '--agent-task', '只看工具报错后有没有重试'], io, {
+      env: {},
+    })
 
     expect(code).toBe(EXIT.ok)
     expect(chunks.out).toContain('只看工具报错后有没有重试')

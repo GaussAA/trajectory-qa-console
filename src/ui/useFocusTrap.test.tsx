@@ -39,7 +39,8 @@ afterEach(() => {
   else delete (HTMLElement.prototype as unknown as Record<string, unknown>).offsetParent
 })
 
-const pressTab = (shift = false) => fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Tab', shiftKey: shift })
+const pressTab = (shift = false) =>
+  fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Tab', shiftKey: shift })
 
 describe('useFocusTrap', () => {
   it('moves focus into the dialog when it opens', () => {

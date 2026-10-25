@@ -163,7 +163,11 @@ export async function diagnose(request: DiagnoseRequest): Promise<DiagnoseOutcom
   }
 
   if (!run) {
-    return { ok: false, code: streamError ? 'rejected' : 'stream', message: streamError ?? 'stream ended early' }
+    return {
+      ok: false,
+      code: streamError ? 'rejected' : 'stream',
+      message: streamError ?? 'stream ended early',
+    }
   }
   // 部分会话被跳过时如实交代：静默少诊断几条，等于让人以为都看过了。
   return partial === null ? { ok: true, run, model } : { ok: true, run, model, partial }

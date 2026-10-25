@@ -114,7 +114,10 @@ describe('analyzer port', () => {
         analyze: async () => {
           workerCalls += 1
           // 带 reason 的 analysis-failed：analyze() 里每个会话都抛了，是数据的错
-          return { ok: false, error: { code: 'analysis-failed', message: 'x', detail: { reason: '指标计算炸了' } } }
+          return {
+            ok: false,
+            error: { code: 'analysis-failed', message: 'x', detail: { reason: '指标计算炸了' } },
+          }
         },
       }),
     })
@@ -158,7 +161,10 @@ describe('analyzer port', () => {
       workerFactory: () => ({
         analyze: async () => {
           workerCalls += 1
-          return { ok: false, error: { code: 'analysis-failed', message: 'broken', detail: { workerFault: true } } }
+          return {
+            ok: false,
+            error: { code: 'analysis-failed', message: 'broken', detail: { workerFault: true } },
+          }
         },
       }),
     })

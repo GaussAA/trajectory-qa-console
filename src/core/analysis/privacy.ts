@@ -72,7 +72,8 @@ export function countPrivacyHits(text: string): number {
 
 /** 整块 PEM 私钥：从 BEGIN 到 END。没有 END（被截断）就一路吃到结尾——宁可多拿掉，
  *  也不把半截私钥留在正文里。第一个 BEGIN 就会吃到串尾，所以是线性的，不会因为很多个 BEGIN 而变成二次方。 */
-const PEM_BLOCK = /-----BEGIN (?:[A-Z]+ )*PRIVATE KEY-----[\s\S]*?(?:-----END (?:[A-Z]+ )*PRIVATE KEY-----|$)/g
+const PEM_BLOCK =
+  /-----BEGIN (?:[A-Z]+ )*PRIVATE KEY-----[\s\S]*?(?:-----END (?:[A-Z]+ )*PRIVATE KEY-----|$)/g
 
 /** 把密钥、手机号、邮箱、证件号形态的串换成 `[REDACTED:<类别>]`。
  *  幂等：占位符本身不会再被任何检测器命中。 */

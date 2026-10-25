@@ -81,7 +81,11 @@ export async function complete(request: CompleteRequest): Promise<CompleteResult
 
       if (!response.ok) {
         // 只留前 200 字，避免把整页 HTML 错误页塞进报告
-        const failure: CompleteFailure = { kind: 'http', status: response.status, body: response.text.slice(0, 200) }
+        const failure: CompleteFailure = {
+          kind: 'http',
+          status: response.status,
+          body: response.text.slice(0, 200),
+        }
         if (RETRYABLE_STATUS(response.status) && attempt < retries) {
           lastFailure = failure
           await sleep(Math.min(retryDelayMs, Math.max(0, remaining())))
@@ -95,7 +99,10 @@ export async function complete(request: CompleteRequest): Promise<CompleteResult
       if (request.signal?.aborted) return { ok: false, failure: { kind: 'aborted' } }
       // 超时不重试，见文件头。
       if (error instanceof Error && error.message === 'timeout') {
-        return { ok: false, failure: clamped ? { kind: 'timeout', budgetExhausted: true } : { kind: 'timeout' } }
+        return {
+          ok: false,
+          failure: clamped ? { kind: 'timeout', budgetExhausted: true } : { kind: 'timeout' },
+        }
       }
       const failure: CompleteFailure = {
         kind: 'transport',

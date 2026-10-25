@@ -35,9 +35,7 @@ describe('响应式体系', () => {
   it('不再有把视口撑破的 min-width（那是横向滚动条的老来源）', () => {
     // 允许品牌区那点 208px 之类的合理值，禁止任何 500px 以上的硬下限。
     // 排除 @media (min-width: …) ——那是断点条件，不是布局下限。
-    const offenders = [
-      ...`${layout}${responsive}`.matchAll(/(?<!\()\bmin-width:\s*([5-9]\d\d|\d{4,})px/g),
-    ]
+    const offenders = [...`${layout}${responsive}`.matchAll(/(?<!\()\bmin-width:\s*([5-9]\d\d|\d{4,})px/g)]
     expect(offenders.map((match) => match[0])).toEqual([])
   })
 

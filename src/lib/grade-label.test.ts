@@ -65,8 +65,12 @@ describe('a capped C no longer reads as acceptable', () => {
   })
 
   it('JSON keeps the machine-readable letter and only changes the readable label', () => {
-    const zh = JSON.parse(buildJsonReport(input(sample, 'zh-CN'))) as { sessions: { grade: string; gradeLabel: string }[] }
-    const en = JSON.parse(buildJsonReport(input(sample, 'en'))) as { sessions: { grade: string; gradeLabel: string }[] }
+    const zh = JSON.parse(buildJsonReport(input(sample, 'zh-CN'))) as {
+      sessions: { grade: string; gradeLabel: string }[]
+    }
+    const en = JSON.parse(buildJsonReport(input(sample, 'en'))) as {
+      sessions: { grade: string; gradeLabel: string }[]
+    }
     // 给 CI 解析的键与值不变
     expect(zh.sessions[0]?.grade).toBe('C')
     expect(en.sessions[0]?.grade).toBe('C')

@@ -10,11 +10,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { analyze } from '../core/analysis'
-import {
-  buildComparisonModel,
-  renderComparisonJson,
-  renderComparisonMarkdown,
-} from '../lib/report'
+import { buildComparisonModel, renderComparisonJson, renderComparisonMarkdown } from '../lib/report'
 import {
   buildPackCompareModel,
   renderPackCompareJson,
@@ -225,7 +221,8 @@ interface ServeIo {
 /** 常驻诊断服务：界面「诊断」按钮的后端。密钥留在本进程，浏览器拿不到。 */
 async function runServe(options: CliOptions, io: ServeIo): Promise<number> {
   const { stdout, stderr, env, deps } = io
-  const t = (key: MessageKey, params?: Record<string, string | number>) => translate(options.locale, key, params)
+  const t = (key: MessageKey, params?: Record<string, string | number>) =>
+    translate(options.locale, key, params)
 
   const resolved = resolveSemantic(options, env)
   if (!resolved.ok) {

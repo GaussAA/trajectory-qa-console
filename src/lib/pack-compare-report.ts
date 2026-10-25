@@ -96,7 +96,6 @@ export function renderPackCompareJson(input: PackCompareReportInput, comparison:
 
 type Translate = (key: MessageKey, params?: Record<string, string | number>) => string
 
-
 export function buildPackCompareMarkdown(input: PackCompareReportInput): string {
   return renderPackCompareMarkdown(input, buildPackCompareModel(input))
 }

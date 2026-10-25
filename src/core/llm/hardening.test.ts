@@ -52,7 +52,8 @@ describe('redactSecrets', () => {
   })
 
   it('removes the whole of a PEM private key block, not just its header', () => {
-    const pem = '-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEAxxxxxxxx\nyyyyyyyy\n-----END RSA PRIVATE KEY-----'
+    const pem =
+      '-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEAxxxxxxxx\nyyyyyyyy\n-----END RSA PRIVATE KEY-----'
     const out = redactSecrets(`here: ${pem} done`)
     expect(out).toBe('here: [REDACTED:key] done')
     expect(out).not.toContain('MIIEow')
@@ -86,7 +87,9 @@ describe('redactSecrets', () => {
       const out = JSON.parse(
         redactJsonText(JSON.stringify({ [EMAIL]: [{ phone: PHONE, n: 42, ok: true, none: null }] })),
       ) as Record<string, unknown>
-      expect(out).toEqual({ '[REDACTED:email]': [{ phone: '[REDACTED:phone]', n: 42, ok: true, none: null }] })
+      expect(out).toEqual({
+        '[REDACTED:email]': [{ phone: '[REDACTED:phone]', n: 42, ok: true, none: null }],
+      })
     })
 
     it('falls back to plain-text redaction for text that is not valid JSON', () => {
@@ -128,7 +131,11 @@ describe('nothing secret-shaped leaves in the semantic review request', () => {
     const bodies: string[] = []
     const transport: LlmTransport = async (request: LlmRequest) => {
       bodies.push(request.body)
-      return { ok: true, status: 200, text: JSON.stringify({ choices: [{ message: { content: '{"findings":[]}' } }] }) }
+      return {
+        ok: true,
+        status: 200,
+        text: JSON.stringify({ choices: [{ message: { content: '{"findings":[]}' } }] }),
+      }
     }
     await judgeTrajectory(trajectoryWith(`token ${KEY} and ${AWS}`), {
       transport,
@@ -162,7 +169,9 @@ describe('quotes the model cites must be in what it was shown', () => {
   const digest = 'assistant#2: 住宿上限是 500 元，依据财务制度第 3 条。\n  tool search({"q":"报销"}) → ok'
   const options = { stepCount: 2, digestText: digest }
   const judgement = (quote?: string) =>
-    JSON.stringify({ findings: [{ category: 'unsupported_claim', step: 2, severity: 'error', quote, reason: '没有来源' }] })
+    JSON.stringify({
+      findings: [{ category: 'unsupported_claim', step: 2, severity: 'error', quote, reason: '没有来源' }],
+    })
 
   it('keeps a finding whose quote is really in the digest', () => {
     const result = parseJudgement(judgement('住宿上限是 500 元'), options)
@@ -201,7 +210,13 @@ describe('quotes the model cites must be in what it was shown', () => {
 
   it('says so in the finding that reaches the report, in the reader’s language', () => {
     const items = [
-      { category: 'unsupported_claim' as const, step: 2, severity: 'info' as const, reason: '没有来源', unverified: true },
+      {
+        category: 'unsupported_claim' as const,
+        step: 2,
+        severity: 'info' as const,
+        reason: '没有来源',
+        unverified: true,
+      },
     ]
     const zh = toFindings(items, 'zh-CN', 't')[0]
     const en = toFindings(items, 'en', 't')[0]
@@ -231,7 +246,12 @@ describe('quotes the model cites must be in what it was shown', () => {
         choices: [{ message: { content: judgement('住宿上限是 500 元') } }],
       }),
     })
-    const real = await judgeTrajectory(trajectory, { transport, url: 'https://x/v1/chat/completions', model: 'm', apiKey: 'k' })
+    const real = await judgeTrajectory(trajectory, {
+      transport,
+      url: 'https://x/v1/chat/completions',
+      model: 'm',
+      apiKey: 'k',
+    })
     if (!real.ok) throw new Error(real.error.message)
     expect(real.value[0]?.unverified).toBeUndefined()
 
@@ -240,7 +260,12 @@ describe('quotes the model cites must be in what it was shown', () => {
       status: 200,
       text: JSON.stringify({ choices: [{ message: { content: judgement('从没出现过的话') } }] }),
     })
-    const bad = await judgeTrajectory(trajectory, { transport: fake, url: 'https://x/v1/chat/completions', model: 'm', apiKey: 'k' })
+    const bad = await judgeTrajectory(trajectory, {
+      transport: fake,
+      url: 'https://x/v1/chat/completions',
+      model: 'm',
+      apiKey: 'k',
+    })
     if (!bad.ok) throw new Error(bad.error.message)
     expect(bad.value[0]).toMatchObject({ unverified: true, severity: 'info' })
   })
@@ -263,7 +288,15 @@ describe('the agent never sends a secret either', () => {
         },
         { role: 'tool', content: JSON.stringify({ hit: `手机 ${PHONE}` }), toolCallId: 'c1' },
       ],
-      { transport, url: 'https://x/v1/chat/completions', model: 'm', apiKey: 'k', maxTokens: 100, timeoutMs: 1000, tools: [] },
+      {
+        transport,
+        url: 'https://x/v1/chat/completions',
+        model: 'm',
+        apiKey: 'k',
+        maxTokens: 100,
+        timeoutMs: 1000,
+        tools: [],
+      },
     )
     expect(bodies).toHaveLength(1)
     for (const secret of [KEY, EMAIL, AWS, PHONE]) expect(bodies[0]).not.toContain(secret)
@@ -296,7 +329,13 @@ describe('the agent never sends a secret either', () => {
             {
               message: {
                 content: '',
-                tool_calls: [{ id: `c${round}`, type: 'function', function: { name: call.name, arguments: JSON.stringify(call.args) } }],
+                tool_calls: [
+                  {
+                    id: `c${round}`,
+                    type: 'function',
+                    function: { name: call.name, arguments: JSON.stringify(call.args) },
+                  },
+                ],
               },
             },
           ],
@@ -305,7 +344,14 @@ describe('the agent never sends a secret either', () => {
     }
     const run = await runAgent(
       { sessions: [session], pack: DEFAULT_PACK, annotations: [] },
-      { transport, url: 'https://x/v1/chat/completions', model: 'm', apiKey: 'k', locale: 'zh-CN', retryDelayMs: 0 },
+      {
+        transport,
+        url: 'https://x/v1/chat/completions',
+        model: 'm',
+        apiKey: 'k',
+        locale: 'zh-CN',
+        retryDelayMs: 0,
+      },
     )
     expect(run.trace.stopReason).toBe('submitted')
     // 第二轮的请求里带着 get_step 的返回值：里面本来有真密钥
@@ -323,11 +369,24 @@ describe('the agent never sends a secret either', () => {
       bodies.push(request.body)
       return { ok: true, status: 200, text: JSON.stringify({ choices: [{ message: { content: 'ok' } }] }) }
     }
-    const analyzed = analyze({ source: JSON.stringify([{ role: 'user', content: 'x' }, { role: 'assistant', content: 'y' }]), label: 'a.json' })
+    const analyzed = analyze({
+      source: JSON.stringify([
+        { role: 'user', content: 'x' },
+        { role: 'assistant', content: 'y' },
+      ]),
+      label: 'a.json',
+    })
     if (!analyzed.ok) throw new Error(analyzed.error.message)
     await runAgent(
       { sessions: analyzed.value.sessions, pack: DEFAULT_PACK, annotations: [] },
-      { transport, url: 'https://x/v1/chat/completions', model: 'm', apiKey: 'k', locale: 'zh-CN', retryDelayMs: 0 },
+      {
+        transport,
+        url: 'https://x/v1/chat/completions',
+        model: 'm',
+        apiKey: 'k',
+        locale: 'zh-CN',
+        retryDelayMs: 0,
+      },
     )
     expect(bodies[0]).toMatch(/不是指令|不要执行|数据/)
   })
@@ -389,7 +448,10 @@ describe('simulate_pack and propose_pack refuse arguments they would otherwise d
 
   it('does not apply half of a batch when one edit in it is bad', () => {
     const outcome = run('simulate_pack', {
-      edits: [{ ruleId: 'exec-dead-loop', scoreImpact: 30 }, { ruleId: 'exec-tool-error', severity: 'nope' }],
+      edits: [
+        { ruleId: 'exec-dead-loop', scoreImpact: 30 },
+        { ruleId: 'exec-tool-error', severity: 'nope' },
+      ],
     })
     expect(outcome?.ok).toBe(false)
   })

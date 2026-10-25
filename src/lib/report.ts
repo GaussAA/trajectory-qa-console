@@ -123,7 +123,8 @@ export function buildMarkdownReport({ entries, pack, generatedAt, locale }: Repo
       lines.push(`> ${t('report.cappedNote', { raw: card.rawOverall, score: card.overall })}`)
       lines.push('')
     }
-    if (trajectory.meta.model) lines.push(`- ${t('report.model', { model: mdInline(trajectory.meta.model) })}`)
+    if (trajectory.meta.model)
+      lines.push(`- ${t('report.model', { model: mdInline(trajectory.meta.model) })}`)
     if (trajectory.meta.estimatedTokens) lines.push(`- ${t('report.estimatedNote')}`)
     lines.push('')
 
@@ -164,7 +165,10 @@ export function buildMarkdownReport({ entries, pack, generatedAt, locale }: Repo
       lines.push('')
       advice.forEach((item, adviceIndex) => {
         // 只出现一次就不必标「1 处」——那是噪音。
-        const suffix = item.count > 1 ? t('report.adviceSuffix', { text: t('report.adviceCount', { count: item.count }) }) : ''
+        const suffix =
+          item.count > 1
+            ? t('report.adviceSuffix', { text: t('report.adviceCount', { count: item.count }) })
+            : ''
         lines.push(`${adviceIndex + 1}. ${item.text}${suffix}`)
       })
       lines.push('')
@@ -180,7 +184,9 @@ export function buildMarkdownReport({ entries, pack, generatedAt, locale }: Repo
         const key = `${issue.ruleId}:${issue.message}`
         if (seen.has(key)) continue
         seen.add(key)
-        lines.push(`- ${t('report.ruleIssueItem', { id: mdInline(issue.ruleId), message: mdInline(issue.message) })}`)
+        lines.push(
+          `- ${t('report.ruleIssueItem', { id: mdInline(issue.ruleId), message: mdInline(issue.message) })}`,
+        )
       }
     }
     lines.push('')
@@ -396,7 +402,10 @@ export function renderComparisonMarkdown(input: ComparisonInput, model: Comparis
     lines.push(`### ${t('report.compare.advice')}`)
     lines.push('')
     advice.forEach((item, adviceIndex) => {
-      const suffix = item.count > 1 ? t('report.adviceSuffix', { text: t('report.adviceCount', { count: item.count }) }) : ''
+      const suffix =
+        item.count > 1
+          ? t('report.adviceSuffix', { text: t('report.adviceCount', { count: item.count }) })
+          : ''
       lines.push(`${adviceIndex + 1}. ${item.text}${suffix}`)
     })
     lines.push('')
@@ -474,7 +483,6 @@ export function renderComparisonJson(input: ComparisonInput, model: ComparisonMo
     2,
   )
 }
-
 
 /** Convenience wrappers: compute once, render one artifact. Callers that emit
  *  several artifacts should build the model themselves and pass it in. */

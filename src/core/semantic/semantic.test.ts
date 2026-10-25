@@ -140,7 +140,9 @@ describe('extractContent', () => {
   it('reads the response shape for failure diagnosis', () => {
     expect(
       inspectResponse(
-        JSON.stringify({ choices: [{ message: { content: 'ok', reasoning: '想一想' }, finish_reason: 'stop' }] }),
+        JSON.stringify({
+          choices: [{ message: { content: 'ok', reasoning: '想一想' }, finish_reason: 'stop' }],
+        }),
       ),
     ).toEqual({ content: 'ok', finishReason: 'stop', reasoningChars: 3 })
 

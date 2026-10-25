@@ -77,7 +77,12 @@ describe('diagnose', () => {
   const base = { target: { endpoint: 'http://127.0.0.1:7788', token: null }, pack: DEFAULT_PACK }
 
   it('sends sessions without their raw payloads', async () => {
-    const calls = stubFetch(() => streamOf([{ type: 'start', sessions: 1 }, { type: 'done', run: SUBMITTED }]))
+    const calls = stubFetch(() =>
+      streamOf([
+        { type: 'start', sessions: 1 },
+        { type: 'done', run: SUBMITTED },
+      ]),
+    )
 
     const result = await diagnose({ ...base, sessions: sessions() })
 

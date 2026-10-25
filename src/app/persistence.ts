@@ -135,9 +135,7 @@ function isAnnotation(value: unknown): value is Annotation {
     // 步号必须是非负整数：NaN、负数与小数都会造出指不到任何步的幽灵标注，
     // 而它照样会算进错误封顶。
     (record.stepIndex === undefined ||
-      (typeof record.stepIndex === 'number' &&
-        Number.isInteger(record.stepIndex) &&
-        record.stepIndex >= 0))
+      (typeof record.stepIndex === 'number' && Number.isInteger(record.stepIndex) && record.stepIndex >= 0))
   )
 }
 
@@ -196,7 +194,11 @@ function isPackVariant(value: unknown): value is PackVariant {
 function isSessionNote(value: unknown): value is SessionNote {
   if (!value || typeof value !== 'object') return false
   const record = value as Record<string, unknown>
-  if (!(typeof record.trajectoryId === 'string' && typeof record.name === 'string' && typeof record.note === 'string'))
+  if (!(
+    typeof record.trajectoryId === 'string' &&
+    typeof record.name === 'string' &&
+    typeof record.note === 'string'
+  ))
     return false
   // tags 可选（旧数据没有）；存在则必须是字符串数组
   if (record.tags === undefined) return true

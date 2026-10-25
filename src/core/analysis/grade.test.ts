@@ -66,7 +66,13 @@ describe('scoreTrajectory with an error-level finding', () => {
     // 加权后总分约 71：落在 C 的 60–74 之间，但全是 warn，没有 error，确实只是「合格」。
     const warns = (['structure', 'execution'] as const).flatMap((dimension) =>
       Array.from({ length: 3 }, (_, i) =>
-        finding({ id: `${dimension}-${i}`, ruleId: `rule-${dimension}`, severity: 'warn', impact: 17, dimension }),
+        finding({
+          id: `${dimension}-${i}`,
+          ruleId: `rule-${dimension}`,
+          severity: 'warn',
+          impact: 17,
+          dimension,
+        }),
       ),
     )
     const card = scoreTrajectory(warns, DIMENSIONS)
@@ -88,7 +94,10 @@ describe('scoreTrajectory with an error-level finding', () => {
   })
 
   it('a manual error annotation counts as an error too, since the gate counts it', () => {
-    const card = scoreTrajectory([finding({ ruleId: 'manual', severity: 'error', manual: true, impact: 8 })], DIMENSIONS)
+    const card = scoreTrajectory(
+      [finding({ ruleId: 'manual', severity: 'error', manual: true, impact: 8 })],
+      DIMENSIONS,
+    )
     expect(card.overall).toBe(74)
     expect(gradeKeyOf(card)).toBe('C.gated')
   })

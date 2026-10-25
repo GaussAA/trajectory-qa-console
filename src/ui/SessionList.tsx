@@ -270,7 +270,10 @@ export function SessionList({
                   )}
                 </span>
                 {card !== undefined && card.counts.error > 0 && (
-                  <span className="session-badge" title={t('session.errorBadge', { count: card.counts.error })}>
+                  <span
+                    className="session-badge"
+                    title={t('session.errorBadge', { count: card.counts.error })}
+                  >
                     {card.counts.error}
                   </span>
                 )}

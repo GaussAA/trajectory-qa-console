@@ -121,9 +121,24 @@ describe('persistence', () => {
     })
 
     it.each([
-      ['annotations', STORAGE_KEYS.annotations, (p: ReturnType<typeof createPersistence>) => p.loadAnnotations(), (p: ReturnType<typeof createPersistence>) => p.saveAnnotations([])],
-      ['session notes', STORAGE_KEYS.sessionNotes, (p: ReturnType<typeof createPersistence>) => p.loadSessionNotes(), (p: ReturnType<typeof createPersistence>) => p.saveSessionNotes([])],
-      ['pack variants', STORAGE_KEYS.packVariants, (p: ReturnType<typeof createPersistence>) => p.loadPackVariants(), (p: ReturnType<typeof createPersistence>) => p.savePackVariants([])],
+      [
+        'annotations',
+        STORAGE_KEYS.annotations,
+        (p: ReturnType<typeof createPersistence>) => p.loadAnnotations(),
+        (p: ReturnType<typeof createPersistence>) => p.saveAnnotations([]),
+      ],
+      [
+        'session notes',
+        STORAGE_KEYS.sessionNotes,
+        (p: ReturnType<typeof createPersistence>) => p.loadSessionNotes(),
+        (p: ReturnType<typeof createPersistence>) => p.saveSessionNotes([]),
+      ],
+      [
+        'pack variants',
+        STORAGE_KEYS.packVariants,
+        (p: ReturnType<typeof createPersistence>) => p.loadPackVariants(),
+        (p: ReturnType<typeof createPersistence>) => p.savePackVariants([]),
+      ],
     ])('covers %s too', (_name, key, load, save) => {
       const store = createMemoryStorage({ [key]: futureEnvelope([]) })
       const port = createPersistence(store)

@@ -115,7 +115,9 @@ describe('complete: totalTimeoutMs bounds the whole call, retries included', () 
     let sent = 0
     const transport: LlmTransport = async () => {
       sent += 1
-      return sent === 1 ? { ok: false, status: 429, text: 'slow down' } : { ok: true, status: 200, text: 'ok' }
+      return sent === 1
+        ? { ok: false, status: 429, text: 'slow down' }
+        : { ok: true, status: 200, text: 'ok' }
     }
     expect((await complete(request(transport, { retries: 1 }))).ok).toBe(true)
   })

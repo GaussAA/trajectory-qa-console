@@ -89,10 +89,7 @@ function badArgs(raw: string): ToolOutcome {
   }
 }
 
-export async function runAgent(
-  toolContext: ToolContext,
-  options: AgentOptions,
-): Promise<AgentRun> {
+export async function runAgent(toolContext: ToolContext, options: AgentOptions): Promise<AgentRun> {
   const budget: AgentBudget = { ...AGENT_BUDGET, ...options.budget }
   // 提案收集器挂在本次运行自己的上下文上，不污染调用方传进来的对象。
   const proposals: PackProposal[] = []

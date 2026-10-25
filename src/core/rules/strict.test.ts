@@ -38,7 +38,9 @@ describe('unknown keys are errors, not silently dropped', () => {
   it('rejects a stray key on a dimension', () => {
     const dimensions = DEFAULT_PACK.dimensions.map((d, i) => (i === 0 ? { ...d, colour: '#fff' } : d))
     const errors = errorsOf({ ...DEFAULT_PACK, dimensions })
-    expect(errors.some((error) => error.path === 'dimensions.0' && error.message.includes('colour'))).toBe(true)
+    expect(errors.some((error) => error.path === 'dimensions.0' && error.message.includes('colour'))).toBe(
+      true,
+    )
   })
 
   it('rejects a stray key at the top level', () => {
@@ -84,26 +86,38 @@ describe('message placeholders must name a field the rule can actually fill', ()
     const errors = errorsOf(
       withRule({ scope: 'trajectory', expr: 'stepCount > 1', message: '问题出在第 {step} 步' }),
     )
-    expect(errors.some((error) => error.path === 'rules.0.message' && error.message.includes('step'))).toBe(true)
+    expect(errors.some((error) => error.path === 'rules.0.message' && error.message.includes('step'))).toBe(
+      true,
+    )
   })
 
   it('rejects a step-scope rule that asks for a trajectory-only field', () => {
     const errors = errorsOf(withRule({ scope: 'step', expr: 'role == "tool"', message: '共 {stepCount} 步' }))
-    expect(errors.some((error) => error.path === 'rules.0.message' && error.message.includes('stepCount'))).toBe(true)
+    expect(
+      errors.some((error) => error.path === 'rules.0.message' && error.message.includes('stepCount')),
+    ).toBe(true)
   })
 
   it('accepts a trajectory rule using trajectory fields and a step rule using step fields', () => {
-    expect(validatePack(withRule({ scope: 'trajectory', expr: 'stepCount > 1', message: '共 {stepCount} 步' })).ok).toBe(true)
-    expect(validatePack(withRule({ scope: 'step', expr: 'role == "tool"', message: '第 {step} 步，{role}' })).ok).toBe(true)
+    expect(
+      validatePack(withRule({ scope: 'trajectory', expr: 'stepCount > 1', message: '共 {stepCount} 步' })).ok,
+    ).toBe(true)
+    expect(
+      validatePack(withRule({ scope: 'step', expr: 'role == "tool"', message: '第 {step} 步，{role}' })).ok,
+    ).toBe(true)
   })
 
   it('reports each bad placeholder once per rule, even if it repeats', () => {
-    const errors = errorsOf(withRule({ message: '{nope} {nope} {nope}' })).filter((error) => error.path === 'rules.0.message')
+    const errors = errorsOf(withRule({ message: '{nope} {nope} {nope}' })).filter(
+      (error) => error.path === 'rules.0.message',
+    )
     expect(errors).toHaveLength(1)
   })
 
   it('reports different bad placeholders of one rule together', () => {
-    const errors = errorsOf(withRule({ message: '{aaa} 与 {bbb}' })).filter((error) => error.path === 'rules.0.message')
+    const errors = errorsOf(withRule({ message: '{aaa} 与 {bbb}' })).filter(
+      (error) => error.path === 'rules.0.message',
+    )
     const text = errors.map((error) => error.message).join(' ')
     expect(text).toContain('aaa')
     expect(text).toContain('bbb')
@@ -118,7 +132,9 @@ describe('message placeholders must name a field the rule can actually fill', ()
 
   it('treats {1} as a placeholder attempt, exactly as the renderer would', () => {
     // renderMessage 的正则是 \{(\w+)\}，\w 包含数字：{1} 渲染时会去找名为 1 的字段，找不到就原样留着。
-    expect(errorsOf(withRule({ message: '第 {1} 步' })).some((error) => error.path === 'rules.0.message')).toBe(true)
+    expect(
+      errorsOf(withRule({ message: '第 {1} 步' })).some((error) => error.path === 'rules.0.message'),
+    ).toBe(true)
   })
 
   it('still checks the expression, as before', () => {

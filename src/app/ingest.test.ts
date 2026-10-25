@@ -76,9 +76,7 @@ describe('ingest', () => {
 
   it('carries the template params the dictionary entry needs', async () => {
     const tooMany = await readFiles(
-      Array.from({ length: INGEST_LIMITS.maxFiles + 2 }, (_, index) =>
-        fakeFile(`f${index}.json`, '[]'),
-      ),
+      Array.from({ length: INGEST_LIMITS.maxFiles + 2 }, (_, index) => fakeFile(`f${index}.json`, '[]')),
     )
     const tooLarge = await readFiles([
       { name: 'huge.json', size: INGEST_LIMITS.maxFileBytes + 1, text: async () => '[]' },

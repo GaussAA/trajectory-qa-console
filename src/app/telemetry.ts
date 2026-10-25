@@ -84,9 +84,7 @@ function redact(value: unknown, depth = 0): unknown {
   if (typeof value === 'object') {
     const out: Record<string, unknown> = {}
     for (const [key, item] of Object.entries(value)) {
-      out[key] = REDACTED_KEYS.has(key.toLowerCase())
-        ? describeHidden(item)
-        : redact(item, depth + 1)
+      out[key] = REDACTED_KEYS.has(key.toLowerCase()) ? describeHidden(item) : redact(item, depth + 1)
     }
     return out
   }

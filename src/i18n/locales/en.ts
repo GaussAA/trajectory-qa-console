@@ -65,7 +65,8 @@ export const en: Record<MessageKey, string> = {
   'error.unrecognized-structure': 'Unrecognized structure: no messages/steps array found',
   'error.too-large': 'File exceeds the size limit',
   'error.too-many-steps': 'Too many steps',
-  'error.nothing-to-score': 'No assistant or tool steps, so there is nothing to score (empty trace, or an unrecognised format)',
+  'error.nothing-to-score':
+    'No assistant or tool steps, so there is nothing to score (empty trace, or an unrecognised format)',
   'error.invalid-pack': 'Invalid rule pack',
   'error.analysis-failed': 'Analysis failed',
   'error.aborted': 'Cancelled',
@@ -380,7 +381,8 @@ export const en: Record<MessageKey, string> = {
   'cli.err.path-missing': 'Path not found: {path}',
   'cli.err.too-many-files': 'Too many files: {count}, limit {limit}; split the run or raise --max-files',
   'cli.err.no-files': 'No trace files found (.json / .jsonl / .txt)',
-  'cli.err.partialFailure': '{files} file(s) failed to analyse, {dirs} path(s) unreadable — unread is not a pass',
+  'cli.err.partialFailure':
+    '{files} file(s) failed to analyse, {dirs} path(s) unreadable — unread is not a pass',
   'cli.err.sessionsDropped': '{count} session(s) could not be analysed',
   'ingest.sessionFailed': 'Session {index} ({label}): {message}',
   'cli.err.pack-invalid': 'Rule pack validation failed: {detail}',
@@ -412,7 +414,7 @@ export const en: Record<MessageKey, string> = {
   'agent.ui.failed': 'Diagnosis did not finish',
   'agent.ui.conclusion': 'Conclusion',
   'agent.ui.conclusionNote':
-    'The prose below is the model\'s own account; the numbers in it are unverified. Trust the call log for figures.',
+    "The prose below is the model's own account; the numbers in it are unverified. Trust the call log for figures.",
   'agent.ui.noConclusion': 'The model produced no conclusion.',
   'agent.ui.rootCauses': 'Root causes',
   'agent.ui.actions': 'Suggested actions',
@@ -434,7 +436,7 @@ export const en: Record<MessageKey, string> = {
   'agent.ui.exportReport': 'Export diagnosis report',
   'agent.ui.exportJson': 'Export JSON',
   'agent.ui.exportHint':
-    'This exports the model\'s diagnosis (agent.md/json); it is not the score report from the topbar',
+    "This exports the model's diagnosis (agent.md/json); it is not the score report from the topbar",
 
   'compare.title': 'Trace comparison',
   'compare.base': 'Baseline',
@@ -461,7 +463,8 @@ export const en: Record<MessageKey, string> = {
   'compare.status.added': 'added',
   'compare.status.removed': 'removed',
 
-  'semantic.unverifiedNote': '(the quote the model cited could not be verified in the trace; downgraded to info)',
+  'semantic.unverifiedNote':
+    '(the quote the model cited could not be verified in the trace; downgraded to info)',
   'semantic.category.off_topic': 'Off-topic answer',
   'semantic.category.unsupported_claim': 'Unsupported claim',
   'semantic.category.overreach': 'Overreach',
@@ -480,11 +483,14 @@ export const en: Record<MessageKey, string> = {
   'cli.optAgentTask': '--agent-task <text>      focus the diagnosis on one question',
   'cli.serveReady': 'Diagnosis service listening on {url}',
   'cli.serveHint': 'Append ?agent={origin} to the console URL to enable the Diagnose button',
-  'cli.serveNoToken': 'No --token: any local http page can call it, and file:// pages are refused (add --token to use them)',
+  'cli.serveNoToken':
+    'No --token: any local http page can call it, and file:// pages are refused (add --token to use them)',
   'cli.serveWithToken': 'Token enabled: the console needs ?agentToken=<token>',
-  'cli.servePublicHost': 'Warning: --host {host} is not a loopback address; other machines on the LAN can reach it',
+  'cli.servePublicHost':
+    'Warning: --host {host} is not a loopback address; other machines on the LAN can reach it',
   'cli.err.serveListen': 'Cannot listen on {host}:{port}: {message}',
-  'cli.optServe': 'serve                     start the local diagnosis service (backend for the Diagnose button)',
+  'cli.optServe':
+    'serve                     start the local diagnosis service (backend for the Diagnose button)',
   'cli.optPort': '--port <n>               service port, default 7788',
   'cli.optHost': '--host <addr>            bind address, default 127.0.0.1 (do not use 0.0.0.0)',
   'cli.optToken': '--token <secret>         service token; the console passes it as ?agentToken=',
@@ -514,7 +520,7 @@ export const en: Record<MessageKey, string> = {
   'agent.report.status': 'Status',
   'agent.report.conclusion': 'Conclusion',
   'agent.report.conclusionNote':
-    'The prose below is the model\'s own account; the numbers in it are unverified. Trust the call log for figures.',
+    "The prose below is the model's own account; the numbers in it are unverified. Trust the call log for figures.",
   'agent.report.noConclusion': 'The model produced no conclusion.',
   'agent.report.rootCauses': 'Root causes',
   'agent.report.actions': 'Suggested actions',

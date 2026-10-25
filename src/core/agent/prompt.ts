@@ -66,8 +66,7 @@ export interface AgentTaskInput {
 
 export function buildAgentMessages(input: AgentTaskInput): AgentMessage[] {
   const task =
-    input.task?.trim() ||
-    '诊断这批轨迹：整体质量如何、差在哪几条会话的哪些步、根因是什么、该改什么。'
+    input.task?.trim() || '诊断这批轨迹：整体质量如何、差在哪几条会话的哪些步、根因是什么、该改什么。'
   return [
     { role: 'system', content: buildSystemPrompt(input.locale) },
     {
