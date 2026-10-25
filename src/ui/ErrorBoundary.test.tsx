@@ -64,7 +64,8 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>,
     )
     expect(onError).toHaveBeenCalledTimes(1)
-    expect((onError.mock.calls[0]?.[0] as Error).message).toBe('渲染炸了')
+    const reported = onError.mock.calls[0]?.[0] as Error | undefined
+    expect(reported?.message).toBe('渲染炸了')
   })
 
   it('recovers on Retry once the cause is gone', () => {

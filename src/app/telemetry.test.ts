@@ -78,7 +78,8 @@ describe('telemetry', () => {
 
     const data = telemetry.snapshot()[0]?.data
     expect(data?.error).toBe('Error')
-    expect((data?.message as string).length).toBeLessThan(200)
+    const message = data?.message as string | undefined
+    expect(message?.length).toBeLessThan(200)
     expect(JSON.stringify(data)).not.toContain('    at ')
   })
 
