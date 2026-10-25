@@ -136,6 +136,15 @@ const RULES = {
   eqeqeq: ['error', 'smart'],
   'no-constant-condition': ['error', { checkLoops: 'allExceptWhileTrue' }],
   'react/exhaustive-deps': 'warn',
+  // 类型感知规则（需要 --type-aware 与 oxlint-tsgolint）。都是在真实代码上零命中、
+  // 且用故意写坏的探针验证过会触发的几条。
+  // 没启用 no-unnecessary-type-assertion 和 no-base-to-string：前者在 compare.ts 里命中 25 处
+  // noUncheckedIndexedAccess 下的 `as Step`，后者在 normalize.ts 里命中 14 处对 unknown 的有意容错。
+  'typescript/no-floating-promises': 'error',
+  'typescript/no-misused-promises': 'error',
+  'typescript/await-thenable': 'error',
+  'typescript/no-for-in-array': 'error',
+  'typescript/restrict-plus-operands': 'error',
 }
 const SRC_TS = 'src/**/*.{ts,tsx}'
 const TEST_FILES = ['**/*.test.{ts,tsx}', '**/test-support.ts']

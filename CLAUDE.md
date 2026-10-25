@@ -15,7 +15,7 @@ pnpm dev                     # Vite dev server
 pnpm build                   # tsc --noEmit + vite build → dist/index.html only (NOT the CLI)
 pnpm build:cli               # → dist-cli/qa.mjs
 pnpm typecheck
-pnpm lint                    # oxlint --deny-warnings, so warnings fail too
+pnpm lint                    # oxlint --type-aware --deny-warnings, so warnings fail too
 pnpm format                  # prettier --write
 
 pnpm test                                   # all tests, once
@@ -64,7 +64,7 @@ The pipeline and the rules that keep it consistent:
 - **No hardcoded CJK or fullwidth punctuation in `src/ui`, `src/app`, `src/cli` or `src/lib`** outside comments (`check-i18n.mjs`). User-facing text goes in `src/i18n/locales/zh-CN.ts`, the source of `MessageKey`, and in `en.ts`, typed `Record<MessageKey, string>` so a missing key fails to compile. Both locales must use the same `{name}` placeholders. `src/core` messages are deliberately exempt; the UI and CLI override them with `t('error.<code>')`.
 - **Font sizes come only from the six `var(--fs-*)` tokens** in `src/styles/tokens.css` (minimum 11px). Raw `font-size: Npx` in CSS or inline `fontSize: 'Npx'` in TSX fails `check-typography.mjs`, as do unbalanced braces in any stylesheet.
 - The exported HTML reports in `src/lib` carry their own stylesheet and cannot use `var(--fs-*)`, but `check-typography.mjs` holds them to the same 11px floor. The build must stay one self-contained file under 1500 KB, with no external scripts, stylesheets or remote images. The CLI bundle may import only `node:` built-ins.
-- The linter (oxlint, configured in `oxlint.config.js`) forbids `any`, allows only `console.warn` and `console.error` outside tests, and ignores unused names only when they start with `_`. tsconfig turns on `noUncheckedIndexedAccess`. Prettier settings: no semicolons, single quotes, 110-character lines.
+- The linter (oxlint, configured in `oxlint.config.js`, with type-aware rules via `oxlint-tsgolint`) rejects unawaited and misused promises, forbids `any`, allows only `console.warn` and `console.error` outside tests, and ignores unused names only when they start with `_`. tsconfig turns on `noUncheckedIndexedAccess`. Prettier settings: no semicolons, single quotes, 110-character lines.
 
 - **Layer direction is a lint rule.** `oxlint.config.js` (`layerOverrides`) forbids upward relative imports, tests included: `core` may not import `app/ui/lib/cli`, `lib` not `app/ui/cli`, `app` not `ui/cli`, `cli` not `ui`, and `i18n` not any other layer. A test that needs a higher layer belongs in that layer's directory. The rule matches relative specifiers by depth (up to `MAX_DEPTH` levels), so keep imports relative. If a layer's directories ever nest deeper than `MAX_DEPTH`, the oxlint config throws instead of silently skipping the deepest files; raise the constant.
 - **Shared test builders live in `test-support.ts` files**: `src/core/test-support.ts` (`analyzeSessions`, `reimbursementSessions`, `makeStep`) and `src/cli/test-support.ts` (temp dirs, `capture`, the serve server helpers). Test files only; they are excluded from coverage by the `**/test-support.ts` pattern, and production code must not import them (a lint rule enforces this). A test file that uses `tempDir` must register `afterEach(cleanupTempDirs)` itself.
