@@ -8,7 +8,7 @@
  */
 
 import { buildCard, scoreSession, type ScoreCard, type SessionAnalysis } from '../analysis'
-import { compareCards, diffFindings } from '../compare'
+import { compareCards, diffFindings } from '../compare/sessions'
 import { formatPackErrors, validatePack } from '../rules/contract'
 import { numericLiterals, replaceLiteral } from '../rules/tuning'
 import { DIGEST_DEFAULTS, renderStep } from '../semantic/prompt'

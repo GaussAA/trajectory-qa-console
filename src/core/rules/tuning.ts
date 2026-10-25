@@ -7,7 +7,7 @@
  *     「禁用这条规则会扣回多少分」用同一套评分函数重算，不另写一份公式。
  */
 
-import { compileExpression } from '../expr'
+import { compileExpression } from './expr'
 import type { Finding, RulePack, Trajectory } from '../model'
 import { computeMetrics } from '../analysis/metrics'
 import { runRules } from './engine'

@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import type { Finding } from './model'
-import { DEFAULT_PACK } from './rules/builtin-pack'
-import { makeStep as step } from './test-support'
-import { analyze } from './analysis'
-import { scoreSession, type SessionAnalysis } from './analysis'
-import { alignSteps, compareCards, diffFindings, stepSignature, summarizeAlignment } from './compare'
+import type { Finding } from '../model'
+import { DEFAULT_PACK } from '../rules/builtin-pack'
+import { makeStep as step } from '../test-support'
+import { analyze } from '../analysis'
+import { scoreSession, type SessionAnalysis } from '../analysis'
+import { alignSteps, compareCards, diffFindings, stepSignature, summarizeAlignment } from './sessions'
 
 function finding(ruleId: string, stepIndex: number | undefined, message = 'x'): Finding {
   return {

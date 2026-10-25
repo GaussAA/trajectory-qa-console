@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'r
 import { NOTHING_TO_SCORE, type ScoreCard, type SessionAnalysis } from '../core/analysis'
 import type { Annotation, PackVariant, RulePack, SessionNote, Severity } from '../core/model'
 import { useI18n, useT, type MessageKey, type TranslateParams } from '../i18n'
-import { buildStressTrace } from '../core/sample'
+import { buildStressTrace } from '../core/samples'
 import { createAnalyzer, type AnalyzerPort } from '../app/analyzer'
 import { buildDiagnostics, buildReportBundle, downloadText } from '../app/exporters'
 import { MAX_PACK_VARIANTS, parsePackVariants, serializePackVariants } from '../app/persistence'

@@ -1,6 +1,12 @@
 import { useMemo, useState } from 'react'
 import type { ScoreCard, SessionAnalysis } from '../core/analysis'
-import { alignSteps, compareCards, diffFindings, summarizeAlignment, type AlignStatus } from '../core/compare'
+import {
+  alignSteps,
+  compareCards,
+  diffFindings,
+  summarizeAlignment,
+  type AlignStatus,
+} from '../core/compare/sessions'
 import type { Finding, SessionNote, Step } from '../core/model'
 import { useI18n } from '../i18n'
 import { downloadFile, nowStamp } from '../lib/format'

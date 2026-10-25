@@ -20,7 +20,7 @@ pnpm check:layers            # dependency-cruiser: layer direction, test-support
 pnpm format                  # prettier --write
 
 pnpm test                                   # all tests, once
-pnpm test src/core/expr.test.ts             # one file
+pnpm test src/core/rules/expr.test.ts             # one file
 pnpm test -t "golden master"                # by test name
 pnpm test:watch
 pnpm test:coverage                          # enforces lines/functions/statements ≥85%, branches ≥75%
@@ -55,7 +55,7 @@ The pipeline and the rules that keep it consistent:
 
 - **`analyze()` (`core/analysis/index.ts`) is the only path from raw text to `SessionAnalysis`**, which holds trajectory, metrics and diagnostics. It isolates failures per session: a bad session goes into `issues`, and the file fails only if every session fails. The UI calls it through the analyzer port (`app/analyzer.ts`). That port uses the sync adapter, or an inlined Web Worker for inputs over 256 KB. The worker is skipped on `file://`. The port falls back to sync only on a real worker fault (could not start, crashed, went silent); an `analysis-failed` that came back from `analyze()` is about the data and does not disable the worker.
 - **`buildCard(trajectory, metrics, pack, annotations)` is the only source of a score.** Findings and score cards are never stored. Rules re-run on every call, which costs about 10 ms per 10k steps, and callers memoise instead of caching. The workspace, pack comparison (`scoreUnderPack`), the CLI and the agent tools all call it, so one input can never show two different scores.
-- Rules are data (`scope + expr + message`). `core/expr.ts` compiles them to an AST and walks it; never use `eval` or `new Function`. `core/rules/contract.ts` validates packs with zod and declares a type for every rule-visible field. Validation is strict: unknown keys at any level, and `{placeholders}` in a message that are not fields of the rule's scope, are errors. When you add a field to `StepContext` or `TrajectoryMetrics`, also add it to `STEP_FIELD_TYPES` or `TRAJECTORY_FIELD_TYPES`. Both are `Record<keyof …>`, so a missing entry fails typecheck. Scoring caps the total by the number of distinct error-level rules hit: ≥1 → 74, ≥3 → 54, ≥5 → 39 (ADR-0003).
+- Rules are data (`scope + expr + message`). `core/rules/expr.ts` compiles them to an AST and walks it; never use `eval` or `new Function`. `core/rules/contract.ts` validates packs with zod and declares a type for every rule-visible field. Validation is strict: unknown keys at any level, and `{placeholders}` in a message that are not fields of the rule's scope, are errors. When you add a field to `StepContext` or `TrajectoryMetrics`, also add it to `STEP_FIELD_TYPES` or `TRAJECTORY_FIELD_TYPES`. Both are `Record<keyof …>`, so a missing entry fails typecheck. Scoring caps the total by the number of distinct error-level rules hit: ≥1 → 74, ≥3 → 54, ≥5 → 39 (ADR-0003).
 - Reports: Markdown, JSON and HTML are rendered from the same `ReportInput` (`lib/report.ts`). Totals come from `reportTotals` and comparison diffs from `buildComparisonModel`, each computed once, so the three formats and the UI and CLI outputs always agree. JSON keys stay stable and only values are localised (new keys may be added, existing ones keep their meaning). HTML reports contain no `<script>` and escape all external text.
 - LLM boundaries: the browser UI never calls a model. Semantic review runs in the CLI only. The UI reaches agent diagnosis only through `qa serve` (127.0.0.1, CORS allowlist), which keeps the API key in the server process. **Agent output never enters the `ScoreCard` or report bundle** (invariant 7). Everything sent to a model is redacted first (`redactSecrets` / `redactJsonText` in `core/analysis/privacy.ts`), and a semantic finding whose quote is not in the digest the model saw is downgraded and marked unverified. Agent proposals are drafts, and the UI adopts one through the single `pack/adopt` action.
 - Persisted data carries a `schemaVersion`. To add a version, append one entry to the `MIGRATIONS` table in `app/persistence.ts`. Data from a future version is rejected and its key is locked against writes for the session, so an older build cannot overwrite what a newer one saved. Corrupt data falls back to defaults.
@@ -76,7 +76,7 @@ Another convention, not checked by a script: CSS is split into four layers (`tok
 ## Decisions already made
 
 - Do not split `useWorkspaceController` (ADR-0018). Its render-time `stateRef.current = state` assignment is intentional. Revisit only when a second caller needs the same actions.
-- The rule drawer's dry-run (`core/rules/tuning.ts`) and pack comparison (`core/pack-compare.ts`) are the documented exceptions where the UI evaluates rules directly. All other UI code must not call parse, metrics or score directly.
+- The rule drawer's dry-run (`core/rules/tuning.ts`) and pack comparison (`core/compare/packs.ts`) are the documented exceptions where the UI evaluates rules directly. All other UI code must not call parse, metrics or score directly.
 
 ## Workflow
 

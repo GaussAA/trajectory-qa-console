@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest'
 import { analyze, scoreSession } from '../core/analysis'
 import { DEFAULT_PACK } from '../core/rules/builtin-pack'
-import { SAMPLE_FILES } from '../core/sample'
+import { SAMPLE_FILES } from '../core/samples'
 import { buildHtmlReport } from './report-html'
 import { buildJsonReport, buildMarkdownReport, type ReportEntry } from './report'
 

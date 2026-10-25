@@ -5,7 +5,7 @@
  *  returned as issues — the caller decides how to show them.
  */
 
-import { SAMPLE_FILES } from '../core/sample'
+import { SAMPLE_FILES } from '../core/samples'
 import type { ErrorCode } from '../core/model'
 import type { MessageKey } from '../i18n/core'
 

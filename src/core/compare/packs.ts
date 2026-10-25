@@ -7,8 +7,8 @@
  *  分数」和「口径对比的分数」不可能分叉。
  */
 
-import { buildCard, computeMetrics, type ScoreCard } from './analysis'
-import type { RulePack, Trajectory } from './model'
+import { buildCard, computeMetrics, type ScoreCard } from '../analysis'
+import type { RulePack, Trajectory } from '../model'
 
 /** 只要轨迹本体：调参面板传的是轻量会话（id + trajectory），也能直接用。 */
 export interface PackCompareSession {

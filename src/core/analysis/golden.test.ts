@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { analyze, scoreSession } from './index'
 import { DEFAULT_PACK } from '../rules/builtin-pack'
-import { SAMPLE_FILES } from '../sample'
+import { SAMPLE_FILES } from '../samples'
 
 /** Behaviour lock: the four demo traces must score and report exactly as they
  *  did before the refactor. Any intentional change to scoring or wording has to

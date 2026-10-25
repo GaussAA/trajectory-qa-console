@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { analyzeSessions } from '../test-support'
 import { DEFAULT_PACK } from './builtin-pack'
 import { numericLiterals, replaceLiteral, buildTuningReport } from './tuning'
-import { compileExpression } from '../expr'
+import { compileExpression } from './expr'
 
 const TRACE = JSON.stringify([
   { role: 'system', content: '你是助手' },

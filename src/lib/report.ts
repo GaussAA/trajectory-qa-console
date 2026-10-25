@@ -9,7 +9,13 @@
 
 import { formatTokens } from '../core/estimate'
 import { gradeKeyOf, type ScoreCard } from '../core/analysis'
-import { alignSteps, compareCards, diffFindings, summarizeAlignment, type AlignStatus } from '../core/compare'
+import {
+  alignSteps,
+  compareCards,
+  diffFindings,
+  summarizeAlignment,
+  type AlignStatus,
+} from '../core/compare/sessions'
 import { mdCell, mdInline } from './markdown'
 import { buildAdvice } from '../core/rules/advice'
 import type { RulePack, Severity, Trajectory } from '../core/model'

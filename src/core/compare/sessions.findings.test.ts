@@ -8,9 +8,9 @@
  *  文案不进键，变了的单独列出来，而不是当成一条消失、一条出现。 */
 
 import { describe, expect, it } from 'vitest'
-import { alignSteps, diffFindings } from './compare'
-import type { Finding, Step } from './model'
-import { makeStep as step } from './test-support'
+import { alignSteps, diffFindings } from './sessions'
+import type { Finding, Step } from '../model'
+import { makeStep as step } from '../test-support'
 
 function finding(
   ruleId: string,

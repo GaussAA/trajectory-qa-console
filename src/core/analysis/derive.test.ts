@@ -11,9 +11,9 @@
 
 import { describe, expect, it } from 'vitest'
 import { analyze, buildCard, scoreSession, type SessionAnalysis } from './index'
-import { scoreUnderPack } from '../pack-compare'
+import { scoreUnderPack } from '../compare/packs'
 import { DEFAULT_PACK } from '../rules/builtin-pack'
-import { SAMPLE_FILES } from '../sample'
+import { SAMPLE_FILES } from '../samples'
 import type { RulePack } from '../model'
 
 /** Index of demo-04: the only sample that exercises the error gate. */

@@ -7,8 +7,8 @@
  *  LCS 是 O(n·m)；超上限时退化为按位置配对，并如实标出来（不假装对齐过）。
  */
 
-import type { Finding, Severity, Step, Trajectory } from './model'
-import type { ScoreCard } from './analysis/score'
+import type { Finding, Severity, Step, Trajectory } from '../model'
+import type { ScoreCard } from '../analysis/score'
 
 export interface Delta {
   before: number

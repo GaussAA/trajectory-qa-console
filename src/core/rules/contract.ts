@@ -4,7 +4,7 @@
  */
 
 import * as z from 'zod/mini'
-import { compileExpression, ExprError } from '../expr'
+import { compileExpression, ExprError } from './expr'
 import type { Rule, RulePack } from '../model'
 import type { TrajectoryMetrics } from '../analysis/metrics'
 import type { StepContext } from './engine'
