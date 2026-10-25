@@ -71,7 +71,7 @@ ADR-0011 已把这条钉死，本轮不改它。
 src/core/agent/
   types.ts    AgentMessage / ToolSpec / ToolCallRequest / AgentStep / AgentTrace / AgentOutcome
   prompt.ts   系统提示（工具纪律 + 输出契约）
-  tools.ts    工具注册表：name → { spec, run(args, ctx) }
+  tools/      工具注册表：name → { spec, run(args, ctx) }（inspect / pack / diagnosis 三组，index.ts 汇总）
   loop.ts     循环：模型 → tool_calls → 执行 → 回填 → 终止条件
   budget.ts   预算闸：轮次 / 工具调用数 / 墙钟 / token / 单工具超时
   report.ts   把 trace 收敛成结构化诊断（Markdown / JSON）
