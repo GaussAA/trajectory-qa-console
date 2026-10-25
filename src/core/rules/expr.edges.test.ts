@@ -116,6 +116,37 @@ describe('operators and property access', () => {
   })
 })
 
+describe('behaviours that look surprising but are pinned on purpose', () => {
+  // 下面几条不一定是「想要的」行为，但内置规则包没用到它们，用户导入的规则包可能用了。
+  // 改动会让已有规则包的评分悄悄变化，所以先固定住；真要改，应当同时升规则包的版本并在说明里写明。
+  // 用例失败时请先想清楚：是在修一个缺陷，还是在改变别人规则的含义。
+
+  it('treats a missing prefix or suffix as the empty string, which every text starts and ends with', () => {
+    expect(evaluateExpression('startsWith("abc", p)', { p: null })).toBe(true)
+    expect(evaluateExpression('endsWith(x, p)', { x: null, p: null })).toBe(true)
+    // 反过来：被检查的文本缺失、而前缀非空，才是 false
+    expect(evaluateExpression('startsWith(x, "a")', { x: null })).toBe(false)
+  })
+
+  it('gives min and max a zero for anything that is not a number, so max(-3, "x") is 0', () => {
+    expect(evaluateExpression('min(3, "x")', {})).toBe(0)
+    expect(evaluateExpression('max(-3, "x")', {})).toBe(0)
+    expect(evaluateExpression('max(-3, x)', { x: null })).toBe(0)
+  })
+
+  it('compares two strings as text, even when both look like numbers', () => {
+    expect(evaluatePredicate('"10" > "9"', {})).toBe(false)
+    // 只要有一边是真正的数字，就按数值比
+    expect(evaluatePredicate('10 > "9"', {})).toBe(true)
+    expect(evaluatePredicate('x > "9"', { x: 10 })).toBe(true)
+  })
+
+  it('lets division by zero produce Infinity, which JSON would write as null', () => {
+    expect(evaluateExpression('5 / 0', {})).toBe(Number.POSITIVE_INFINITY)
+    expect(JSON.stringify({ value: evaluateExpression('5 / 0', {}) })).toBe('{"value":null}')
+  })
+})
+
 describe('type errors', () => {
   const cases: [string, Context, RegExp][] = [
     ['x[1.5]', { x: [10, 20] }, /数组索引必须为整数/],

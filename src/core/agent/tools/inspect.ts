@@ -104,7 +104,11 @@ export const getFindings: Tool = {
           description: '维度 id，如 structure / execution / efficiency / semantic',
         },
         severity: { type: 'string', enum: ['error', 'warn', 'info'] },
-        limit: { type: 'number', description: '最多返回多少条，默认 20，上限 50' },
+        limit: {
+          type: 'number',
+          description:
+            '最多返回多少条，默认 20。每条带消息和证据，超过二十几条就会撞上单次结果的字数上限而被截断，此时请改用 dimension / severity 缩小范围。',
+        },
       },
       required: ['sessionId'],
     },
