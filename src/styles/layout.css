@@ -10,12 +10,16 @@
 /* 顶栏与主网格同一上限：否则带鱼屏上品牌贴在最左、按钮贴在最右，
    而内容缩在中间，两头各飘着一件不相干的东西。 */
 .topbar {
-  height: 64px;
-  flex: 0 0 64px;
+  /* 一行放得下时是 64px 高；放不下（窄屏，或英文标签更长）就换成两行，而不是把按钮挤出视口。
+     被挤出去的「导出报告」不可达：body 是 overflow-x: hidden，滚也滚不到。 */
+  min-height: 64px;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  row-gap: 8px;
   display: flex;
   align-items: center;
   gap: 18px;
-  padding: 0 18px;
+  padding: 8px 18px;
   width: 100%;
   max-width: 1700px;
   margin-inline: auto;
@@ -96,6 +100,8 @@
 
 .topbar-actions {
   display: flex;
+  /* 单独占一行时仍可能比视口宽（手机宽度下八颗按钮 530px），所以自己也要能换行。 */
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }

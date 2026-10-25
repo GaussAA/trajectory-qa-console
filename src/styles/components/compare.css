@@ -35,6 +35,8 @@
 
 .compare-picker {
   display: flex;
+  /* 两个会话下拉加箭头在手机宽度下排不进一行。 */
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   padding: 2px 2px 0;
