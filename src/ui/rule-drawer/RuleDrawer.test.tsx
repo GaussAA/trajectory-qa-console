@@ -369,3 +369,42 @@ describe('RuleDrawer built-in packs', () => {
     expect(screen.getByRole('button', { name: 'Chinese pack' })).toBeTruthy()
   })
 })
+
+describe('RuleDrawer keeps its state while closed', () => {
+  // App 始终渲染抽屉、只用 open 控制显示。状态若随关闭一起卸载，口径对比选好的对照、
+  // 变体名输入到一半的内容打开后就没了——拆分成子组件时最容易无意间引入这种回归。
+  function Harness({ open }: { open: boolean }) {
+    return (
+      <I18nProvider initialLocale="zh-CN">
+        <RuleDrawer
+          open={open}
+          pack={DEFAULT_PACK}
+          sessions={sessions()}
+          ruleIssues={[]}
+          variants={[{ id: 'v1', name: '宽松口径', pack: DEFAULT_PACK, savedAt: '2026-10-23T10:00:00.000Z' }]}
+          onClose={() => undefined}
+          onApply={() => undefined}
+        />
+      </I18nProvider>
+    )
+  }
+
+  it('remembers the chosen comparison target and the half-typed variant name after reopening', () => {
+    const { container, rerender } = render(<Harness open />)
+
+    fireEvent.click(screen.getByText('口径对比'))
+    const targetSelect = () => container.querySelectorAll('.packcmp-pickers select')[1] as HTMLSelectElement
+    fireEvent.change(targetSelect(), { target: { value: 'v1' } })
+    const nameInput = () =>
+      screen.getByPlaceholderText(/./, { selector: '.variant-save-row input' }) as HTMLInputElement
+    fireEvent.change(nameInput(), { target: { value: '写到一半' } })
+
+    rerender(<Harness open={false} />)
+    expect(container.querySelector('.rules-drawer')).toBeNull()
+    rerender(<Harness open />)
+
+    // 口径对比的详情是 <details>，重新打开后默认收起，但其中的选择值仍在。
+    expect(targetSelect().value).toBe('v1')
+    expect(nameInput().value).toBe('写到一半')
+  })
+})
