@@ -3,7 +3,7 @@
  *  its input and the editor can explain mistakes precisely.
  */
 
-import { z } from 'zod'
+import * as z from 'zod/mini'
 import { compileExpression, ExprError } from '../expr'
 import type { Rule, RulePack } from '../model'
 import type { TrajectoryMetrics } from '../analysis/metrics'
@@ -166,38 +166,46 @@ export function isSafeCssColor(value: string): boolean {
   return text.length <= 64 && (HEX_COLOR.test(text) || FUNCTION_COLOR.test(text))
 }
 
+// zod/mini：函数式 API，体积比 classic 小得多（单文件产物里 zod 占的那部分）。
+// 校验规则挂在 .check(...) 上，文案与 issue 的 code/path 与 classic 一致。
 const dimensionSchema = z.strictObject({
-  id: z.string().min(1, '维度 id 不能为空'),
-  label: z.string().min(1, '维度名不能为空'),
-  weight: z.number().min(0, 'weight 不能为负').max(1, 'weight 不能大于 1'),
+  id: z.string().check(z.minLength(1, '维度 id 不能为空')),
+  label: z.string().check(z.minLength(1, '维度名不能为空')),
+  weight: z.number().check(z.minimum(0, 'weight 不能为负'), z.maximum(1, 'weight 不能大于 1')),
   color: z
     .string()
-    .min(1, '缺少颜色')
-    .refine(isSafeCssColor, '颜色只能是十六进制（#rrggbb）或 rgb()/hsl() 的数值写法'),
-  description: z.string().default(''),
+    .check(
+      z.minLength(1, '缺少颜色'),
+      z.refine(isSafeCssColor, '颜色只能是十六进制（#rrggbb）或 rgb()/hsl() 的数值写法'),
+    ),
+  description: z._default(z.string(), ''),
 })
 
 const ruleSchema = z.strictObject({
-  id: z.string().min(1, '规则 id 不能为空'),
-  dimension: z.string().min(1, '规则必须归属一个维度'),
+  id: z.string().check(z.minLength(1, '规则 id 不能为空')),
+  dimension: z.string().check(z.minLength(1, '规则必须归属一个维度')),
   severity: z.enum(['error', 'warn', 'info'], { message: 'severity 只能是 error / warn / info' }),
-  title: z.string().min(1, '缺少标题'),
-  scoreImpact: z.number().min(0, '扣分不能为负').max(100, '单条扣分不应超过 100'),
+  title: z.string().check(z.minLength(1, '缺少标题')),
+  scoreImpact: z.number().check(z.minimum(0, '扣分不能为负'), z.maximum(100, '单条扣分不应超过 100')),
   scope: z.enum(['step', 'trajectory'], { message: 'scope 只能是 step / trajectory' }),
   expr: z
     .string()
-    .min(1, '缺少表达式')
-    .max(PACK_LIMITS.maxExpressionLength, `表达式不得超过 ${PACK_LIMITS.maxExpressionLength} 字符`),
-  message: z.string().min(1, '缺少提示文案').max(500, '提示文案过长'),
-  enabled: z.boolean().default(true),
-  builtin: z.boolean().default(false),
+    .check(
+      z.minLength(1, '缺少表达式'),
+      z.maxLength(PACK_LIMITS.maxExpressionLength, `表达式不得超过 ${PACK_LIMITS.maxExpressionLength} 字符`),
+    ),
+  message: z.string().check(z.minLength(1, '缺少提示文案'), z.maxLength(500, '提示文案过长')),
+  enabled: z._default(z.boolean(), true),
+  builtin: z._default(z.boolean(), false),
 })
 
 export const rulePackSchema = z.strictObject({
-  version: z.number().int('version 必须是整数').positive('version 必须为正'),
-  name: z.string().min(1, '规则包需要名称'),
-  dimensions: z.array(dimensionSchema).min(1, '至少需要一个维度').max(PACK_LIMITS.maxDimensions),
-  rules: z.array(ruleSchema).max(PACK_LIMITS.maxRules),
+  version: z.int('version 必须是整数').check(z.positive('version 必须为正')),
+  name: z.string().check(z.minLength(1, '规则包需要名称')),
+  dimensions: z
+    .array(dimensionSchema)
+    .check(z.minLength(1, '至少需要一个维度'), z.maxLength(PACK_LIMITS.maxDimensions)),
+  rules: z.array(ruleSchema).check(z.maxLength(PACK_LIMITS.maxRules)),
 })
 
 // ---------- type / schema agreement ----------
