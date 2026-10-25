@@ -26,7 +26,7 @@ pnpm test:watch
 pnpm test:coverage                          # enforces lines/functions/statements ≥85%, branches ≥75%
 
 pnpm verify                  # the merge gate; CI and release both run exactly this
-pnpm test:e2e                # Playwright against dist/index.html opened via file://; needs `pnpm build` first and a local Chrome. CI runs it after verify; it is not part of verify
+pnpm test:e2e                # Playwright against dist/index.html opened via file://; needs `pnpm build` first and a local Chrome. CI runs it after verify; it is not part of verify. Includes an axe accessibility scan (WCAG 2.x A/AA) of the main views
 ```
 
 `pnpm verify` runs, in order: typecheck → lint → check:layers → format:check → test:coverage → `scripts/check-i18n.mjs` → `scripts/check-typography.mjs` → vite build → `scripts/check-artifact.mjs` → build:cli → `scripts/smoke-cli.mjs`. Each script can be run alone with `node scripts/<name>.mjs`; the artifact check and the CLI smoke test need their build output to exist first. A formatting failure is fixed with `pnpm format`.
@@ -63,6 +63,7 @@ The pipeline and the rules that keep it consistent:
 ## Conventions enforced by `pnpm verify`
 
 - **No hardcoded CJK or fullwidth punctuation in `src/ui`, `src/app`, `src/cli` or `src/lib`** outside comments (`check-i18n.mjs`). User-facing text goes in `src/i18n/locales/zh-CN.ts`, the source of `MessageKey`, and in `en.ts`, typed `Record<MessageKey, string>` so a missing key fails to compile. Both locales must use the same `{name}` placeholders. `src/core` messages are deliberately exempt; the UI and CLI override them with `t('error.<code>')`.
+- **Text colours must keep 4.5:1 contrast on the dark panels** (`e2e/accessibility.spec.ts`). Use `--text`, `--text-dim` or `--text-mute`; a hard-coded translucent grey composites to something dimmer than it looks and has failed AA before. The scan flattens the gradient background first, because axe cannot compute contrast on a gradient, so contrast over the real gradient is not measured.
 - **Font sizes come only from the six `var(--fs-*)` tokens** in `src/styles/tokens.css` (minimum 11px). Raw `font-size: Npx` in CSS or inline `fontSize: 'Npx'` in TSX fails `check-typography.mjs`, as do unbalanced braces in any stylesheet.
 - The exported HTML reports in `src/lib` carry their own stylesheet and cannot use `var(--fs-*)`, but `check-typography.mjs` holds them to the same 11px floor. The build must stay one self-contained file under 1500 KB, with no external scripts, stylesheets or remote images. The CLI bundle may import only `node:` built-ins.
 - The linter (oxlint, configured in `oxlint.config.js`, with type-aware rules via `oxlint-tsgolint`) rejects unawaited and misused promises, forbids `any`, allows only `console.warn` and `console.error` outside tests, and ignores unused names only when they start with `_`. tsconfig turns on `noUncheckedIndexedAccess`. Prettier settings: no semicolons, single quotes, 110-character lines.
