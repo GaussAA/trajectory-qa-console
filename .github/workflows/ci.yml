@@ -68,3 +68,34 @@ jobs:
           path: coverage/
           if-no-files-found: ignore
           retention-days: 7
+
+  # 开发机是 Windows，CI 其余部分只在 Linux 上跑。路径分隔符、换行符、子进程启动方式这类差异
+  # 只会在 Windows 上暴露；这里跑同一道门禁和 e2e，不上传产物（Linux 那个 job 已经传了）。
+  verify-windows:
+    name: verify (windows)
+    runs-on: windows-2025
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 12.14.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify
+        run: pnpm verify
+
+      - name: E2E (file:// artifact)
+        run: pnpm test:e2e

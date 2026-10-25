@@ -6,7 +6,7 @@
  */
 
 import { readFileSync, statSync } from 'node:fs'
-import { basename, relative, sep } from 'node:path'
+import { basename, isAbsolute, relative, sep } from 'node:path'
 import { analyze, gradeOf, scoreSession, type ScoreCard, type SessionAnalysis } from '../core/analysis'
 import type { AppError, Finding, RulePack } from '../core/model'
 import { translate, type Locale } from '../i18n/core'
@@ -73,7 +73,9 @@ export interface BatchResult {
 /** 报告里用相对路径（短、可读、可 diff）；跨盘或上级目录时回退文件名。 */
 export function displayPath(file: string, cwd = process.cwd()): string {
   const rel = relative(cwd, file)
-  const shown = !rel || rel.startsWith('..') ? basename(file) : rel
+  // Windows 上两个路径在不同盘符时，relative 不会给出 `..` 开头的结果，而是原样返回绝对路径；
+  // 这也算「在工作目录之外」。
+  const shown = !rel || rel.startsWith('..') || isAbsolute(rel) ? basename(file) : rel
   // 统一用 /，否则 Windows 与 POSIX 产出的报告无法逐字节比对。
   return shown.split(sep).join('/')
 }

@@ -105,4 +105,12 @@ describe('displayPath', () => {
   it('falls back to the file name outside the working directory', async () => {
     expect(displayPath(join(tmpdir(), 'elsewhere', 'a.json'), join(process.cwd(), 'src'))).toBe('a.json')
   })
+
+  // 盘符只存在于 Windows。写死盘符而不是依赖机器上有两块盘，这样在任何一台 Windows 上都能复现。
+  it.runIf(process.platform === 'win32')(
+    'treats a file on another drive as outside the working directory',
+    () => {
+      expect(displayPath('C:\\Temp\\elsewhere\\a.json', 'D:\\work\\repo')).toBe('a.json')
+    },
+  )
 })
