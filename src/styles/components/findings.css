@@ -142,7 +142,7 @@
 .finding-ev {
   font-family: var(--mono);
   font-size: var(--fs-xs);
-  color: rgba(111, 122, 146, 0.85);
+  color: var(--text-mute);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

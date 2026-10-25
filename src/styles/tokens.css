@@ -5,7 +5,7 @@
   --line-strong: rgba(148, 163, 184, 0.2);
   --text: #e9eef8;
   --text-dim: #a8b3c7;
-  --text-mute: #7b869c; /* 4.39:1 → 5.16:1：原色在 9px 小字上低于 AA */
+  --text-mute: #848fa5; /* 4.39:1 → 5.16:1 → 在对比视图的着色行（最亮底 #1d222f）上仍有 4.88:1；#7b869c 在那里只有 4.34 */
   --teal: #5eead4;
   --violet: #a78bfa;
   --error: #fb7185;
