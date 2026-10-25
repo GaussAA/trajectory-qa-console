@@ -225,9 +225,7 @@ export default function App({
           <button
             type="button"
             className="issue-pill"
-            title={state.issues
-              .map((issue) => t(issueMessageKey(issue.code), issue.params))
-              .join('\n')}
+            title={state.issues.map((issue) => t(issueMessageKey(issue.code), issue.params)).join('\n')}
             onClick={() => setDiagnosticsOpen(true)}
           >
             {t('issues.filesFailed', { count: state.issues.length })}
@@ -372,10 +370,7 @@ export default function App({
                     让位给中栏，比让标注多绕一步划算。 */}
                 <label className="narrow-session">
                   <span>{t('panel.sessions')}</span>
-                  <select
-                    value={session.id}
-                    onChange={(event) => actions.chooseSession(event.target.value)}
-                  >
+                  <select value={session.id} onChange={(event) => actions.chooseSession(event.target.value)}>
                     {state.sessions.map((item) => (
                       <option key={item.id} value={item.id}>
                         {labelOf(state.notes, item.trajectory)}
@@ -383,7 +378,12 @@ export default function App({
                     ))}
                   </select>
                 </label>
-                <ErrorBoundary nameKey="panel.score" compact resetKey={session.id} onError={reportBoundaryError('score')}>
+                <ErrorBoundary
+                  nameKey="panel.score"
+                  compact
+                  resetKey={session.id}
+                  onError={reportBoundaryError('score')}
+                >
                   <ScorePanel
                     card={card}
                     trajectory={session.trajectory}
@@ -391,7 +391,12 @@ export default function App({
                     ruleIssueCount={card.ruleIssues.length}
                   />
                 </ErrorBoundary>
-                <ErrorBoundary nameKey="panel.timeline" compact resetKey={`${session.id}:${state.selectedStep}`} onError={reportBoundaryError('timeline')}>
+                <ErrorBoundary
+                  nameKey="panel.timeline"
+                  compact
+                  resetKey={`${session.id}:${state.selectedStep}`}
+                  onError={reportBoundaryError('timeline')}
+                >
                   <Timeline
                     trajectory={session.trajectory}
                     card={card}
@@ -402,11 +407,16 @@ export default function App({
               </div>
 
               <div className="col col-right">
-                <ErrorBoundary nameKey="panel.inspector" compact resetKey={`${session.id}:${state.selectedStep}`} onError={reportBoundaryError('inspector')}>
-                <Inspector
-                  trajectory={session.trajectory}
-                  metrics={session.metrics}
-                  step={step}
+                <ErrorBoundary
+                  nameKey="panel.inspector"
+                  compact
+                  resetKey={`${session.id}:${state.selectedStep}`}
+                  onError={reportBoundaryError('inspector')}
+                >
+                  <Inspector
+                    trajectory={session.trajectory}
+                    metrics={session.metrics}
+                    step={step}
                     card={card}
                     dimensions={state.pack.dimensions}
                     annotations={state.annotations}
@@ -414,7 +424,12 @@ export default function App({
                     onRemoveAnnotation={actions.removeAnnotation}
                   />
                 </ErrorBoundary>
-                <ErrorBoundary nameKey="panel.findings" compact resetKey={session.id} onError={reportBoundaryError('findings')}>
+                <ErrorBoundary
+                  nameKey="panel.findings"
+                  compact
+                  resetKey={session.id}
+                  onError={reportBoundaryError('findings')}
+                >
                   <FindingsPanel
                     card={card}
                     dimensions={state.pack.dimensions}

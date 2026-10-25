@@ -27,7 +27,13 @@ export default defineConfig({
         'src/cli/**/*.ts',
         'src/lib/**/*.ts',
       ],
-      exclude: ['**/*.test.{ts,tsx}', 'src/core/sample.ts', '**/test-support.ts', 'src/core/__golden__/**', 'src/cli/bin.ts'],
+      exclude: [
+        '**/*.test.{ts,tsx}',
+        'src/core/sample.ts',
+        '**/test-support.ts',
+        'src/core/__golden__/**',
+        'src/cli/bin.ts',
+      ],
       reporter: ['text', 'json-summary'],
       thresholds: {
         lines: 85,

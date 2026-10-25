@@ -49,72 +49,75 @@ export function FindingsPanel({ card, dimensions, onLocate }: Props) {
         <p className="findings-none">{t('findings.noneAtAll')}</p>
       ) : (
         <>
-      <div className="filter-row">
-        <div className="chip-group">
-          {(['all', 'error', 'warn', 'info'] as SeverityFilter[]).map((item) => (
-            <button
-              type="button"
-              key={item}
-              className={cx('filter-chip', severity === item && 'active')}
-              onClick={() => setSeverity(item)}
-              aria-pressed={severity === item}
-              style={
-                item === 'all' ? undefined : { color: severity === item ? SEVERITY_COLOR[item] : undefined }
-              }
+          <div className="filter-row">
+            <div className="chip-group">
+              {(['all', 'error', 'warn', 'info'] as SeverityFilter[]).map((item) => (
+                <button
+                  type="button"
+                  key={item}
+                  className={cx('filter-chip', severity === item && 'active')}
+                  onClick={() => setSeverity(item)}
+                  aria-pressed={severity === item}
+                  style={
+                    item === 'all'
+                      ? undefined
+                      : { color: severity === item ? SEVERITY_COLOR[item] : undefined }
+                  }
+                >
+                  {item === 'all' ? t('common.all') : t(`severity.${item}`)}
+                  {item !== 'all' && (
+                    <b>{card.findings.filter((finding) => finding.severity === item).length}</b>
+                  )}
+                </button>
+              ))}
+            </div>
+            <select
+              value={dimension}
+              onChange={(event) => setDimension(event.target.value)}
+              aria-label={t('findings.filterDimension')}
             >
-              {item === 'all' ? t('common.all') : t(`severity.${item}`)}
-              {item !== 'all' && <b>{card.findings.filter((finding) => finding.severity === item).length}</b>}
-            </button>
-          ))}
-        </div>
-        <select
-          value={dimension}
-          onChange={(event) => setDimension(event.target.value)}
-          aria-label={t('findings.filterDimension')}
-        >
-          <option value="all">{t('findings.allDimensions')}</option>
-          {dimensions.map((item) => (
-            <option key={item.id} value={item.id}>
-              {dimensionLabel.get(item.id) ?? item.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="finding-scroll">
-        {visible.length === 0 ? (
-          <div className="empty-inline">
-            <span>{t('findings.empty')}</span>
-            <em>{t('findings.emptyHint')}</em>
+              <option value="all">{t('findings.allDimensions')}</option>
+              {dimensions.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {dimensionLabel.get(item.id) ?? item.label}
+                </option>
+              ))}
+            </select>
           </div>
-        ) : (
-          visible.map((finding) => (
-            <button
-              type="button"
-              className={cx('finding', finding.stepIndex !== undefined && 'clickable')}
-              key={finding.id}
-              onClick={() => {
-                if (finding.stepIndex !== undefined) onLocate(finding.stepIndex)
-              }}
-            >
-              <i className="finding-dot" style={{ background: SEVERITY_COLOR[finding.severity] }} />
-              <span className="finding-body">
-                <span className="finding-head">
-                  <b>{finding.ruleTitle}</b>
-                  <em>{dimensionLabel.get(finding.dimension) ?? finding.dimension}</em>
-                  {finding.manual && <span className="manual-tag">{t('findings.manual')}</span>}
-                </span>
-                <span className="finding-msg">{finding.message}</span>
-                {finding.evidence && <span className="finding-ev">{truncate(finding.evidence, 80)}</span>}
-              </span>
-              {finding.stepIndex !== undefined && (
-                <span className="finding-step">#{finding.stepIndex + 1}</span>
-              )}
-            </button>
-          ))
-        )}
-      </div>
 
+          <div className="finding-scroll">
+            {visible.length === 0 ? (
+              <div className="empty-inline">
+                <span>{t('findings.empty')}</span>
+                <em>{t('findings.emptyHint')}</em>
+              </div>
+            ) : (
+              visible.map((finding) => (
+                <button
+                  type="button"
+                  className={cx('finding', finding.stepIndex !== undefined && 'clickable')}
+                  key={finding.id}
+                  onClick={() => {
+                    if (finding.stepIndex !== undefined) onLocate(finding.stepIndex)
+                  }}
+                >
+                  <i className="finding-dot" style={{ background: SEVERITY_COLOR[finding.severity] }} />
+                  <span className="finding-body">
+                    <span className="finding-head">
+                      <b>{finding.ruleTitle}</b>
+                      <em>{dimensionLabel.get(finding.dimension) ?? finding.dimension}</em>
+                      {finding.manual && <span className="manual-tag">{t('findings.manual')}</span>}
+                    </span>
+                    <span className="finding-msg">{finding.message}</span>
+                    {finding.evidence && <span className="finding-ev">{truncate(finding.evidence, 80)}</span>}
+                  </span>
+                  {finding.stepIndex !== undefined && (
+                    <span className="finding-step">#{finding.stepIndex + 1}</span>
+                  )}
+                </button>
+              ))
+            )}
+          </div>
         </>
       )}
 

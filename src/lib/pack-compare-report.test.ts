@@ -18,7 +18,10 @@ const TRACE = JSON.stringify([
 ])
 
 function sessions() {
-  return analyzeSessions(TRACE, 'single-error.json').map((session) => ({ id: session.id, trajectory: session.trajectory }))
+  return analyzeSessions(TRACE, 'single-error.json').map((session) => ({
+    id: session.id,
+    trajectory: session.trajectory,
+  }))
 }
 
 const lenient = {

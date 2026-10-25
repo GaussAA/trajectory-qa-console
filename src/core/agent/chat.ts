@@ -90,19 +90,34 @@ export function parseReply(raw: string): ChatReply | null {
     // 有些本地代理直接回文本
     const text = extractContent(raw)
     return text
-      ? { content: text, toolCalls: [], finishReason: null, reasoningChars: 0, usage: { prompt: 0, completion: 0 } }
+      ? {
+          content: text,
+          toolCalls: [],
+          finishReason: null,
+          reasoningChars: 0,
+          usage: { prompt: 0, completion: 0 },
+        }
       : null
   }
 
   const record = parsed as {
-    choices?: { message?: { content?: unknown; tool_calls?: unknown; reasoning?: unknown }; finish_reason?: unknown }[]
+    choices?: {
+      message?: { content?: unknown; tool_calls?: unknown; reasoning?: unknown }
+      finish_reason?: unknown
+    }[]
     usage?: { prompt_tokens?: unknown; completion_tokens?: unknown }
   }
   const choice = record.choices?.[0]
   if (!choice) {
     const text = extractContent(raw)
     return text
-      ? { content: text, toolCalls: [], finishReason: null, reasoningChars: 0, usage: { prompt: 0, completion: 0 } }
+      ? {
+          content: text,
+          toolCalls: [],
+          finishReason: null,
+          reasoningChars: 0,
+          usage: { prompt: 0, completion: 0 },
+        }
       : null
   }
 

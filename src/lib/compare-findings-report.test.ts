@@ -87,7 +87,9 @@ describe('a problem that really changed is still reported', () => {
       ],
       'worse.json',
     )
-    const json = JSON.parse(buildComparisonJson({ base: BASE, target: worse, generatedAt: GENERATED, locale: 'zh-CN' })) as {
+    const json = JSON.parse(
+      buildComparisonJson({ base: BASE, target: worse, generatedAt: GENERATED, locale: 'zh-CN' }),
+    ) as {
       findings: { added: number }
     }
     expect(json.findings.added).toBeGreaterThan(0)
@@ -107,7 +109,9 @@ describe('a problem that really changed is still reported', () => {
       ],
       'fixed.json',
     )
-    const json = JSON.parse(buildComparisonJson({ base: BASE, target: fixed, generatedAt: GENERATED, locale: 'zh-CN' })) as {
+    const json = JSON.parse(
+      buildComparisonJson({ base: BASE, target: fixed, generatedAt: GENERATED, locale: 'zh-CN' }),
+    ) as {
       findings: { resolved: number; added: number }
     }
     expect(json.findings.resolved).toBeGreaterThan(0)

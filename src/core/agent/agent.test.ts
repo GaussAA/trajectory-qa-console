@@ -527,7 +527,10 @@ describe('tools', () => {
   it('refuses a tuning that no longer compiles', () => {
     const context = contextWith()
     // 负下标没有任何数字常量可换
-    const outcome = toolByName('tune_literal')?.run({ ruleId: 'exec-tool-error', index: 99, next: 1 }, context)
+    const outcome = toolByName('tune_literal')?.run(
+      { ruleId: 'exec-tool-error', index: 99, next: 1 },
+      context,
+    )
     expect(outcome?.ok).toBe(false)
   })
 

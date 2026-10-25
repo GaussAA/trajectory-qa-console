@@ -62,7 +62,10 @@ describe('agent server client disconnect', () => {
     const server = await start({ transport: failing })
     try {
       const result = await diagnose(server.base, { sessions: [session()] })
-      const last = result.lines.at(-1) as unknown as { type: string; run: { ok: boolean; error?: { message: string } } }
+      const last = result.lines.at(-1) as unknown as {
+        type: string
+        run: { ok: boolean; error?: { message: string } }
+      }
       expect(last.type).toBe('done')
       expect(last.run.ok).toBe(false)
       expect(last.run.error?.message).toContain('500')

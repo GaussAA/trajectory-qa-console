@@ -319,7 +319,9 @@ describe('an unwritable --out is an error message, not a stack trace', () => {
     trace(dir, 'a.json', CLEAN)
     trace(dir, 'b.json', BROKEN)
     const { io, chunks } = capture()
-    expect(await main([join(dir, 'a.json'), join(dir, 'b.json'), '--compare', '--out', blockedOut(dir)], io)).toBe(EXIT.error)
+    expect(
+      await main([join(dir, 'a.json'), join(dir, 'b.json'), '--compare', '--out', blockedOut(dir)], io),
+    ).toBe(EXIT.error)
     expect(chunks.err).toContain('写入')
   })
 
@@ -327,7 +329,9 @@ describe('an unwritable --out is an error message, not a stack trace', () => {
     const dir = tempDir()
     trace(dir, 'a.json', CLEAN)
     const { io, chunks } = capture()
-    expect(await main([join(dir, 'a.json'), '--pack-compare', 'en', '--out', blockedOut(dir)], io)).toBe(EXIT.error)
+    expect(await main([join(dir, 'a.json'), '--pack-compare', 'en', '--out', blockedOut(dir)], io)).toBe(
+      EXIT.error,
+    )
     expect(chunks.err).toContain('写入')
   })
 })

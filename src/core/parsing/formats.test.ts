@@ -95,7 +95,9 @@ describe('LangChain', () => {
 
   it('keeps the original object on the step, not the unwrapped one', () => {
     const original = { type: 'human', data: { content: 'hi', type: 'human' } }
-    expect((parse([original, { type: 'ai', data: { content: 'x', type: 'ai' } }])[0]?.steps[0]?.raw)).toEqual(original)
+    expect(parse([original, { type: 'ai', data: { content: 'x', type: 'ai' } }])[0]?.steps[0]?.raw).toEqual(
+      original,
+    )
   })
 })
 
@@ -103,7 +105,14 @@ describe('SWE-agent style records with both `trajectory` and `history`', () => {
   const record = {
     trajectory: [
       { action: 'ls', observation: 'a b', response: 'ls', thought: 't', execution_time: 0.1, state: {} },
-      { action: 'submit', observation: 'done', response: 'submit', thought: 't', execution_time: 0.1, state: {} },
+      {
+        action: 'submit',
+        observation: 'done',
+        response: 'submit',
+        thought: 't',
+        execution_time: 0.1,
+        state: {},
+      },
     ],
     history: [
       { role: 'system', content: '你是工程师' },
@@ -120,10 +129,12 @@ describe('SWE-agent style records with both `trajectory` and `history`', () => {
 
 describe('what must keep working', () => {
   it('does not let `type` override an explicit role', () => {
-    expect(roles([{ role: 'user', type: 'ai', content: 'hi' }, { role: 'assistant', content: 'yo' }])).toEqual([
-      'user',
-      'assistant',
-    ])
+    expect(
+      roles([
+        { role: 'user', type: 'ai', content: 'hi' },
+        { role: 'assistant', content: 'yo' },
+      ]),
+    ).toEqual(['user', 'assistant'])
   })
 
   it('still reads OpenAI Responses message items', () => {
@@ -136,15 +147,15 @@ describe('what must keep working', () => {
   })
 
   it('still prefers a plain `messages` array', () => {
-    expect(roles({ messages: [{ role: 'user', content: 'hi' }], history: [{ role: 'assistant', content: 'x' }] })).toEqual(
-      ['user'],
-    )
+    expect(
+      roles({ messages: [{ role: 'user', content: 'hi' }], history: [{ role: 'assistant', content: 'x' }] }),
+    ).toEqual(['user'])
   })
 
   it('still finds messages nested under `data` when the outer array is not messages', () => {
-    expect(roles({ trajectory: [{ action: 'ls' }], data: { messages: [{ role: 'user', content: 'hi' }] } })).toEqual([
-      'user',
-    ])
+    expect(
+      roles({ trajectory: [{ action: 'ls' }], data: { messages: [{ role: 'user', content: 'hi' }] } }),
+    ).toEqual(['user'])
   })
 
   it('does not mistake an ordinary message that has a `data` field for a LangChain dump', () => {

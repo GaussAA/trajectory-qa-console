@@ -105,7 +105,11 @@ describe('renderAgentMarkdown', () => {
       input({
         sessions,
         run: run({
-          diagnosis: { verdict: 'v', rootCauses: [{ session: id, cause: '原因', evidence: '证据' }], actions: [] },
+          diagnosis: {
+            verdict: 'v',
+            rootCauses: [{ session: id, cause: '原因', evidence: '证据' }],
+            actions: [],
+          },
         }),
       }),
     )
@@ -154,7 +158,11 @@ describe('renderAgentMarkdown', () => {
   it('reports a failed run with its reason', () => {
     const markdown = renderAgentMarkdown(
       input({
-        run: run({ ok: false, error: { code: 'analysis-failed', message: '模型请求失败（HTTP 500）' }, diagnosis: null }),
+        run: run({
+          ok: false,
+          error: { code: 'analysis-failed', message: '模型请求失败（HTTP 500）' },
+          diagnosis: null,
+        }),
       }),
     )
     expect(markdown).toContain('运行失败')
@@ -167,7 +175,9 @@ describe('renderAgentMarkdown', () => {
       input({
         run: run({
           trace: {
-            entries: [{ kind: 'tool', round: 1, name: 'get_step', args: '{a|b}', ok: false, result: 'x|y', ms: 1 }],
+            entries: [
+              { kind: 'tool', round: 1, name: 'get_step', args: '{a|b}', ok: false, result: 'x|y', ms: 1 },
+            ],
             rounds: 1,
             toolCalls: 1,
             truncated: false,

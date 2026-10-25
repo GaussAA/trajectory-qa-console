@@ -217,7 +217,16 @@ describe('the same holds for the agent diagnosis report, whose text is model out
       rootCauses: [{ session: 's', cause: evil, evidence: evil }],
       actions: [{ action: evil, ruleId: 'a`b`c', rationale: evil }],
     },
-    proposals: [{ id: `p\n${FORGED}`, rationale: evil, applied: [{ ruleId: 'x`y', severity: 'warn', effectiveImpact: 1 }], averageBefore: 90, averageAfter: 91, delta: 1 }],
+    proposals: [
+      {
+        id: `p\n${FORGED}`,
+        rationale: evil,
+        applied: [{ ruleId: 'x`y', severity: 'warn', effectiveImpact: 1 }],
+        averageBefore: 90,
+        averageAfter: 91,
+        delta: 1,
+      },
+    ],
     trace: { entries: [], toolCalls: 0, rounds: 1, truncated: false },
     usage: { prompt: 1, completion: 1 },
   } as unknown as AgentRun

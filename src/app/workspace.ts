@@ -316,9 +316,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         sessions,
         phase: sessions.length > 0 ? state.phase : 'idle',
         selectedId: next?.id ?? null,
-        selectedStep: next
-          ? pickStepFor(next, scoreSession(next, state.pack, state.annotations))
-          : null,
+        selectedStep: next ? pickStepFor(next, scoreSession(next, state.pack, state.annotations)) : null,
       }
     }
 

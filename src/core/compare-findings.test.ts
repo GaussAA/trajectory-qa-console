@@ -12,7 +12,11 @@ import { alignSteps, diffFindings } from './compare'
 import type { Finding, Step } from './model'
 import { makeStep as step } from './test-support'
 
-function finding(ruleId: string, stepIndex: number | undefined, message = `第 ${stepIndex} 步有问题`): Finding {
+function finding(
+  ruleId: string,
+  stepIndex: number | undefined,
+  message = `第 ${stepIndex} 步有问题`,
+): Finding {
   return {
     id: `${ruleId}-${stepIndex}`,
     ruleId,
@@ -108,7 +112,12 @@ describe('a step removed upstream', () => {
 describe('a problem on a removed step must not be matched to an unrelated step by number', () => {
   // 基准的第 1 步（工具 gone）在对照里被删了，对照只有 3 步。基准在那一步上有 rule-x 的问题；
   // 对照里另一步（它的第 1 步，工具 keep）上也恰好有 rule-x。两者原始步号都是 1，但根本不是同一个问题。
-  const base = [step(0, 'user', 'q'), step(1, 'assistant', '', ['gone']), step(2, 'assistant', '', ['keep']), step(3, 'assistant', 'end')]
+  const base = [
+    step(0, 'user', 'q'),
+    step(1, 'assistant', '', ['gone']),
+    step(2, 'assistant', '', ['keep']),
+    step(3, 'assistant', 'end'),
+  ]
   const target = [step(0, 'user', 'q'), step(1, 'assistant', '', ['keep']), step(2, 'assistant', 'end')]
   const rows = alignSteps(base, target)
 
@@ -141,7 +150,11 @@ describe('the message is not part of the identity', () => {
   it('a step number inside the text that merely shifted is not a change worth listing', () => {
     // 插入一步后「第 4 步」变成「第 5 步」：问题没变，只是步号跟着挪了
     const rows = alignSteps(BASE, WITH_INSERT)
-    const diff = diffFindings([finding('r-write', 4, '第 5 步没有结果')], [finding('r-write', 5, '第 6 步没有结果')], rows)
+    const diff = diffFindings(
+      [finding('r-write', 4, '第 5 步没有结果')],
+      [finding('r-write', 5, '第 6 步没有结果')],
+      rows,
+    )
     expect(diff.persisted).toHaveLength(1)
     expect(diff.changed).toEqual([])
   })

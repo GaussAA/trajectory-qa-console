@@ -57,13 +57,20 @@ describe('the step-diff cap means the same thing in every artifact', () => {
       generatedAt: GENERATED,
       locale: 'en' as const,
     }
-    expect(buildComparisonReport(input).split('\n').filter((line) => MD_ROW.test(line))).toHaveLength(40)
+    expect(
+      buildComparisonReport(input)
+        .split('\n')
+        .filter((line) => MD_ROW.test(line)),
+    ).toHaveLength(40)
     expect(buildComparisonHtml(input).match(HTML_ROW) ?? []).toHaveLength(40)
   })
 
   it('JSON stays complete: it is for machines, and a silent cut would look like fewer changes', () => {
     const input = { base, target, generatedAt: GENERATED, locale: 'en' as const, maxStepRows: 2 }
-    const json = JSON.parse(buildComparisonJson(input)) as { changedSteps: unknown[]; steps: { changed: number } }
+    const json = JSON.parse(buildComparisonJson(input)) as {
+      changedSteps: unknown[]
+      steps: { changed: number }
+    }
     expect(json.changedSteps.length).toBeGreaterThan(2)
     expect(json.changedSteps.length).toBe(json.steps.changed)
   })
@@ -92,14 +99,24 @@ describe('English reports carry no CJK punctuation of their own', () => {
   }
 
   it('the advice suffix uses ASCII parentheses', () => {
-    const markdown = buildMarkdownReport({ entries: [twice()], pack: DEFAULT_PACK, generatedAt: GENERATED, locale: 'en' })
+    const markdown = buildMarkdownReport({
+      entries: [twice()],
+      pack: DEFAULT_PACK,
+      generatedAt: GENERATED,
+      locale: 'en',
+    })
     const advice = markdown.slice(markdown.indexOf('### Recommendations'))
     expect(advice).toMatch(/ \(2×\)/)
     expect(advice).not.toMatch(/[（）]/)
   })
 
   it('the Chinese report keeps its fullwidth parentheses', () => {
-    const markdown = buildMarkdownReport({ entries: [twice()], pack: DEFAULT_PACK, generatedAt: GENERATED, locale: 'zh-CN' })
+    const markdown = buildMarkdownReport({
+      entries: [twice()],
+      pack: DEFAULT_PACK,
+      generatedAt: GENERATED,
+      locale: 'zh-CN',
+    })
     expect(markdown).toMatch(/（2 处）/)
   })
 
@@ -154,7 +171,12 @@ describe('exported report styles keep the 11px floor', () => {
 
   const entry = entryOf(conversation('x', 2), 'x.json')
   const documents = {
-    'session report': buildHtmlReport({ entries: [entry], pack: DEFAULT_PACK, generatedAt: GENERATED, locale: 'zh-CN' }),
+    'session report': buildHtmlReport({
+      entries: [entry],
+      pack: DEFAULT_PACK,
+      generatedAt: GENERATED,
+      locale: 'zh-CN',
+    }),
     'comparison report': buildComparisonHtml({
       base: entry,
       target: entryOf(conversation('y', 2), 'y.json'),

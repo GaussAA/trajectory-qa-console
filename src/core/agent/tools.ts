@@ -120,9 +120,7 @@ function findingView(finding: {
 
 // ---------- 草稿包与试跑（simulate_pack 与 propose_pack 共用） ----------
 
-type DraftResult =
-  | { ok: true; pack: RulePack; applied: AppliedEdit[] }
-  | { ok: false; outcome: ToolOutcome }
+type DraftResult = { ok: true; pack: RulePack; applied: AppliedEdit[] } | { ok: false; outcome: ToolOutcome }
 
 /** 把 edits 打到当前包的副本上，再交给契约校验。
  *
@@ -228,8 +226,7 @@ function simulateOn(context: ToolContext, pack: RulePack): Simulation {
 const listSessions: Tool = {
   spec: {
     name: 'list_sessions',
-    description:
-      '列出所有会话的一句话概览：分数、等级、步数、token、问题计数。诊断的第一步通常是它。',
+    description: '列出所有会话的一句话概览：分数、等级、步数、token、问题计数。诊断的第一步通常是它。',
     parameters: { type: 'object', properties: {}, required: [] },
   },
   run: (_args, context) => {
@@ -263,8 +260,7 @@ const listSessions: Tool = {
 const getCard: Tool = {
   spec: {
     name: 'get_card',
-    description:
-      '读取某条会话的完整评分卡：各维度得分与权重、错误封顶、问题计数、命中最多的问题、规则异常。',
+    description: '读取某条会话的完整评分卡：各维度得分与权重、错误封顶、问题计数、命中最多的问题、规则异常。',
     parameters: {
       type: 'object',
       properties: { sessionId: { type: 'string', description: '会话 id（list_sessions 返回的那个）' } },
@@ -309,7 +305,10 @@ const getFindings: Tool = {
       type: 'object',
       properties: {
         sessionId: { type: 'string' },
-        dimension: { type: 'string', description: '维度 id，如 structure / execution / efficiency / semantic' },
+        dimension: {
+          type: 'string',
+          description: '维度 id，如 structure / execution / efficiency / semantic',
+        },
         severity: { type: 'string', enum: ['error', 'warn', 'info'] },
         limit: { type: 'number', description: '最多返回多少条，默认 20，上限 50' },
       },
@@ -408,9 +407,7 @@ const getStep: Tool = {
           ? { isError: call.result.isError, content: clip(call.result.content, 600) }
           : null,
       })),
-      result: step.result
-        ? { isError: step.result.isError, content: clip(step.result.content, 800) }
-        : null,
+      result: step.result ? { isError: step.result.isError, content: clip(step.result.content, 800) } : null,
       findings: card.findings.filter((finding) => finding.stepIndex === stepNo - 1).map(findingView),
     })
   },
@@ -458,7 +455,10 @@ const searchSteps: Tool = {
       hits.push({
         step: step.index + 1,
         role: step.role,
-        snippet: haystack.slice(start, at + query.length + 60).replace(/\s+/g, ' ').trim(),
+        snippet: haystack
+          .slice(start, at + query.length + 60)
+          .replace(/\s+/g, ' ')
+          .trim(),
       })
     }
     return wrap({ sessionId: session.id, query, hits, truncated: hits.length >= limit })
@@ -530,18 +530,28 @@ function readEdits(args: Record<string, unknown>): EditsRead {
 
     if (given('scoreImpact')) {
       const impact = readNumber(record.scoreImpact)
-      if (impact === null) return { ok: false, error: `${where}.scoreImpact 必须是数字，收到 ${JSON.stringify(record.scoreImpact)}` }
+      if (impact === null)
+        return {
+          ok: false,
+          error: `${where}.scoreImpact 必须是数字，收到 ${JSON.stringify(record.scoreImpact)}`,
+        }
       edit.scoreImpact = impact
     }
     if (given('enabled')) {
       if (typeof record.enabled !== 'boolean') {
-        return { ok: false, error: `${where}.enabled 必须是 true 或 false（布尔值），收到 ${JSON.stringify(record.enabled)}` }
+        return {
+          ok: false,
+          error: `${where}.enabled 必须是 true 或 false（布尔值），收到 ${JSON.stringify(record.enabled)}`,
+        }
       }
       edit.enabled = record.enabled
     }
     if (given('severity')) {
       if (!isSeverity(record.severity)) {
-        return { ok: false, error: `${where}.severity 只能是 error / warn / info，收到 ${JSON.stringify(record.severity)}` }
+        return {
+          ok: false,
+          error: `${where}.severity 只能是 error / warn / info，收到 ${JSON.stringify(record.severity)}`,
+        }
       }
       edit.severity = record.severity
     }

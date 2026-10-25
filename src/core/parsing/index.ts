@@ -40,7 +40,9 @@ interface SessionDraft {
 
 function findMessageArray(value: unknown): unknown[] | undefined {
   if (!isRecord(value)) return undefined
-  const candidates = CONTAINER_KEYS.map((key) => value[key]).filter((item): item is unknown[] => Array.isArray(item))
+  const candidates = CONTAINER_KEYS.map((key) => value[key]).filter((item): item is unknown[] =>
+    Array.isArray(item),
+  )
   // 优先取「里面真是消息」的那个数组。SWE-agent 的记录同时有 `trajectory`（动作记录）和
   // `history`（消息），按键的先后取第一个数组，会把动作记录当消息读。
   const real = candidates.find((item) => item.some(looksLikeMessage))

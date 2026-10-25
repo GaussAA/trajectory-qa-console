@@ -27,7 +27,7 @@ pnpm test:coverage                          # enforces lines/functions/statement
 pnpm verify                  # the merge gate; CI and release both run exactly this
 ```
 
-`pnpm verify` runs, in order: typecheck → lint → test:coverage → `scripts/check-i18n.mjs` → `scripts/check-typography.mjs` → vite build → `scripts/check-artifact.mjs` → build:cli → `scripts/smoke-cli.mjs`. Each script can be run alone with `node scripts/<name>.mjs`; the artifact check and the CLI smoke test need their build output to exist first. `format:check` is not part of verify.
+`pnpm verify` runs, in order: typecheck → lint → format:check → test:coverage → `scripts/check-i18n.mjs` → `scripts/check-typography.mjs` → vite build → `scripts/check-artifact.mjs` → build:cli → `scripts/smoke-cli.mjs`. Each script can be run alone with `node scripts/<name>.mjs`; the artifact check and the CLI smoke test need their build output to exist first. A formatting failure is fixed with `pnpm format`.
 
 CLI usage once built: `node dist-cli/qa.mjs examples [--fail-below 90] [--out dir] [--format md|json|html|both|all] [--locale en] [--pack en]`. Exit codes are a contract (ADR-0007): `0` pass, `1` gate failed, `2` usage/IO error, nothing to analyse, **or any partial failure**. The LLM features (`--semantic`, `--agent`, `serve`) read `TQA_LLM_URL` or `TQA_LLM_BASE_URL`, `TQA_LLM_MODEL` and `TQA_LLM_API_KEY` from the environment only. `--semantic-dry-run` and `--agent-dry-run` print the prompt without calling a model.
 

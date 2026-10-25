@@ -32,11 +32,7 @@ import {
   type WorkspaceState,
 } from '../app/workspace'
 import { downloadFile, nowStamp } from '../lib/format'
-import {
-  buildAgentReportModel,
-  renderAgentJson,
-  renderAgentMarkdown,
-} from '../lib/agent-report'
+import { buildAgentReportModel, renderAgentJson, renderAgentMarkdown } from '../lib/agent-report'
 import type { AgentRun } from '../core/agent/types'
 
 export type ToastMessage = { key: MessageKey; params?: TranslateParams } | { text: string }
@@ -234,9 +230,7 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
         })
         const first = issues[0]
         setToast(
-          first
-            ? { key: issueMessageKey(first.code), params: first.params }
-            : { key: 'toast.nothingUsable' },
+          first ? { key: issueMessageKey(first.code), params: first.params } : { key: 'toast.nothingUsable' },
         )
         return
       }
@@ -433,11 +427,7 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
   const exportVariants = useCallback(() => {
     const variants = stateRef.current.variants
     if (variants.length === 0) return
-    downloadFile(
-      `pack-variants-${nowStamp()}.json`,
-      serializePackVariants(variants),
-      'application/json',
-    )
+    downloadFile(`pack-variants-${nowStamp()}.json`, serializePackVariants(variants), 'application/json')
     telemetry.emit('variant:export-all', { count: variants.length })
     setToast({ key: 'variants.exported', params: { count: variants.length } })
   }, [telemetry])
@@ -520,9 +510,17 @@ export function useWorkspaceController({ analyzer, telemetry, persistence }: Con
       }
       const model = buildAgentReportModel(input)
       if (format === 'md') {
-        downloadFile(`trajectory-qa-agent-${nowStamp()}.md`, renderAgentMarkdown(input, model), 'text/markdown')
+        downloadFile(
+          `trajectory-qa-agent-${nowStamp()}.md`,
+          renderAgentMarkdown(input, model),
+          'text/markdown',
+        )
       } else {
-        downloadFile(`trajectory-qa-agent-${nowStamp()}.json`, renderAgentJson(input, model), 'application/json')
+        downloadFile(
+          `trajectory-qa-agent-${nowStamp()}.json`,
+          renderAgentJson(input, model),
+          'application/json',
+        )
       }
       telemetry.emit('export:agent-report', {
         format,

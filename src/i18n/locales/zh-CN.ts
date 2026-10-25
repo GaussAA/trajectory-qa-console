@@ -524,7 +524,8 @@ export const zhCN = {
   'agent.report.sep': '：',
   'agent.report.paren': '（{text}）',
   'agent.report.proposals': '规则包提案',
-  'agent.report.proposalNote': '提案不会自动生效；命令行已把第一份写成 proposal.pack.json，可用 --pack 试用。',
+  'agent.report.proposalNote':
+    '提案不会自动生效；命令行已把第一份写成 proposal.pack.json，可用 --pack 试用。',
   'agent.report.proposalImpact': '有效扣分 {impact}',
   'agent.report.proposalDelta': '平均分 {before} → {after}（{delta}）',
 
@@ -535,7 +536,8 @@ export const zhCN = {
   'cli.optLlmUrl': '--llm-url <url>          OpenAI 兼容的 chat/completions 地址',
   'cli.optLlmModel': '--llm-model <model>      模型名',
   'cli.optSemanticLimit': '--semantic-limit <n>     单次最多复核多少会话，默认 20',
-  'cli.optLlmTimeout': '--llm-timeout <秒>        单次模型请求超时（5–600），默认语义 60、诊断 90；诊断整轮仍受 180 秒总时限约束',
+  'cli.optLlmTimeout':
+    '--llm-timeout <秒>        单次模型请求超时（5–600），默认语义 60、诊断 90；诊断整轮仍受 180 秒总时限约束',
 
   'report.packCompare.title': '口径对比报告',
   'report.packCompare.base': '基准口径：{name}',

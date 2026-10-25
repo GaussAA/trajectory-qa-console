@@ -68,14 +68,11 @@ describe('ComparePanel', () => {
 
     // Switching the base must swap which option is offered, not duplicate it.
     fireEvent.change(baseSelect, { target: { value: targetOptions[0] as string } })
-    const [nextBase, nextTarget] = screen.getAllByRole('combobox') as [
-      HTMLSelectElement,
-      HTMLSelectElement,
-    ]
+    const [nextBase, nextTarget] = screen.getAllByRole('combobox') as [HTMLSelectElement, HTMLSelectElement]
     expect(nextBase.value).toBe(targetOptions[0])
-    expect(Array.from(nextTarget.querySelectorAll('option')).map((o) => (o as HTMLOptionElement).value)).toEqual([
-      targetSelect.value,
-    ])
+    expect(
+      Array.from(nextTarget.querySelectorAll('option')).map((o) => (o as HTMLOptionElement).value),
+    ).toEqual([targetSelect.value])
   })
 
   it('shows the score, dimension and step deltas', () => {

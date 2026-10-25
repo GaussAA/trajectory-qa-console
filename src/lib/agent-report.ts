@@ -123,9 +123,7 @@ export function renderAgentMarkdown(input: AgentReportInput, model?: AgentReport
   const field = (key: string, value: string | number): string =>
     `${t(locale, key)}${t(locale, 'agent.report.sep')}${value}`
   lines.push(`- ${field('agent.report.generatedAt', input.generatedAt.toISOString())}`)
-  lines.push(
-    `- ${field('agent.report.model', `${mdInline(input.model)} @ ${mdInline(built.endpointHost)}`)}`,
-  )
+  lines.push(`- ${field('agent.report.model', `${mdInline(input.model)} @ ${mdInline(built.endpointHost)}`)}`)
   lines.push(`- ${field('agent.report.pack', mdInline(input.pack.name))}`)
   lines.push(`- ${field('agent.report.sessions', input.sessions.length)}`)
   lines.push(`- ${field('agent.report.status', built.status)}`)

@@ -134,7 +134,9 @@ export function createWorkerAnalyzer(
         signal?.addEventListener('abort', onAbort, { once: true })
 
         const watchdog = setTimeout(() => {
-          finish(fail('analysis-failed', `No response within ${timeoutMs}ms; degraded`, { workerFault: true }))
+          finish(
+            fail('analysis-failed', `No response within ${timeoutMs}ms; degraded`, { workerFault: true }),
+          )
         }, timeoutMs)
         disposers.push(() => clearTimeout(watchdog))
 

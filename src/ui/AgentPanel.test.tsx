@@ -174,10 +174,7 @@ describe('AgentPanel', () => {
     replyWithProposal()
     const exported: string[] = []
 
-    setup(
-      { endpoint: 'http://127.0.0.1:7788', token: null },
-      { onExport: (format) => exported.push(format) },
-    )
+    setup({ endpoint: 'http://127.0.0.1:7788', token: null }, { onExport: (format) => exported.push(format) })
 
     await user.click(screen.getByRole('button', { name: /开始诊断/ }))
     await user.click(await screen.findByRole('button', { name: /导出诊断报告/ }))
@@ -204,9 +201,7 @@ describe('AgentPanel', () => {
       vi.fn(
         async (_url: string, init?: RequestInit) =>
           new Promise<Response>((_resolve, reject) => {
-            init?.signal?.addEventListener('abort', () =>
-              reject(new DOMException('aborted', 'AbortError')),
-            )
+            init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))
           }),
       ),
     )
