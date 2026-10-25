@@ -39,7 +39,7 @@ Markdown 不够体面，界面截图又没法检索。
 反而是最常被问「能不能发我看看」的场景。已落地 `buildComparisonHtml`
 （`src/lib/comparison-html.ts`）：
 
-- 与 Markdown 对比报告同一份 `ComparisonInput`，直接读 `core/compare` 的 diff，
+- 与 Markdown 对比报告同一份 `ComparisonInput`，直接读 `core/compare/sessions` 的 diff，
   不从 Markdown 做文本替换；
 - 双分数环 + 差值徽章、维度增量表、问题三分（新增/已修复/仍在）、
   步骤差异表、只针对「对照新增」的建议；

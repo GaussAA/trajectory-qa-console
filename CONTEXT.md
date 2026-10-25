@@ -24,7 +24,7 @@
 
 ## 不变量
 
-1. 只有 `analyze()` 能把原始文本变成 `SessionAnalysis`；UI 不得直接调用 parse / metrics / score。**例外**：规则抽屉的「试跑」与「口径对比」由界面主动求值、直接跑 rules（`tuning.ts` / `pack-compare.ts`）——它们回答的是「换一套口径会怎样」，不是这条会话的分数；大轨迹下由 `useDeferredValue` 兜着，打字不被卡。
+1. 只有 `analyze()` 能把原始文本变成 `SessionAnalysis`；UI 不得直接调用 parse / metrics / score。**例外**：规则抽屉的「试跑」与「口径对比」由界面主动求值、直接跑 rules（`tuning.ts` / `compare/packs.ts`）——它们回答的是「换一套口径会怎样」，不是这条会话的分数；大轨迹下由 `useDeferredValue` 兜着，打字不被卡。
 2. 每条 Finding 都必须指向一个已定义的维度；规则包在应用前必须通过契约校验。
    契约是**严格**的：任何一层（包、维度、规则）出现不认的键都报错并给出「是否指 enabled」之类的提示，
    而不是悄悄丢掉——写成 `enable: false` 的规则以前照样启用，没有任何提示。
@@ -140,7 +140,7 @@ node dist-cli/qa.mjs examples --pack en --locale en --out ./qa-out   # 全英文
 
 顶栏「对比」（需 ≥2 条轨迹）进入对比模式：左侧会话列表保留，中右两列合并。
 
-- `core/compare.ts`：`compareCards`（分数/维度/步数/token 增量）、
+- `core/compare/sessions.ts`：`compareCards`（分数/维度/步数/token 增量）、
   `diffFindings`（新增 / 已修复 / 仍在 / 程度变了；**要先对齐再比**，见下）、`alignSteps`（按 `角色|工具名` 做 LCS 对齐，
   内容差异用 FNV-1a 指纹判定）、`summarizeAlignment`。
 - 对齐上限 `(n+1)(m+1) > 400_000` 时退化为按位置配对，**不假装对齐过**。
@@ -291,7 +291,7 @@ trajectory-qa serve --port 7788 --token abc123
 
 同一份 diff 两个出口：界面「导出对比」下载 Markdown；CLI `--compare` 写
 `compare.md` / `compare.json`。两者都调 `buildComparisonReport`（`src/lib/report.ts`），
-与对比视图共用 `core/compare`，数字不会分叉。
+与对比视图共用 `core/compare/sessions`，数字不会分叉。
 
 ```bash
 node dist-cli/qa.mjs a.json b.json --compare --out ./cmp        # 第一份为基准
@@ -368,7 +368,7 @@ node dist-cli/qa.mjs a.json b.json --compare --fail-below 80    # 只卡「对�
 
 抽屉「口径对比」：当前包 / 内置中文包 / 各变体两两对跑同一批轨迹。
 
-- `core/pack-compare.ts`：`scoreUnderPack`（真跑规则）与 `comparePacks`（逐会话分数 + 双平均 + identical 判定）。
+- `core/compare/packs.ts`：`scoreUnderPack`（真跑规则）与 `comparePacks`（逐会话分数 + 双平均 + identical 判定）。
 - 与调参/CLI 同一边界：不含人工标注。
 - 注意：存变体即生效，因此「当前包 vs 刚存的变体」恒等——比较变体与原版的正确姿势是
   基准选「内置中文包」（或另一变体）。identical 时界面如实说明，不出空表。

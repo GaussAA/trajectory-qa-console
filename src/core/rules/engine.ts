@@ -3,7 +3,7 @@
  *  contract seam — but never lets one broken rule stop the others.
  */
 
-import { compileExpression, ExprError, truthy, type ExprContext } from '../expr'
+import { compileExpression, ExprError, truthy, type ExprContext } from './expr'
 import {
   SEVERITY_FACTOR,
   type Finding,

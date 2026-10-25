@@ -1,10 +1,10 @@
 /** 对比报告的 HTML 形态：与逐会话报告共用同一套视觉与转义工具。
  *
- *  数据全部来自 `core/compare`（与对比视图、Markdown 对比报告同一份 diff），
+ *  数据全部来自 `core/compare/sessions`（与对比视图、Markdown 对比报告同一份 diff），
  *  这里只负责把它画出来——数字不会出现第二个版本。
  */
 
-import type { AlignedStep } from '../core/compare'
+import type { AlignedStep } from '../core/compare/sessions'
 import { formatTokens } from '../core/estimate'
 import { buildAdvice } from '../core/rules/advice'
 import type { Severity } from '../core/model'

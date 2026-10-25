@@ -33,7 +33,7 @@
 
 ## 后果
 
-- `src/core/compare.ts`：`compareCards` / `diffFindings` / `alignSteps` / `summarizeAlignment`。
+- `src/core/compare/sessions.ts`：`compareCards` / `diffFindings` / `alignSteps` / `summarizeAlignment`。
 - 单测 11 项覆盖：分数与维度增量、问题三分（新增/修复/仍在）、步号敏感性、
   结构对齐与内容变化、增删步、上限退化、空侧。
 - 组件测试 6 项：分数与步骤增量展示、问题变化、状态徽标、双向切换、英文、单轨迹提示。

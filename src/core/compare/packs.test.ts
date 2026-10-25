@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_PACK } from './rules/builtin-pack'
-import { analyzeSessions } from './test-support'
-import type { RulePack } from './model'
-import type { PackOption } from './pack-compare'
-import { comparePacks, scoreUnderPack } from './pack-compare'
+import { DEFAULT_PACK } from '../rules/builtin-pack'
+import { analyzeSessions } from '../test-support'
+import type { RulePack } from '../model'
+import type { PackOption } from './packs'
+import { comparePacks, scoreUnderPack } from './packs'
 
 const TRACE = JSON.stringify([
   { role: 'system', content: '你是助手' },

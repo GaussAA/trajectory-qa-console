@@ -9,7 +9,7 @@
 
 ## 决策
 
-自研表达式语言（`src/core/expr.ts`）：
+自研表达式语言（`src/core/rules/expr.ts`）：
 
 1. 词法 → AST → 求值三段式，禁用 `eval`；
 2. 编译结果暴露 `identifiers`，供契约在**保存前**比对合法字段；

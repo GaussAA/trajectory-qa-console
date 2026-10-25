@@ -29,7 +29,7 @@ export default defineConfig({
       ],
       exclude: [
         '**/*.test.{ts,tsx}',
-        'src/core/sample.ts',
+        'src/core/samples/index.ts',
         '**/test-support.ts',
         'src/core/__golden__/**',
         'src/cli/bin.ts',
