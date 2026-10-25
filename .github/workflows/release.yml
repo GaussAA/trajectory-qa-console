@@ -3,9 +3,13 @@ name: release
 # 打 v* tag 即发版：先过同一道 verify 门禁，再挂产物。
 # 门禁不过就没有 Release——发版权在测试手里，不在谁手滑 push tag 手里。
 
+# 手动触发（workflow_dispatch）是演练：跑完整条流水线直到产物备好，但不校验 tag、不创建 Release。
+# 依赖升级（actions、pnpm、Node）之后可以先演练一遍，不必等到真发版才发现流水线坏了。
+
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
 
 concurrency:
   group: release-${{ github.ref }}
@@ -42,6 +46,7 @@ jobs:
         run: pnpm verify
 
       - name: Guard tag against package version
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
           PKG="v$(node -p "require('./package.json').version")"
           TAG="${GITHUB_REF_NAME}"
@@ -54,15 +59,24 @@ jobs:
       - name: Rebuild CLI bundle (verify 已构建过一次；这里重建，确保挂出去的是干净产物)
         run: pnpm build:cli
 
-      - name: Create release and upload artifacts
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Name the artifacts
         run: |
           # gh 的 file#label 语法只改展示名不改文件名，下载后仍是 index.html；
           # 直接拷成带版本与用途的名字，拿下来就能分辨。
-          VERSION="${GITHUB_REF_NAME#v}"
+          # 版本取自 package.json：发版时上一步已保证它与 tag 一致，演练时没有 tag 可用。
+          VERSION="$(node -p "require('./package.json').version")"
           cp dist/index.html "trajectory-qa-console-${VERSION}.html"
           cp dist-cli/qa.mjs "trajectory-qa-cli-${VERSION}.mjs"
+          ls -l trajectory-qa-*
+          sha256sum trajectory-qa-*
+
+      - name: Create release and upload artifacts
+        # 只有 tag 触发才发布；手动演练走到上一步为止。
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
           gh release create "$GITHUB_REF_NAME" \
             --title "$GITHUB_REF_NAME" \
             --generate-notes \
