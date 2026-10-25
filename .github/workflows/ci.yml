@@ -40,6 +40,10 @@ jobs:
       - name: Verify
         run: pnpm verify
 
+      # verify 已构建出 dist/index.html；这里用真实 Chrome 以 file:// 打开它。
+      - name: E2E (file:// artifact)
+        run: pnpm test:e2e
+
       - name: Upload single-file artifact
         uses: actions/upload-artifact@v6
         with:
