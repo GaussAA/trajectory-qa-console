@@ -1,0 +1,4 @@
+# 所有文本文件检出时都用 LF，与仓库内容一致。
+# Windows 上 git 默认 core.autocrlf=true，会把检出的文件换成 CRLF；Prettier 只认 LF，
+# format:check 会整体失败，golden 等逐字比较的测试也会受影响。
+* text=auto eol=lf
