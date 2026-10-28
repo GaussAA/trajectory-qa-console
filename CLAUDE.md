@@ -82,6 +82,7 @@ Another convention, not checked by a script: CSS is split into four layers (`tok
 ## Workflow
 
 - Commits use Conventional Commits with a scope and a Chinese subject that describes the user-visible effect, e.g. `fix(ui): 导出按钮挪到抽屉页脚，关掉面板也不再丢结论`.
+- Pre-commit hook (husky + lint-staged, `.husky/pre-commit`): every commit runs Prettier on the staged files that `pnpm format` covers, then `pnpm typecheck` and `pnpm test`. It is a quick local gate, not `pnpm verify`; CI still runs the full `verify`. `pnpm install` activates it through the `prepare` script. When it fails, fix the cause; do not bypass it with `--no-verify`.
 - Release: pushing a `v*` tag runs verify and publishes the HTML and CLI artifacts. The tag must equal `v` + `package.json` version, or the release fails.
 - UI debug deep links: `#demo` / `#demo:N` load sample traces, `#stress:N` generates an N-step synthetic trace, and `?drawer=1`, `?diag=1`, `?compare`, `?lang=en` and `?agent=http://127.0.0.1:7788` open specific views.
 
