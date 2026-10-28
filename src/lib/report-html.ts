@@ -2,7 +2,9 @@
  *
  *  三条硬约束：
  *  1. 自包含 —— 没有外部字体、样式、脚本，断网也能完整显示；
- *  2. 零脚本 —— 只用 `<details>` 做折叠，避免在别人的浏览器里执行任何代码；
+ *  2. 零脚本 —— 只用 `<details>` 做折叠、页内锚点做跳转，避免在别人的浏览器里执行任何代码；
+ *     含 error 级发现的会话默认展开，其余收起。关着的 `<details>` 默认不会被打印，
+ *     也不会因锚点跳转而展开，所以样式里用 `::details-content` 在打印和 `:target` 时把内容露出来；
  *  3. 全量转义 —— 轨迹名、工具名、模型输出都来自外部数据，必须当不可信内容处理。
  *
  *  视觉沿用应用的设计令牌（深色液态玻璃），并在 `@media print` 下翻成浅色，
@@ -91,6 +93,8 @@ function renderDimensions(card: ScoreCard, t: Translate, locale: Locale): string
   return `<div class="dims" aria-label="${escapeHtml(t('report.dimensionHeader'))}">${rows}</div>`
 }
 
+const sessionAnchor = (index: number): string => `session-${index + 1}`
+
 function renderSession(entry: ReportEntry, index: number, t: Translate, locale: Locale): string {
   const { trajectory, card } = entry
   const tone = toneOf(card.overall)
@@ -107,28 +111,28 @@ function renderSession(entry: ReportEntry, index: number, t: Translate, locale: 
       )}</p>`
     : ''
 
-  return `<article class="session">
-    <header class="session-head">
-      <div class="session-title">
-        <p class="eyebrow">${escapeHtml(t('report.sessionHeader'))} ${index + 1}</p>
-        <h2>${escapeHtml(trajectory.label)}</h2>
-        <div class="chips">
-          <span class="chip">${escapeHtml(t('score.stepUnit', { count: trajectory.steps.length }))}</span>
-          <span class="chip">${formatTokens(trajectory.meta.totalTokens)} ${escapeHtml(t('kpi.tokens'))}</span>
-          ${model}
-          ${estimated}
-        </div>
-      </div>
-      <div class="score" style="--pct:${clampPercent(card.overall)};--tone:${tone}">
+  // 锚点 id 用序号而不是轨迹名：名字是外部数据，可能重复，也可能含引号。
+  // <summary> 只允许短语内容与标题，所以折叠头里的块级元素都用 <span>，布局交给样式。
+  return `<details class="session" id="${sessionAnchor(index)}"${card.counts.error > 0 ? ' open' : ''}>
+    <summary class="session-head">
+      <span class="eyebrow">${escapeHtml(t('report.sessionHeader'))} ${index + 1}</span>
+      <h2>${escapeHtml(trajectory.label)}</h2>
+      <span class="chips">
+        <span class="chip">${escapeHtml(t('score.stepUnit', { count: trajectory.steps.length }))}</span>
+        <span class="chip">${formatTokens(trajectory.meta.totalTokens)} ${escapeHtml(t('kpi.tokens'))}</span>
+        ${model}
+        ${estimated}
+      </span>
+      <span class="score" style="--pct:${clampPercent(card.overall)};--tone:${tone}">
         <b>${card.overall}</b>
         <em>${escapeHtml(card.grade)} · ${escapeHtml(gradeLabel)}</em>
-      </div>
-    </header>
+      </span>
+    </summary>
     ${capped}
     ${renderDimensions(card, t, locale)}
     ${renderFindings(entry, t)}
     ${renderAdvice(entry, t, locale)}
-  </article>`
+  </details>`
 }
 
 function renderRuleIssues(entries: ReportEntry[], t: Translate): string {
@@ -155,10 +159,10 @@ export function buildHtmlReport({ entries, pack, generatedAt, locale }: ReportIn
   const { steps: totalSteps, tokens: totalTokens, average, enabledRules: ruleCount } = totals
 
   const overviewRows = entries
-    .map(({ trajectory, card }) => {
+    .map(({ trajectory, card }, index) => {
       const tone = toneOf(card.overall)
       return `<tr>
-        <td class="name">${escapeHtml(trajectory.label)}</td>
+        <td class="name"><a href="#${sessionAnchor(index)}">${escapeHtml(trajectory.label)}</a></td>
         <td class="num">${trajectory.steps.length}</td>
         <td class="num">${formatTokens(trajectory.meta.totalTokens)}</td>
         <td class="num" style="color:${tone};font-weight:600">${card.overall}</td>

@@ -26,6 +26,20 @@ function entriesOf(text: string, label = 'trace.json') {
 
 const GENERATED = new Date('2026-10-22T12:00:00Z')
 
+const HEALTHY = JSON.stringify([
+  { role: 'user', content: '你好' },
+  { role: 'assistant', content: '你好，有什么可以帮你？' },
+])
+
+/** 取第 n 个会话的 <details> 开始标签；找不到就让测试直接失败。 */
+function sessionTag(html: string, n: number): string {
+  const match = html.match(new RegExp(`<details\\b[^>]*\\bid="session-${n}"[^>]*>`))
+  if (!match) throw new Error(`no <details> for session ${n}`)
+  return match[0]
+}
+
+const isOpen = (tag: string) => /\sopen(?=[\s>=])/.test(tag)
+
 describe('buildHtmlReport', () => {
   const entries = entriesOf(TRACE)
 
@@ -104,6 +118,56 @@ describe('buildHtmlReport', () => {
     expect(html).toContain('Structure')
     // 规则标题属数据，保持中文（与 ADR-0006 一致）
     expect(html).toContain('工具参数非法 JSON')
+  })
+
+  describe('navigating a long report', () => {
+    // 两个会话故意同名：锚点 id 必须来自序号，不能来自（外部的、可能重复的）轨迹名。
+    const mixed = [...entriesOf(TRACE, 'same.json'), ...entriesOf(HEALTHY, 'same.json')]
+    const html = buildHtmlReport({
+      entries: mixed,
+      pack: DEFAULT_PACK,
+      generatedAt: GENERATED,
+      locale: 'zh-CN',
+    })
+
+    it('links every overview row to its own session, even when names repeat', () => {
+      expect(html).toContain('<a href="#session-1">same.json</a>')
+      expect(html).toContain('<a href="#session-2">same.json</a>')
+
+      const ids = [...html.matchAll(/<details\b[^>]*\bid="(session-\d+)"/g)].map((match) => match[1])
+      expect(ids).toEqual(['session-1', 'session-2'])
+    })
+
+    it('opens only the sessions that have error-level findings', () => {
+      // 夹具必须一好一坏，否则下面的断言是空转。
+      expect(mixed[0]?.card.counts.error).toBeGreaterThan(0)
+      expect(mixed[1]?.card.counts.error).toBe(0)
+
+      expect(isOpen(sessionTag(html, 1))).toBe(true)
+      expect(isOpen(sessionTag(html, 2))).toBe(false)
+    })
+
+    it('keeps the name, score and grade visible in the fold header', () => {
+      const summaries = [...html.matchAll(/<summary\b[^>]*>([\s\S]*?)<\/summary>/g)].map(
+        (match) => match[1] ?? '',
+      )
+      expect(summaries).toHaveLength(2)
+      summaries.forEach((summary, index) => {
+        const card = mixed[index]?.card
+        expect(summary).toContain('same.json')
+        expect(summary).toContain(`>${card?.overall}<`)
+        expect(summary).toContain(card?.grade ?? '')
+      })
+    })
+
+    it('shows every session when printed and when jumped to, without a script', () => {
+      // 两条规则必须各自独立：选择器列表里只要有一个浏览器不认识，整条规则就会被丢掉。
+      expect(html).toMatch(/details:target::details-content\s*\{[^}]*content-visibility:\s*visible/)
+      expect(html).toMatch(
+        /@media print\s*\{[\s\S]*details::details-content\s*\{[^}]*content-visibility:\s*visible/,
+      )
+      expect(html).not.toMatch(/<script/i)
+    })
   })
 
   it('handles an empty workspace without throwing', () => {
