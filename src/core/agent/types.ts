@@ -152,6 +152,8 @@ export type TraceEntry =
       toolCalls: number
       reasoningChars: number
       ms: number
+      /** 该轮端点返回的用量；端点没给时是 0。运行级 `usage` 恒等于各轮之和。 */
+      usage: { prompt: number; completion: number }
     }
   | {
       kind: 'tool'

@@ -182,6 +182,7 @@ export async function runAgent(toolContext: ToolContext, options: AgentOptions):
       toolCalls: turn.toolCalls.length,
       reasoningChars: turn.reasoningChars,
       ms: now() - sentAt,
+      usage: { prompt: turn.usage.prompt, completion: turn.usage.completion },
     })
     emit(options, { kind: 'round', round, toolCalls: turn.toolCalls.length })
 
