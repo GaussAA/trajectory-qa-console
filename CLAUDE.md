@@ -84,3 +84,17 @@ Another convention, not checked by a script: CSS is split into four layers (`tok
 - Commits use Conventional Commits with a scope and a Chinese subject that describes the user-visible effect, e.g. `fix(ui): 导出按钮挪到抽屉页脚，关掉面板也不再丢结论`.
 - Release: pushing a `v*` tag runs verify and publishes the HTML and CLI artifacts. The tag must equal `v` + `package.json` version, or the release fails.
 - UI debug deep links: `#demo` / `#demo:N` load sample traces, `#stress:N` generates an N-step synthetic trace, and `?drawer=1`, `?diag=1`, `?compare`, `?lang=en` and `?agent=http://127.0.0.1:7788` open specific views.
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked in GitHub Issues (`GaussAA/trajectory-qa-console`) via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context. The glossary is `CONTEXT.md` (not `GLOSSARY.md`); ADRs are in `docs/adr/`. See `docs/agents/domain.md`.
