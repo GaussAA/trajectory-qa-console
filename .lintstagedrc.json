@@ -1,0 +1,5 @@
+{
+  "src/**/*.{ts,tsx,css}": "prettier --write",
+  "e2e/**/*.ts": "prettier --write",
+  "./*.{ts,js,json}": "prettier --write"
+}
