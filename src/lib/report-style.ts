@@ -103,8 +103,43 @@ th {
 td { padding: 7px 8px; border-bottom: 1px solid rgba(148, 163, 184, 0.06); color: var(--dim); }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 td.name { color: var(--text); }
-.session-head { display: flex; gap: 18px; align-items: flex-start; justify-content: space-between; }
-.session-title { min-width: 0; }
+.session { scroll-margin-top: 16px; }
+.session-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "eyebrow score" "title score" "chips score";
+  grid-template-rows: auto auto 1fr;
+  column-gap: 18px;
+  align-items: start;
+  cursor: pointer;
+  list-style: none;
+}
+.session-head::-webkit-details-marker { display: none; }
+.session-head .eyebrow { grid-area: eyebrow; }
+.session-head h2 { grid-area: title; min-width: 0; }
+.session-head .chips { grid-area: chips; }
+.session-head .score { grid-area: score; }
+/* 原生三角在 grid 下会消失，用边框画一个，并随开合旋转。 */
+.session-head .eyebrow::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 8px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.15s;
+  vertical-align: 1px;
+}
+details[open] > .session-head .eyebrow::before,
+details:target > .session-head .eyebrow::before { transform: rotate(45deg); }
+/* 从总览表跳过来时，被收起的会话也要把内容露出来；不需要脚本。 */
+details:target::details-content { content-visibility: visible; display: block; }
+.session-head:focus-visible, td.name a:focus-visible { outline: 2px solid #5eead4; outline-offset: 3px; border-radius: 6px; }
+td.name a { color: inherit; text-decoration: underline dotted; text-underline-offset: 3px; }
+td.name a:hover { color: var(--text); text-decoration-style: solid; }
+@media (prefers-reduced-motion: reduce) { .session-head .eyebrow::before { transition: none; } }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .chip {
   display: inline-block;
@@ -221,7 +256,8 @@ footer {
 @media (max-width: 720px) {
   body { padding: 24px 14px 40px; }
   .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .session-head { flex-direction: column; }
+  .session-head { grid-template-columns: minmax(0, 1fr); grid-template-areas: "eyebrow" "title" "chips" "score"; }
+  .session-head .score { justify-self: start; margin-top: 12px; }
   .dim { grid-template-columns: 92px minmax(0, 1fr) 30px 34px; }
 }
 @media print {
@@ -253,6 +289,10 @@ footer {
   .evidence { background: #f8fafc; border-color: #e2e8f0; color: #334155; }
   .sev, .sev-error .sev, .sev-warn .sev, .sev-info .sev, .eyebrow { color: #4b5563; }
   .advice li::before { background: #0f766e; color: #fff; }
+  /* 关着的 <details> 默认不会被打印；这里让每个会话的内容都印出来。 */
+  details::details-content { content-visibility: visible; display: block; }
+  .session-head .eyebrow::before { display: none; }
+  td.name a { text-decoration: none; }
   footer { border-color: #d7dee9; color: #4b5563; }
 }
 `
