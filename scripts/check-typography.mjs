@@ -54,7 +54,9 @@ for (const token of SCALE) {
 }
 for (let index = 1; index < declared.length; index += 1) {
   if (declared[index].size <= declared[index - 1].size) {
-    problems.push(`标度必须递增：${declared[index].token}(${declared[index].size}px) ≤ ${declared[index - 1].token}`)
+    problems.push(
+      `标度必须递增：${declared[index].token}(${declared[index].size}px) ≤ ${declared[index - 1].token}`,
+    )
   }
 }
 
@@ -87,9 +89,17 @@ for (const file of LIB_ROOTS.flatMap((root) => walk(root, /\.ts$/))) {
   if (/\.test\.ts$/.test(file)) continue
   const source = readFileSync(file, 'utf8')
   source.split('\n').forEach((line, index) => {
-    for (const match of line.matchAll(/font-size\s*:\s*([0-9.]+)(px|pt)/g)) {
-      const px = match[2] === 'pt' ? Number(match[1]) * (4 / 3) : Number(match[1])
-      if (px < FLOOR_PX) problems.push(`${file}:${index + 1}  ${match[0]}（低于下限 ${FLOOR_PX}px）`)
+    for (const match of line.matchAll(/font-size\s*:\s*([^;}]+)/g)) {
+      const value = (match[1] ?? '').trim()
+      const length = value.match(/^([0-9.]+)(px|pt)$/)
+      // 非法值（比如批量替换时没展开的 `$211px`）会被浏览器整条丢掉，元素静默退回继承字号，
+      // 而之前这里只匹配合法写法，所以它会被悄悄跳过。现在一律当成错误。
+      if (!length) {
+        problems.push(`${file}:${index + 1}  ${match[0].trim()}（不是合法的长度，浏览器会丢掉这条声明）`)
+        continue
+      }
+      const px = length[2] === 'pt' ? Number(length[1]) * (4 / 3) : Number(length[1])
+      if (px < FLOOR_PX) problems.push(`${file}:${index + 1}  ${match[0].trim()}（低于下限 ${FLOOR_PX}px）`)
     }
   })
 }

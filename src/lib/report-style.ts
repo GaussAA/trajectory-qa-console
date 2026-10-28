@@ -55,7 +55,7 @@ body {
 .page { max-width: 960px; margin: 0 auto; }
 .eyebrow {
   margin: 0 0 6px;
-  font-size:$211px;
+  font-size: 11px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--mute);
@@ -80,7 +80,7 @@ p { margin: 0 0 8px; }
   border: 1px solid var(--line);
   background: var(--panel);
 }
-.kpi span { display: block; font-size:$211px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mute); }
+.kpi span { display: block; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mute); }
 .kpi b { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .block, .session {
   margin-bottom: 22px;
@@ -92,7 +92,7 @@ p { margin: 0 0 8px; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 th {
   text-align: left;
-  font-size:$211px;
+  font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--mute);
@@ -147,7 +147,7 @@ td.name a:hover { color: var(--text); text-decoration-style: solid; }
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.16);
   background: rgba(148, 163, 184, 0.06);
-  font-size:$211px;
+  font-size: 11px;
   color: var(--dim);
   white-space: nowrap;
 }
@@ -164,7 +164,7 @@ td.name a:hover { color: var(--text); text-decoration-style: solid; }
     conic-gradient(var(--tone) calc(var(--pct) * 1%), rgba(148, 163, 184, 0.16) 0);
 }
 .score b { font-size: 30px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.1; }
-.score em { font-size:$211px; font-style: normal; color: var(--dim); }
+.score em { font-size: 11px; font-style: normal; color: var(--dim); }
 .dims { display: flex; flex-direction: column; gap: 6px; margin-top: 16px; }
 .dim {
   display: grid;
@@ -190,7 +190,7 @@ td.name a:hover { color: var(--text); text-decoration-style: solid; }
 .finding.sev-warn { border-left-color: #fbbf24; background: rgba(251, 191, 36, 0.05); }
 .finding.sev-info { border-left-color: #60a5fa; background: rgba(96, 165, 250, 0.05); }
 .finding-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
-.sev { font-size:$211px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--mute); }
+.sev { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--mute); }
 .sev-error .sev { color: #fda4af; }
 .sev-warn .sev { color: #fcd34d; }
 .sev-info .sev { color: #93c5fd; }
@@ -227,7 +227,7 @@ td.name a:hover { color: var(--text); text-decoration-style: solid; }
   border-radius: 50%;
   display: grid;
   place-content: center;
-  font-size:$211px;
+  font-size: 11px;
   color: #06231f;
   background: #5eead4;
 }

@@ -161,7 +161,7 @@ td .num, .delta-cell { font-variant-numeric: tabular-nums; }
   display: inline-block;
   padding: 1px 8px;
   border-radius: 999px;
-  font-size:$211px;
+  font-size: 11px;
   border: 1px solid rgba(148, 163, 184, 0.2);
   color: var(--mute);
 }
