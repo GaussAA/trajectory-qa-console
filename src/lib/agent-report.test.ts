@@ -22,7 +22,15 @@ function run(overrides: Partial<AgentRun> = {}): AgentRun {
     proposals: [],
     trace: {
       entries: [
-        { kind: 'model', round: 1, content: '', toolCalls: 1, reasoningChars: 12, ms: 300 },
+        {
+          kind: 'model',
+          round: 1,
+          content: '',
+          toolCalls: 1,
+          reasoningChars: 12,
+          ms: 300,
+          usage: { prompt: 10, completion: 5 },
+        },
         {
           kind: 'tool',
           round: 1,
@@ -87,6 +95,72 @@ describe('renderAgentMarkdown', () => {
     expect(markdown).toContain('第 4 步')
     expect(markdown).toContain('exec-tool-error')
     expect(markdown).toContain('| 1 | list_sessions |')
+  })
+
+  it('lists the input and output tokens of every round in the trace section', () => {
+    const markdown = renderAgentMarkdown(
+      input({
+        run: run({
+          trace: {
+            ...run().trace,
+            entries: [
+              {
+                kind: 'model',
+                round: 1,
+                content: '',
+                toolCalls: 0,
+                reasoningChars: 0,
+                ms: 1,
+                usage: { prompt: 1200, completion: 30 },
+              },
+              {
+                kind: 'model',
+                round: 2,
+                content: '',
+                toolCalls: 0,
+                reasoningChars: 0,
+                ms: 1,
+                usage: { prompt: 3400, completion: 45 },
+              },
+            ],
+            rounds: 2,
+          },
+          usage: { prompt: 4600, completion: 75 },
+        }),
+      }),
+    )
+
+    const trace = markdown.slice(markdown.indexOf('## 调用记录'), markdown.indexOf('## 运行统计'))
+    expect(trace).toContain('| 1 | 1200 | 30 |')
+    expect(trace).toContain('| 2 | 3400 | 45 |')
+    // 逐轮数字是可核验的事实，只能出现在「调用记录」，不能混进「结论」。
+    expect(markdown.slice(0, markdown.indexOf('## 调用记录'))).not.toContain('3400')
+  })
+
+  it('does not print a per-round usage table when the endpoint reported nothing', () => {
+    const markdown = renderAgentMarkdown(
+      input({
+        run: run({
+          trace: {
+            ...run().trace,
+            entries: [
+              {
+                kind: 'model',
+                round: 1,
+                content: 'x',
+                toolCalls: 0,
+                reasoningChars: 0,
+                ms: 1,
+                usage: { prompt: 0, completion: 0 },
+              },
+            ],
+          },
+          usage: { prompt: 0, completion: 0 },
+        }),
+      }),
+    )
+
+    expect(markdown).not.toContain('逐轮 token')
   })
 
   it('shows the session label next to the id when the session is loaded', () => {
@@ -221,6 +295,36 @@ describe('proposals in the report', () => {
 })
 
 describe('renderAgentJson', () => {
+  it('carries the per-round usage inside the trace and leaves the top-level keys alone', () => {
+    const base = run()
+    const json = JSON.parse(
+      renderAgentJson(
+        input({
+          run: run({
+            trace: {
+              ...base.trace,
+              entries: [
+                {
+                  kind: 'model',
+                  round: 1,
+                  content: '',
+                  toolCalls: 0,
+                  reasoningChars: 0,
+                  ms: 1,
+                  usage: { prompt: 900, completion: 40 },
+                },
+              ],
+            },
+            usage: { prompt: 900, completion: 40 },
+          }),
+        }),
+      ),
+    ) as { trace: { usage: unknown }[]; usage: unknown }
+
+    expect(json.trace[0]?.usage).toEqual({ prompt: 900, completion: 40 })
+    expect(json.usage).toEqual({ prompt: 900, completion: 40 })
+  })
+
   it('keeps stable keys and only localises values', () => {
     const json = JSON.parse(renderAgentJson(input())) as Record<string, unknown>
 

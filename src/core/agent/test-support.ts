@@ -37,6 +37,8 @@ export function first(context: ToolContext): SessionAnalysis {
 export interface Turn {
   content?: string
   calls?: { name: string; args?: unknown; raw?: string; id?: string }[]
+  /** 该回合端点返回的用量；省略时用固定的 10 / 5。 */
+  usage?: { prompt: number; completion: number }
 }
 
 /** 把一回合写成 OpenAI 形状：测试里只要关心「模型说了什么、要调什么」。 */
@@ -62,7 +64,10 @@ export function turn(input: Turn): string {
         finish_reason: input.calls ? 'tool_calls' : 'stop',
       },
     ],
-    usage: { prompt_tokens: 10, completion_tokens: 5 },
+    usage: {
+      prompt_tokens: input.usage?.prompt ?? 10,
+      completion_tokens: input.usage?.completion ?? 5,
+    },
   })
 }
 

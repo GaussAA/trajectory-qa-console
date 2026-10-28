@@ -33,12 +33,20 @@ interface TraceRow {
   ms: number
 }
 
+export interface RoundUsageRow {
+  round: number
+  prompt: number
+  completion: number
+}
+
 export interface AgentReportModel {
   /** 状态一句话（已收尾 / 未收敛 / 失败）。 */
   status: string
   /** 未收敛或失败时的补充说明；正常收尾为 null。 */
   statusNote: string | null
   traceRows: TraceRow[]
+  /** 逐轮用量；端点一轮都没报用量时为空数组，报告里就不画这张表，免得满屏 0 被当成事实。 */
+  roundUsage: RoundUsageRow[]
   toolCalls: number
   rounds: number
   durationMs: number
@@ -79,6 +87,15 @@ function toolRows(entries: TraceEntry[]): TraceRow[] {
     }))
 }
 
+function roundUsageRows(entries: TraceEntry[]): RoundUsageRow[] {
+  const rows = entries.flatMap((entry) =>
+    entry.kind === 'model'
+      ? [{ round: entry.round, prompt: entry.usage.prompt, completion: entry.usage.completion }]
+      : [],
+  )
+  return rows.some((row) => row.prompt > 0 || row.completion > 0) ? rows : []
+}
+
 export function buildAgentReportModel(input: AgentReportInput): AgentReportModel {
   const { run, locale } = input
   const rows = toolRows(run.trace.entries)
@@ -99,6 +116,7 @@ export function buildAgentReportModel(input: AgentReportInput): AgentReportModel
     status,
     statusNote,
     traceRows: rows,
+    roundUsage: roundUsageRows(run.trace.entries),
     toolCalls: run.trace.toolCalls,
     rounds: run.trace.rounds,
     durationMs: run.trace.entries.reduce((sum, entry) => sum + entry.ms, 0),
@@ -205,6 +223,18 @@ export function renderAgentMarkdown(input: AgentReportInput, model?: AgentReport
       lines.push(
         `| ${row.round} | ${escapeCell(row.tool)} | ${escapeCell(clip(row.args, 60))} | ${mark} · ${escapeCell(clip(row.result, 120))} | ${row.ms} |`,
       )
+    }
+    lines.push('')
+  }
+
+  if (built.roundUsage.length > 0) {
+    lines.push(`### ${t(locale, 'agent.report.roundUsage')}`, '')
+    lines.push(
+      `| ${t(locale, 'agent.report.col.round')} | ${t(locale, 'agent.report.roundUsage.prompt')} | ${t(locale, 'agent.report.roundUsage.completion')} |`,
+    )
+    lines.push('| --- | --- | --- |')
+    for (const row of built.roundUsage) {
+      lines.push(`| ${row.round} | ${row.prompt} | ${row.completion} |`)
     }
     lines.push('')
   }

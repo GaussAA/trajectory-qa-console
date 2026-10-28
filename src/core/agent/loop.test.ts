@@ -34,6 +34,60 @@ describe('runAgent', () => {
     expect(run.usage.prompt).toBe(20)
   })
 
+  it('records the endpoint usage of every round and the rounds add up to the run total', async () => {
+    const { transport } = scripted([
+      turn({ calls: [{ name: 'list_sessions' }], usage: { prompt: 100, completion: 20 } }),
+      turn({ calls: [{ name: 'list_sessions' }], usage: { prompt: 260, completion: 30 } }),
+      turn({ content: '结论', usage: { prompt: 400, completion: 50 } }),
+    ])
+
+    const run = await runAgent(contextWith(), { ...BASE, transport })
+
+    const modelUsage = run.trace.entries.flatMap((entry) => (entry.kind === 'model' ? [entry.usage] : []))
+    expect(modelUsage).toEqual([
+      { prompt: 100, completion: 20 },
+      { prompt: 260, completion: 30 },
+      { prompt: 400, completion: 50 },
+    ])
+    expect(run.usage).toEqual({
+      prompt: modelUsage.reduce((sum, usage) => sum + usage.prompt, 0),
+      completion: modelUsage.reduce((sum, usage) => sum + usage.completion, 0),
+    })
+    expect(run.usage).toEqual({ prompt: 760, completion: 100 })
+  })
+
+  it('counts a round as zero when the endpoint returns no usage instead of failing', async () => {
+    const noUsage = JSON.stringify({
+      choices: [{ message: { content: '没有用量字段' }, finish_reason: 'stop' }],
+    })
+    const { transport } = scripted([noUsage])
+
+    const run = await runAgent(contextWith(), { ...BASE, transport })
+
+    expect(run.ok).toBe(true)
+    const model = run.trace.entries.find((entry) => entry.kind === 'model')
+    expect(model?.kind === 'model' ? model.usage : null).toEqual({ prompt: 0, completion: 0 })
+    expect(run.usage).toEqual({ prompt: 0, completion: 0 })
+  })
+
+  it('keeps the usage of the rounds that finished when a later round fails', async () => {
+    const first = turn({ calls: [{ name: 'list_sessions' }], usage: { prompt: 120, completion: 15 } })
+    let calls = 0
+    const transport: LlmTransport = async () => {
+      calls += 1
+      return calls === 1
+        ? { ok: true, status: 200, text: first }
+        : { ok: false, status: 500, text: 'upstream down' }
+    }
+
+    const run = await runAgent(contextWith(), { ...BASE, transport })
+
+    expect(run.ok).toBe(false)
+    const modelUsage = run.trace.entries.flatMap((entry) => (entry.kind === 'model' ? [entry.usage] : []))
+    expect(modelUsage).toEqual([{ prompt: 120, completion: 15 }])
+    expect(run.usage).toEqual({ prompt: 120, completion: 15 })
+  })
+
   it('accepts a plain-text answer without a terminal tool', async () => {
     const { transport } = scripted([turn({ content: '这批轨迹都还可以。' })])
     const run = await runAgent(contextWith(), { ...BASE, transport })
